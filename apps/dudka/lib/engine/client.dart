@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -291,6 +292,8 @@ class ChatMessage {
     this.size = 0,
     this.mime = '',
     this.hash = '',
+    this.thumbB64 = '',
+    this.thumbPath = '',
   });
 
   final String msgId;
@@ -304,6 +307,8 @@ class ChatMessage {
   final int size;
   final String mime;
   final String hash;
+  final String thumbB64;
+  final String thumbPath;
 
   bool get isFileAnnounce =>
       type == 'file_announce' || (fileId.isNotEmpty && fileName.isNotEmpty);
@@ -329,8 +334,51 @@ class ChatMessage {
       size: (m['size'] as num?)?.toInt() ?? 0,
       mime: (m['mime'] as String?)?.trim() ?? '',
       hash: (m['hash'] as String?)?.trim() ?? '',
+      thumbB64: (m['thumb_b64'] as String?)?.trim() ?? '',
+      thumbPath: (m['thumb_path'] as String?)?.trim() ?? '',
     );
   }
+}
+
+enum FeedThumbKind { none, image, heicMark }
+
+bool isImageMime(String mime) {
+  switch (mime.trim().toLowerCase()) {
+    case 'image/jpeg':
+    case 'image/jpg':
+    case 'image/png':
+    case 'image/webp':
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isHeicMime(String mime) {
+  switch (mime.trim().toLowerCase()) {
+    case 'image/heic':
+    case 'image/heif':
+      return true;
+    default:
+      return false;
+  }
+}
+
+Uint8List? decodeThumbBytes(ChatMessage m) {
+  final b64 = m.thumbB64.trim();
+  if (b64.isEmpty) return null;
+  try {
+    return Uint8List.fromList(base64Decode(b64));
+  } catch (_) {
+    return null;
+  }
+}
+
+FeedThumbKind feedThumbKind(ChatMessage m) {
+  if (!m.isFileAnnounce) return FeedThumbKind.none;
+  if (decodeThumbBytes(m) != null) return FeedThumbKind.image;
+  if (isHeicMime(m.mime)) return FeedThumbKind.heicMark;
+  return FeedThumbKind.none;
 }
 
 class TransferInfo {

@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import '../engine/client.dart';
 import 'settings_nick_screen.dart';
 
-/// Chat shell: status/peers/feed/compose + files with progress/cancel (P063–P067).
-/// DESIGN step-row lands in P069; image thumbs in P068.
+/// Chat shell: status/peers/feed/compose + files/thumbs (P063–P068).
+/// DESIGN step-row lands in P069.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -353,6 +353,7 @@ class _ChatScreenState extends State<ChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(formatFeedLine(m)),
+              ..._thumbWidgets(m),
               const SizedBox(height: 4),
               _fileActions(m.fileId, tr),
             ],
@@ -360,6 +361,30 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  List<Widget> _thumbWidgets(ChatMessage m) {
+    switch (feedThumbKind(m)) {
+      case FeedThumbKind.image:
+        final bytes = decodeThumbBytes(m)!;
+        return [
+          const SizedBox(height: 4),
+          Image.memory(
+            bytes,
+            key: Key('file-thumb-${m.fileId}'),
+            height: 96,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+          ),
+        ];
+      case FeedThumbKind.heicMark:
+        return [
+          const SizedBox(height: 4),
+          Text('HEIC', key: Key('file-heic-${m.fileId}')),
+        ];
+      case FeedThumbKind.none:
+        return const [];
+    }
   }
 
   Widget _fileActions(String fileId, TransferInfo? tr) {

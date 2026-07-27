@@ -93,7 +93,7 @@
 - [x] P065 Состояния `alone` / `no_network` + кнопка «ИСКАТЬ»
 - [x] P066 Мини-настройки: только ник
 - [x] P067 Отправка/приём файла из Flutter с прогрессом и отменой
-- [ ] P068 Превью картинок в ленте Flutter
+- [x] P068 Превью картинок в ленте Flutter
 - [ ] P069 Визуал `DESIGN.md`: charcoal panel, silkscreen labels, mono, step-progress (без CRT-фанатизма)
 - [ ] P070 Wide layout dual-pane; narrow — peer strip (resize desktop не теряет текст compose)
 - [ ] P071 Flutter↔Flutter текст+файл на двух устройствах

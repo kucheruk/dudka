@@ -67,17 +67,17 @@ ADR: не требуется
 ### DUD-FILE-120
 
 Priority: P0  
-Status: Draft
+Status: Partial
 
 Для mime `image/jpeg`, `image/png`, `image/webp`, `image/heic` (если платформа декодирует) в ленте показывается thumbnail без отдельного обязательного «скачать, чтобы увидеть превью». Полный файл по-прежнему по запросу/автозагрузке политики клиента.
 
 Проверка:
 
-- jpeg/png/webp дают превью в ленте у получателя при живом источнике; *(P056: `thumb_b64` на announce → локальный `thumb_path`, TUI `THUMB <path>`)*
-- heic/heif: превью если платформа декодирует (darwin+cgo / ImageIO), иначе честный fallback без фейкового `THUMB`; *(P057: `files.HEICAvailable`, TUI метка `HEIC`)*
-- не-image не рисует ложное превью;
+- jpeg/png/webp дают превью в ленте у получателя при живом источнике; *(P056: `thumb_b64` на announce → локальный `thumb_path`, TUI `THUMB <path>`; P068 Flutter `Image.memory` из `thumb_b64`)*
+- heic/heif: превью если платформа декодирует (darwin+cgo / ImageIO), иначе честный fallback без фейкового `THUMB`; *(P057 TUI; P068 Flutter метка `HEIC` без фейкового Image)*
+- не-image не рисует ложное превью; *(P068)*
 - TUI↔TUI: картинка с превью и произвольный бинарник доходят end-to-end; *(P058: `dudka -announce` / `/announce`, `-fetch` / `/fetch`, `scripts/tui_files_e2e_test.sh`)*
-- evidence: UI/protocol (`scripts/file_thumb_test.sh`, `scripts/file_heic_test.sh`, `scripts/tui_files_e2e_test.sh`).
+- evidence: `scripts/file_thumb_test.sh`, `scripts/file_heic_test.sh`, `scripts/tui_files_e2e_test.sh`, `./scripts/flutter_thumbs_test.sh` (P068).
 
 Зависимости: DUD-FILE-101  
 ADR: не требуется

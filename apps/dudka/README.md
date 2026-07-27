@@ -21,6 +21,7 @@ Cold start: first-run nick (RU) → chat (status/peers/feed) → compose «ДУ�
 ## Checks
 
 ```bash
+./scripts/flutter_thumbs_test.sh     # P068 image thumbs in feed
 ./scripts/flutter_files_test.sh      # P067 file announce/fetch/cancel
 ./scripts/flutter_settings_test.sh   # P066 mini-settings nick
 ./scripts/flutter_seek_test.sh       # P065 alone/no_network + ИСКАТЬ
