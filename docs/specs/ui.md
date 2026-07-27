@@ -94,13 +94,14 @@ ADR: не требуется
 ### DUD-UI-150
 
 Priority: P0  
-Status: Draft
+Status: Partial
 
 Linux TUI показывает те же сущности: peers, лента, compose, статусы `alone`/`no_network`, прогресс файла (текстом). Не требует GUI.
 
 Проверка:
 
 - сценарий текст+файл между TUI и Flutter;
+- *(P040: status strip + peers; пусто → «НИКОГО РЯДОМ»; `dudka -engine` / `internal/tui`)*
 - evidence: smoke script.
 
 Зависимости: DUD-PRD-102  
