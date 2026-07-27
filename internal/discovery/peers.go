@@ -80,10 +80,60 @@ func (s *PeerStore) List() []Peer {
 	return out
 }
 
+// Remove deletes a peer by id. Returns false if unknown.
+func (s *PeerStore) Remove(peerID string) bool {
+	if peerID == "" {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.peers[peerID]; !ok {
+		return false
+	}
+	delete(s.peers, peerID)
+	return true
+}
+
+// Touch updates LastSeen for a known peer (announce heartbeat).
+func (s *PeerStore) Touch(peerID string) bool {
+	if peerID == "" {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.peers[peerID]
+	if !ok {
+		return false
+	}
+	p.LastSeen = time.Now().UTC()
+	s.peers[peerID] = p
+	return true
+}
+
+// PruneOlderThan removes peers with LastSeen before cutoff (P034).
+func (s *PeerStore) PruneOlderThan(cutoff time.Time) []Peer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var removed []Peer
+	for id, p := range s.peers {
+		if p.LastSeen.Before(cutoff) {
+			removed = append(removed, p)
+			delete(s.peers, id)
+		}
+	}
+	sort.Slice(removed, func(i, j int) bool { return removed[i].PeerID < removed[j].PeerID })
+	return removed
+}
+
 // FormatPeerUpdated is the log line when a neighbor restarts (new instance_id).
 func FormatPeerUpdated(peerID, oldInstance, newInstance string) string {
 	return fmt.Sprintf(
 		"peer_updated peer_id=%s old_instance=%s new_instance=%s",
 		peerID, oldInstance, newInstance,
 	)
+}
+
+// FormatPeerGone is the log line when a neighbor is pruned after TTL (P034).
+func FormatPeerGone(peerID string) string {
+	return fmt.Sprintf("peer_gone peer_id=%s", peerID)
 }

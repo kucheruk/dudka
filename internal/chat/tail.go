@@ -97,6 +97,11 @@ func (h *Hub) OnPeerUpserted(_ discovery.Peer, _ discovery.UpsertResult) {
 	go h.SyncTail()
 }
 
+// OnPeerRemoved re-evaluates keeper after a peer TTL expiry (P034).
+func (h *Hub) OnPeerRemoved(_ discovery.Peer) {
+	go h.SyncTail()
+}
+
 // SyncTail pulls the keeper ring when this node is not the keeper.
 func (h *Hub) SyncTail() {
 	h.mu.Lock()

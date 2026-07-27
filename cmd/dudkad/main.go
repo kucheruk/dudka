@@ -81,6 +81,7 @@ func main() {
 		OnChatLine:     hub.HandleChatLine,
 		OnTailRequest:  hub.HandleTailRequest,
 		OnPeerUpserted: hub.OnPeerUpserted,
+		OnPeerRemoved:  hub.OnPeerRemoved,
 		Logf:           func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {

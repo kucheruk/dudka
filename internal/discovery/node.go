@@ -29,6 +29,7 @@ type Config struct {
 	TCPBind     string        // TCP bind; empty => :TCPPort or :UDPPort
 	Target      string        // empty => UDP broadcast to 255.255.255.255:UDPPort
 	Interval    time.Duration // default 2s
+	PeerTTL     time.Duration // prune peers quieter than this; default 5*Interval (P034)
 	Peers       *PeerStore
 	OnAnnounce  func(Announce, net.Addr)
 	Logf        func(format string, args ...any)
@@ -41,6 +42,8 @@ type Config struct {
 	OnTailRequest func(host string, conn net.Conn)
 	// OnPeerUpserted fires after the peer table changes (register / dial).
 	OnPeerUpserted func(Peer, UpsertResult)
+	// OnPeerRemoved fires when a peer is pruned after PeerTTL (P034).
+	OnPeerRemoved func(Peer)
 }
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
@@ -67,6 +70,9 @@ func NewNode(cfg Config) *Node {
 	}
 	if cfg.Interval <= 0 {
 		cfg.Interval = 2 * time.Second
+	}
+	if cfg.PeerTTL <= 0 {
+		cfg.PeerTTL = 5 * cfg.Interval
 	}
 	if cfg.DialTimeout <= 0 {
 		cfg.DialTimeout = 2 * time.Second
@@ -186,14 +192,61 @@ func (n *Node) Start() error {
 	n.local = conn.LocalAddr()
 	seeds := append([]string{}, n.cfg.DialHosts...)
 
-	n.wg.Add(3)
+	n.wg.Add(4)
 	go n.readLoop(ctx, conn)
 	go n.announceLoop(ctx)
 	go n.acceptLoop(ctx, tcpLn)
+	go n.pruneLoop(ctx)
 	n.mu.Unlock()
 
 	n.dialConfiguredHosts(seeds)
 	return nil
+}
+
+func (n *Node) pruneLoop(ctx context.Context) {
+	defer n.wg.Done()
+	n.mu.Lock()
+	ttl := n.cfg.PeerTTL
+	interval := n.cfg.Interval
+	n.mu.Unlock()
+	if ttl <= 0 {
+		return
+	}
+	tick := ttl / 2
+	if tick <= 0 {
+		tick = interval
+	}
+	if tick > time.Second {
+		tick = time.Second
+	}
+	t := time.NewTicker(tick)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			n.pruneStalePeers()
+		}
+	}
+}
+
+func (n *Node) pruneStalePeers() {
+	n.mu.Lock()
+	ttl := n.cfg.PeerTTL
+	peers := n.cfg.Peers
+	onRemoved := n.cfg.OnPeerRemoved
+	n.mu.Unlock()
+	if ttl <= 0 || peers == nil {
+		return
+	}
+	removed := peers.PruneOlderThan(time.Now().UTC().Add(-ttl))
+	for _, p := range removed {
+		n.cfg.Logf("%s", FormatPeerGone(p.PeerID))
+		if onRemoved != nil {
+			onRemoved(p)
+		}
+	}
 }
 
 func (n *Node) dialConfiguredHosts(hosts []string) {
@@ -379,10 +432,11 @@ func (n *Node) maybeRegister(a Announce, from net.Addr) {
 		n.mu.Unlock()
 		return
 	}
-	// Skip dial if already known with same instance.
+	// Skip dial if already known with same instance; refresh LastSeen (P034 TTL).
 	for _, p := range n.cfg.Peers.List() {
 		if p.PeerID == a.PeerID && p.InstanceID == a.InstanceID {
 			n.mu.Unlock()
+			_ = n.cfg.Peers.Touch(a.PeerID)
 			return
 		}
 	}

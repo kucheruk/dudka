@@ -66,14 +66,14 @@ ADR: не требуется
 ### DUD-CHAT-120
 
 Priority: P0  
-Status: Partial
+Status: Accepted
 
 Среди online peers детерминированно выбирается один tail-keeper. Он хранит кольцо последних **200** сообщений (текст + метаданные файловых announce) и отдаёт его новому peer после register.
 
 Проверка:
 
 - новый peer после join видит ≤ 200 последних сообщений, согласованных с keeper; *(P033: TCP `tail_req`/`tail`, loopback `GET /tail`, ring `MaxTailMessages=200`)*
-- при уходе keeper новый keeper продолжает отдавать хвост; *(P034)*
+- при уходе keeper новый keeper продолжает отдавать хвост; *(P034: `PeerTTL` prune → `peer_gone` → пересчёт min peer_id; третий peer тянет хвост у нового keeper)*
 - evidence: multi-peer integration.
 
 Зависимости: DUD-NET-110  
