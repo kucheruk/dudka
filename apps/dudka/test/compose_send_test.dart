@@ -37,7 +37,7 @@ void main() {
     client.close();
   });
 
-  testWidgets('ДУНУТЬ sends text and shows it in feed', (tester) async {
+  testWidgets('ОТПРАВИТЬ sends text and shows it in feed', (tester) async {
     final messages = <Map<String, Object?>>[];
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
@@ -110,7 +110,7 @@ void main() {
 
     expect(find.byKey(const Key('chat-compose')), findsOneWidget);
     expect(find.byKey(const Key('chat-blow')), findsOneWidget);
-    expect(find.text('ДУНУТЬ'), findsOneWidget);
+    expect(find.text('ОТПРАВИТЬ'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('chat-compose')), 'hello from flutter');
     await tester.tap(find.byKey(const Key('chat-blow')));

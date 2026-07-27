@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Task-level contract for P064: Flutter compose «ДУНУТЬ» → TUI peer sees text.
+# Task-level contract for P064: Flutter compose «ОТПРАВИТЬ» → TUI peer sees text.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,7 +15,7 @@ fail() {
 command -v flutter >/dev/null 2>&1 || fail "flutter not on PATH"
 command -v dart >/dev/null 2>&1 || fail "dart not on PATH"
 
-grep -q 'ДУНУТЬ' apps/dudka/lib/screens/chat_screen.dart || fail "ДУНУТЬ button missing"
+grep -q 'ОТПРАВИТЬ' apps/dudka/lib/screens/chat_screen.dart || fail "ОТПРАВИТЬ button missing"
 grep -q 'sendText' apps/dudka/lib/engine/client.dart || fail "EngineClient.sendText missing"
 
 (

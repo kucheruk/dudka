@@ -27,7 +27,7 @@ Status: Partial
 
 - cold start со сохранённым ником → чат ≤ заявленного NFR;
 - status strip + peers + текстовая лента (wireframe); *(P063: Flutter `ChatScreen` ← `/me` `/peers` `/status` `/messages`; DESIGN step-row — P069)*
-- compose «ДУНУТЬ» → `POST /send`; Flutter↔TUI в LAN; *(P064: `EngineClient.sendText`, `./scripts/flutter_send_test.sh`)*
+- compose «ОТПРАВИТЬ» → `POST /send`; Flutter↔TUI в LAN; *(P064: `EngineClient.sendText`, `./scripts/flutter_send_test.sh`; лексикон: не «дунуть»)*
 - Flutter↔Flutter текст+файл на двух peers; *(P071: два `dudkad` + `live_send`/`live_wait_text`/`live_announce`/`live_fetch`, `./scripts/flutter_ff_test.sh`)*
 - evidence: `apps/dudka/test/chat_screen_test.dart`, `apps/dudka/test/compose_send_test.dart`, `./scripts/flutter_chat_test.sh`, `./scripts/flutter_send_test.sh`, `./scripts/flutter_ff_test.sh` (P063/P064/P071).
 

@@ -16,7 +16,7 @@ flutter run -d macos --dart-define=DUDKA_ENGINE=http://127.0.0.1:17880
 flutter run -d macos --dart-define=DUDKAD_BIN=$PWD/../../dist/dudkad
 ```
 
-Cold start: first-run nick (RU) → chat (status/peers/feed) → compose «ДУНУТЬ» (`POST /send`). Skip uses hostname / «Прилагательное+Животное».
+Cold start: first-run nick (RU) → chat (status/peers/feed) → compose «ОТПРАВИТЬ» (`POST /send`). Skip uses hostname / «Прилагательное+Животное».
 
 Layout: wide (≥700 dp) dual-pane peers|feed; narrow — horizontal peer strip. Resize keeps compose draft.
 

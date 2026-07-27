@@ -117,7 +117,7 @@ Step pads — короткие прямоугольники в ряд (груп�
 - **Status strip:** имя продукта, count online (segment-style), короткий статус сети.
 - **Peer list:** ник + led idle/active; без аватаров-фото в MVP.
 - **Message row:** время · ник · текст; файл — имя, размер, step-progress, thumbnail для image/*.
-- **Compose:** поле ввода + кнопка «ДУНУТЬ» (primary) + attach (ghost).
+- **Compose:** поле ввода + кнопка «ОТПРАВИТЬ» (primary) + attach (ghost).
 - **Empty:** «НИКОГО РЯДОМ» + одна secondary «ИСКАТЬ» (subnet scan), без иллюстраций-баннеров.
 - **First-run:** один экран ника; дальше сразу чат.
 

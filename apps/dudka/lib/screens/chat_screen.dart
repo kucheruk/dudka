@@ -384,7 +384,7 @@ class _ChatScreenState extends State<ChatScreen> {
         FilledButton(
           key: const Key('chat-blow'),
           onPressed: _sending ? null : _blow,
-          child: const Text('ДУНУТЬ'),
+          child: const Text('ОТПРАВИТЬ'),
         ),
       ],
     );
