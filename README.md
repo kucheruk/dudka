@@ -15,9 +15,10 @@
 ```bash
 go build -o dist/dudkad ./cmd/dudkad   # engine
 go build -o dist/dudka ./cmd/dudka     # Linux TUI
-./dist/dudkad -data-dir /tmp/dudka-demo
+./dist/dudkad -data-dir /tmp/dudka-demo -name Вася
 # → dudkad 0.0.0-dev
-# → peer_id=<uuid>   (stable across restarts in that data-dir)
+# → peer_id=<uuid>          (stable across restarts)
+# → display_name=Вася       (флаг / prompt → hostname → Прилагательное+Животное)
 ./dist/dudka    # → dudka 0.0.0-dev
 ```
 
@@ -31,7 +32,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`.
 
 ## Зачем
 

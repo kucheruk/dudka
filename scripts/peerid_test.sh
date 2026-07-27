@@ -5,6 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+export DUDKA_NO_PROMPT=1
 
 fail() {
   echo "peerid_test FAIL: $*" >&2
