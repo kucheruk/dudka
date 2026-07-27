@@ -2,6 +2,7 @@ package files_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"io"
 	"os"
@@ -57,7 +58,7 @@ func TestServeAndFetchChunksReassemble(t *testing.T) {
 	}
 
 	outPath := filepath.Join(dir, "out.bin")
-	got, err := files.ReadChunks(bytes.NewReader(wire.Bytes()), "fid-1", outPath, int64(len(payload)), nil)
+	got, err := files.ReadChunks(context.Background(), bytes.NewReader(wire.Bytes()), "fid-1", outPath, int64(len(payload)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

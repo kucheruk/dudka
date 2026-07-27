@@ -167,6 +167,39 @@ func (c *Client) StartFetch(fileID string) (TransferRow, error) {
 	return tr, nil
 }
 
+// CancelFetch aborts an in-flight download (P053).
+func (c *Client) CancelFetch(fileID string) (TransferRow, error) {
+	fileID = strings.TrimSpace(fileID)
+	if fileID == "" {
+		return TransferRow{}, fmt.Errorf("tui: empty file_id")
+	}
+	body, _ := json.Marshal(map[string]string{"file_id": fileID})
+	resp, err := c.client.Post(c.base+"/files/cancel", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return TransferRow{}, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return TransferRow{}, fmt.Errorf("tui: cancel → %s: %s", resp.Status, strings.TrimSpace(string(raw)))
+	}
+	var wire struct {
+		FileID  string `json:"file_id"`
+		Name    string `json:"name"`
+		Percent int    `json:"percent"`
+		Status  string `json:"status"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return TransferRow{}, err
+	}
+	return TransferRow{
+		FileID:  wire.FileID,
+		Name:    wire.Name,
+		Percent: wire.Percent,
+		Status:  wire.Status,
+	}, nil
+}
+
 func (c *Client) getJSON(path string, dst any) error {
 	resp, err := c.client.Get(c.base + path)
 	if err != nil {

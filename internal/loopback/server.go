@@ -50,6 +50,7 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("POST /send", s.handleSend)
 	s.mux.HandleFunc("POST /files/announce", s.handleFileAnnounce)
 	s.mux.HandleFunc("POST /files/fetch", s.handleFileFetch)
+	s.mux.HandleFunc("POST /files/cancel", s.handleFileCancel)
 	s.mux.HandleFunc("GET /files/transfers", s.handleFileTransfers)
 	s.mux.HandleFunc("GET /messages", s.handleMessages)
 	s.mux.HandleFunc("GET /tail", s.handleTail)
@@ -336,6 +337,36 @@ func (s *Server) handleFileTransfers(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{"transfers": list})
+}
+
+func (s *Server) handleFileCancel(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	if hub == nil {
+		http.Error(w, "chat unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		FileID string `json:"file_id"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	tr, err := hub.CancelFetch(strings.TrimSpace(req.FileID))
+	if err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(tr)
 }
 
 func (s *Server) handleMessages(w http.ResponseWriter, _ *http.Request) {

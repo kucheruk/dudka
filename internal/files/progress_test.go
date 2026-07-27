@@ -2,6 +2,7 @@ package files_test
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestReadChunksReportsProgressToHundred(t *testing.T) {
 
 	var percents []int
 	out := filepath.Join(dir, "out.bin")
-	n, err := files.ReadChunks(bytes.NewReader(wire.Bytes()), "fid", out, int64(len(payload)), func(recv, total int64) {
+	n, err := files.ReadChunks(context.Background(), bytes.NewReader(wire.Bytes()), "fid", out, int64(len(payload)), func(recv, total int64) {
 		percents = append(percents, files.Percent(recv, total))
 	})
 	if err != nil {

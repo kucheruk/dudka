@@ -71,8 +71,8 @@ Status: Draft
 Проверка:
 
 - во время передачи виден прогресс; *(P052: TUI `NN%` на FILE-строке, `GET /files/transfers`)*
-- Cancel; *(P053)*
-- evidence: UI fixtures / `scripts/file_progress_test.sh`.
+- Cancel; *(P053: `/cancel <file_id>` → `CANCELLED discarded`, не 100%)*
+- evidence: UI fixtures / `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`.
 
 Зависимости: DUD-FILE-110  
 ADR: не требуется

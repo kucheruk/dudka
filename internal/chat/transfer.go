@@ -2,11 +2,12 @@ package chat
 
 import "sync"
 
-// Transfer lifecycle statuses (P052). Cancelled comes later (P053).
+// Transfer lifecycle statuses (P052 / P053).
 const (
 	TransferDownloading = "downloading"
 	TransferDone        = "done"
 	TransferError       = "error"
+	TransferCancelled   = "cancelled"
 )
 
 // Transfer is a download progress snapshot for loopback/TUI (0–100%).
@@ -51,4 +52,17 @@ func (b *transferBook) put(t Transfer) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.byID[t.FileID] = t
+}
+
+// putActive updates a transfer only while it is still downloadable (not cancelled/done).
+func (b *transferBook) putActive(t Transfer) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if cur, ok := b.byID[t.FileID]; ok {
+		if cur.Status == TransferCancelled || cur.Status == TransferDone {
+			return false
+		}
+	}
+	b.byID[t.FileID] = t
+	return true
 }

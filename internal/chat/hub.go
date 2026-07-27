@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strings"
@@ -43,6 +44,7 @@ type Hub struct {
 	progressYield time.Duration
 	xfers         *transferBook
 	fetching      map[string]bool
+	cancels       map[string]context.CancelFunc
 	syncing       bool
 }
 
@@ -80,12 +82,18 @@ func NewHub(cfg Config) *Hub {
 		progressYield: cfg.ProgressYield,
 		xfers:         newTransferBook(),
 		fetching:      make(map[string]bool),
+		cancels:       make(map[string]context.CancelFunc),
 	}
 }
 
 // Transfers returns download progress snapshots (P052).
 func (h *Hub) Transfers() []Transfer {
 	return h.xfers.list()
+}
+
+// Transfer returns one transfer by file_id, if present.
+func (h *Hub) Transfer(fileID string) (Transfer, bool) {
+	return h.xfers.get(fileID)
 }
 
 // SetName updates display_name used for subsequent sends (DUD-CHAT-111 foreshadow).

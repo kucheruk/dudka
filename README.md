@@ -34,7 +34,9 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 #   → чанки у источника → полный файл в data-dir/inbox (P051)
 # curl -s -X POST …/files/fetch -d '{"file_id":"…","wait":false}' + GET /files/transfers
 #   → percent 0–100 во время скачивания (P052)
+# curl -s -X POST …/files/cancel -d '{"file_id":"…"}' → cancelled, partial discarded (P053)
 # ./dist/dudka -engine … -fetch <file_id>   # кадры с NN% до 100%
+# /cancel <file_id> в TUI compose
 # curl -s http://127.0.0.1:17880/messages → лента у всех online
 # текст > 4000 code points → 4xx + понятная ошибка (P031)
 # curl -s http://127.0.0.1:17880/tail → хвост ≤200 + keeper_id (после join синхронизируется с keeper)
@@ -58,7 +60,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 
 Гейт запускает `go test ./...`, затем multi-peer **protocol tests** (`./scripts/protocol_tests.sh`: announce/peers/send/tail/WAN/TUI exchange и др., 2+ peer).  
 Мета-контракт P045: `./scripts/protocol_gate_test.sh`.  
-Прочие контракты по задачам: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/send_length_test.sh`, `./scripts/file_announce_test.sh`, `./scripts/file_fetch_test.sh`, `./scripts/file_progress_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_nick_test.sh`.
+Прочие контракты по задачам: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/send_length_test.sh`, `./scripts/file_announce_test.sh`, `./scripts/file_fetch_test.sh`, `./scripts/file_progress_test.sh`, `./scripts/file_cancel_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_nick_test.sh`.
 
 ## Зачем
 

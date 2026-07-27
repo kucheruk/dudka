@@ -39,6 +39,7 @@ const (
 	TransferDownloading = "downloading"
 	TransferDone        = "done"
 	TransferError       = "error"
+	TransferCancelled   = "cancelled"
 )
 
 // MsgRow is one feed line for the feed pane (text P041, file announce P050).
@@ -142,7 +143,7 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id>)\n")
+	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id> · /cancel <file_id>)\n")
 	return b.String()
 }
 
@@ -153,8 +154,19 @@ func feedLine(m MsgRow, tr TransferRow) string {
 			name = "file"
 		}
 		line := fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
-		if tr.FileID != "" {
-			line = fmt.Sprintf("%s %d%%", line, tr.Percent)
+		switch tr.Status {
+		case TransferCancelled:
+			line = fmt.Sprintf("%s CANCELLED discarded", line)
+		case TransferError:
+			line = fmt.Sprintf("%s ERROR", line)
+		case TransferDownloading, TransferDone:
+			if tr.FileID != "" {
+				line = fmt.Sprintf("%s %d%%", line, tr.Percent)
+			}
+		default:
+			if tr.FileID != "" {
+				line = fmt.Sprintf("%s %d%%", line, tr.Percent)
+			}
 		}
 		return line
 	}

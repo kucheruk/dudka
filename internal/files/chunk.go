@@ -2,6 +2,7 @@ package files
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -173,7 +174,11 @@ func ServeChunks(w io.Writer, store *Store, req ChunkReq) error {
 
 // ReadChunks consumes chunk lines from r and writes the reassembled file to destPath.
 // total is the expected size from file-announce (for percent); onProgress may be nil.
-func ReadChunks(r io.Reader, fileID string, destPath string, total int64, onProgress ProgressFunc) (int64, error) {
+// ctx cancel aborts the download, discards the partial file, and returns ErrCancelled (P053).
+func ReadChunks(ctx context.Context, r io.Reader, fileID string, destPath string, total int64, onProgress ProgressFunc) (int64, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	br := bufio.NewReader(r)
 	tmp := destPath + ".partial"
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
@@ -187,6 +192,7 @@ func ReadChunks(r io.Reader, fileID string, destPath string, total int64, onProg
 		}
 		if tmp != "" {
 			_ = os.Remove(tmp)
+			_ = os.Remove(destPath) // never leave a success path after abort
 		}
 	}()
 
@@ -200,6 +206,9 @@ func ReadChunks(r io.Reader, fileID string, destPath string, total int64, onProg
 	var written int64
 	expect := int64(0)
 	for {
+		if err := ctx.Err(); err != nil {
+			return written, ErrCancelled
+		}
 		line, err := br.ReadBytes('\n')
 		if err != nil && !(err == io.EOF && len(line) > 0) {
 			if err == io.EOF {
@@ -231,8 +240,14 @@ func ReadChunks(r io.Reader, fileID string, destPath string, total int64, onProg
 			written += int64(len(data))
 			expect += int64(len(data))
 			report(written)
+			if err := ctx.Err(); err != nil {
+				return written, ErrCancelled
+			}
 		}
 		if c.EOF {
+			if err := ctx.Err(); err != nil {
+				return written, ErrCancelled
+			}
 			if cerr := f.Close(); cerr != nil {
 				return written, cerr
 			}

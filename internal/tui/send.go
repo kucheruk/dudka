@@ -68,6 +68,13 @@ func HandleComposeLine(c *Client, line string) error {
 		_, err := c.StartFetch(fileID)
 		return err
 	}
+	if fileID, isCancel, err := ParseCancelCommand(text); isCancel {
+		if err != nil {
+			return err
+		}
+		_, err := c.CancelFetch(fileID)
+		return err
+	}
 	_, err := c.Send(text)
 	return err
 }
@@ -81,6 +88,19 @@ func ParseFetchCommand(line string) (fileID string, ok bool, err error) {
 	rest := strings.TrimSpace(strings.TrimPrefix(line, "/fetch"))
 	if rest == "" {
 		return "", true, fmt.Errorf("tui: /fetch needs a file_id")
+	}
+	return rest, true, nil
+}
+
+// ParseCancelCommand recognizes `/cancel <file_id>` (P053).
+func ParseCancelCommand(line string) (fileID string, ok bool, err error) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "/cancel") {
+		return "", false, nil
+	}
+	rest := strings.TrimSpace(strings.TrimPrefix(line, "/cancel"))
+	if rest == "" {
+		return "", true, fmt.Errorf("tui: /cancel needs a file_id")
 	}
 	return rest, true, nil
 }

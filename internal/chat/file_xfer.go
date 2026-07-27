@@ -1,9 +1,13 @@
 package chat
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
+	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"dudka/internal/discovery"
@@ -87,6 +91,74 @@ func (h *Hub) StartFetch(fileID string) (Transfer, error) {
 	return tr, nil
 }
 
+// CancelFetch aborts an in-flight download; partial file is discarded (P053).
+func (h *Hub) CancelFetch(fileID string) (Transfer, error) {
+	fileID = strings.TrimSpace(fileID)
+	if fileID == "" {
+		return Transfer{}, fmt.Errorf("chat: empty file_id")
+	}
+	tr, ok := h.xfers.get(fileID)
+	if !ok {
+		return Transfer{}, fmt.Errorf("chat: unknown transfer")
+	}
+	if tr.Status == TransferDone {
+		return tr, fmt.Errorf("chat: transfer already done")
+	}
+	if tr.Status == TransferCancelled {
+		h.discardInbox(fileID, tr.Name)
+		return tr, nil
+	}
+
+	h.mu.Lock()
+	cancel := h.cancels[fileID]
+	h.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+
+	// Mark cancelled immediately so UX never shows success after cancel.
+	cancelled := Transfer{
+		FileID:   fileID,
+		Name:     tr.Name,
+		Received: tr.Received,
+		Total:    tr.Total,
+		Percent:  tr.Percent,
+		Status:   TransferCancelled,
+		Error:    "discarded",
+	}
+	h.xfers.put(cancelled)
+
+	// Wait for the fetch worker to unwind so .partial is removed.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		h.mu.Lock()
+		still := h.fetching[fileID]
+		h.mu.Unlock()
+		if !still {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	h.discardInbox(fileID, tr.Name)
+	h.logf("file_fetch_cancelled file_id=%s percent=%d", fileID, tr.Percent)
+	if final, ok := h.xfers.get(fileID); ok {
+		return final, nil
+	}
+	return cancelled, nil
+}
+
+func (h *Hub) discardInbox(fileID, name string) {
+	if h.inboxDir == "" || fileID == "" {
+		return
+	}
+	dest, err := files.InboxPath(h.inboxDir, fileID, name)
+	if err != nil {
+		return
+	}
+	_ = os.Remove(dest)
+	_ = os.Remove(dest + ".partial")
+}
+
 // Fetch downloads file_id from the announce source and returns local path metadata.
 func (h *Hub) Fetch(fileID string) (FetchResult, error) {
 	msg, ok := h.store.FindFile(fileID)
@@ -109,16 +181,29 @@ func (h *Hub) Fetch(fileID string) (FetchResult, error) {
 }
 
 func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
-	h.xfers.put(Transfer{
-		FileID:  fileID,
-		Name:    msg.FileName,
-		Total:   msg.Size,
-		Percent: 0,
-		Status:  TransferDownloading,
-	})
+	ctx, cancel := context.WithCancel(context.Background())
+	h.mu.Lock()
+	h.cancels[fileID] = cancel
+	h.mu.Unlock()
+	defer func() {
+		cancel()
+		h.mu.Lock()
+		delete(h.cancels, fileID)
+		h.mu.Unlock()
+	}()
+
+	if tr, ok := h.xfers.get(fileID); !ok || tr.Status != TransferCancelled {
+		h.xfers.put(Transfer{
+			FileID:  fileID,
+			Name:    msg.FileName,
+			Total:   msg.Size,
+			Percent: 0,
+			Status:  TransferDownloading,
+		})
+	}
 
 	update := func(recv int64) {
-		h.xfers.put(Transfer{
+		ok := h.xfers.putActive(Transfer{
 			FileID:   fileID,
 			Name:     msg.FileName,
 			Received: recv,
@@ -126,6 +211,9 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 			Percent:  files.Percent(recv, msg.Size),
 			Status:   TransferDownloading,
 		})
+		if !ok {
+			return
+		}
 		if h.progressYield > 0 {
 			time.Sleep(h.progressYield)
 		} else {
@@ -134,13 +222,16 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 	}
 
 	if msg.PeerID == h.peerID {
+		if err := ctx.Err(); err != nil {
+			return h.finishCancelled(fileID, msg, 0, "")
+		}
 		if h.blobs != nil && h.blobs.Has(fileID) {
 			p, err := h.blobs.Path(fileID)
 			if err != nil {
 				h.failTransfer(fileID, msg.FileName, msg.Size, err)
 				return FetchResult{}, err
 			}
-			h.xfers.put(Transfer{
+			if !h.xfers.putActive(Transfer{
 				FileID:   fileID,
 				Name:     msg.FileName,
 				Received: msg.Size,
@@ -148,7 +239,9 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 				Percent:  100,
 				Status:   TransferDone,
 				Path:     p,
-			})
+			}) {
+				return h.finishCancelled(fileID, msg, 0, "")
+			}
 			return FetchResult{
 				FileID: fileID, Path: p, Size: msg.Size, Name: msg.FileName,
 				Percent: 100, Status: TransferDone,
@@ -207,14 +300,24 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 		return FetchResult{}, err
 	}
 
-	n, err := files.ReadChunks(conn, fileID, dest, msg.Size, func(recv, _ int64) {
+	n, err := files.ReadChunks(ctx, conn, fileID, dest, msg.Size, func(recv, _ int64) {
 		update(recv)
 	})
+	if errors.Is(err, files.ErrCancelled) || (err == nil && ctx.Err() != nil) {
+		_ = os.Remove(dest)
+		_ = os.Remove(dest + ".partial")
+		return h.finishCancelled(fileID, msg, n, dest)
+	}
 	if err != nil {
+		_ = os.Remove(dest)
+		_ = os.Remove(dest + ".partial")
+		if tr, ok := h.xfers.get(fileID); ok && tr.Status == TransferCancelled {
+			return h.finishCancelled(fileID, msg, n, dest)
+		}
 		h.failTransfer(fileID, msg.FileName, msg.Size, err)
 		return FetchResult{}, err
 	}
-	h.xfers.put(Transfer{
+	if !h.xfers.putActive(Transfer{
 		FileID:   fileID,
 		Name:     msg.FileName,
 		Received: n,
@@ -222,7 +325,11 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 		Percent:  100,
 		Status:   TransferDone,
 		Path:     dest,
-	})
+	}) {
+		_ = os.Remove(dest)
+		_ = os.Remove(dest + ".partial")
+		return h.finishCancelled(fileID, msg, n, dest)
+	}
 	h.logf("file_fetch_ok file_id=%s path=%s size=%d", fileID, dest, n)
 	return FetchResult{
 		FileID: fileID, Path: dest, Size: n, Name: msg.FileName,
@@ -230,7 +337,35 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 	}, nil
 }
 
+func (h *Hub) finishCancelled(fileID string, msg Message, recv int64, dest string) (FetchResult, error) {
+	if dest != "" {
+		_ = os.Remove(dest)
+		_ = os.Remove(dest + ".partial")
+	}
+	tr := Transfer{
+		FileID:   fileID,
+		Name:     msg.FileName,
+		Received: recv,
+		Total:    msg.Size,
+		Percent:  files.Percent(recv, msg.Size),
+		Status:   TransferCancelled,
+		Error:    "discarded",
+	}
+	if prev, ok := h.xfers.get(fileID); ok && prev.Status == TransferCancelled {
+		tr.Percent = prev.Percent
+		tr.Received = prev.Received
+	}
+	h.xfers.put(tr)
+	return FetchResult{
+		FileID: fileID, Name: msg.FileName, Size: 0,
+		Percent: tr.Percent, Status: TransferCancelled,
+	}, files.ErrCancelled
+}
+
 func (h *Hub) failTransfer(fileID, name string, total int64, err error) {
+	if tr, ok := h.xfers.get(fileID); ok && tr.Status == TransferCancelled {
+		return
+	}
 	h.xfers.put(Transfer{
 		FileID:  fileID,
 		Name:    name,
@@ -241,3 +376,4 @@ func (h *Hub) failTransfer(fileID, name string, total int64, err error) {
 	})
 	h.logf("file_fetch_err file_id=%s err=%v", fileID, err)
 }
+
