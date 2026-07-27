@@ -18,9 +18,12 @@ flutter run -d macos --dart-define=DUDKAD_BIN=$PWD/../../dist/dudkad
 
 Cold start: first-run nick (RU) → chat (status/peers/feed) → compose «ДУНУТЬ» (`POST /send`). Skip uses hostname / «Прилагательное+Животное».
 
+Layout: wide (≥700 dp) dual-pane peers|feed; narrow — horizontal peer strip. Resize keeps compose draft.
+
 ## Checks
 
 ```bash
+./scripts/flutter_layout_test.sh     # P070 wide dual-pane / narrow peer strip
 ./scripts/flutter_theme_test.sh      # P069 DESIGN.md theme + step-progress
 ./scripts/flutter_thumbs_test.sh     # P068 image thumbs in feed
 ./scripts/flutter_files_test.sh      # P067 file announce/fetch/cancel

@@ -99,14 +99,14 @@ ADR: не требуется
 ### DUD-UI-140
 
 Priority: P1  
-Status: Draft
+Status: Accepted
 
 На широком GUI (≥ 700 dp logical width) используется dual-pane: peers | лента. На узком — peers как strip/лист поверх или над лентой, без обязательного отдельного tab root.
 
 Проверка:
 
-- resize desktop переключает layout без потери compose text;
-- evidence: adaptive screenshot set.
+- resize desktop переключает layout без потери compose text; *(P070: один `_compose` controller переживает narrow↔wide)*
+- evidence: `apps/dudka/test/layout_test.dart`, `./scripts/flutter_layout_test.sh` (P070).
 
 Зависимости: DUD-UI-101  
 ADR: не требуется

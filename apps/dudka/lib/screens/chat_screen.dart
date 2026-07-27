@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
+import '../layout/chat_layout.dart';
 import '../theme/dudka_theme.dart';
 import '../widgets/step_progress.dart';
 import 'settings_nick_screen.dart';
 
-/// Chat shell: DESIGN.md charcoal panel + step-progress (P063–P069).
+/// Chat shell: DESIGN.md charcoal + adaptive dual-pane / peer strip (P063–P070).
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -247,25 +248,94 @@ class _ChatScreenState extends State<ChatScreen> {
           style: DudkaType.mono(size: 12, color: DudkaColors.silkscreenDim),
         ),
         const SizedBox(height: 12),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = isWideChatLayout(constraints.maxWidth);
+              if (wide) {
+                return _wideBody(state, snap);
+              }
+              return _narrowBody(state, snap);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _wideBody(String state, ChatSnapshot snap) {
+    return Row(
+      key: const Key('chat-layout-wide'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 220,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('PEERS', style: DudkaType.label()),
+              const SizedBox(height: 4),
+              Expanded(
+                child: Container(
+                  key: const Key('chat-peers'),
+                  alignment: Alignment.topLeft,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
+                      right: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 12, 0),
+                  child: KeyedSubtree(
+                    key: const Key('chat-peers-pane'),
+                    child: _peersList(state, snap, axis: Axis.vertical),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: _feedColumn(snap)),
+      ],
+    );
+  }
+
+  Widget _narrowBody(String state, ChatSnapshot snap) {
+    return Column(
+      key: const Key('chat-layout-narrow'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Text('PEERS', style: DudkaType.label()),
         const SizedBox(height: 4),
-        Expanded(
-          flex: 2,
+        SizedBox(
+          height: state == 'alone' || state == 'no_network' ? 88 : 40,
           child: Container(
             key: const Key('chat-peers'),
-            alignment: Alignment.topLeft,
+            alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
             ),
             padding: const EdgeInsets.only(top: 8),
-            child: _peersPane(state, snap),
+            child: KeyedSubtree(
+              key: const Key('chat-peers-strip'),
+              child: _peersList(state, snap, axis: Axis.horizontal),
+            ),
           ),
         ),
         const SizedBox(height: 8),
+        Expanded(child: _feedColumn(snap)),
+      ],
+    );
+  }
+
+  Widget _feedColumn(ChatSnapshot snap) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Text('ЛЕНТА', style: DudkaType.label()),
         const SizedBox(height: 4),
         Expanded(
-          flex: 5,
           child: Container(
             key: const Key('chat-feed'),
             alignment: Alignment.topLeft,
@@ -282,67 +352,113 @@ class _ChatScreenState extends State<ChatScreen> {
         if (_fileError != null)
           Text(_fileError!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                key: const Key('chat-compose'),
-                controller: _compose,
-                enabled: !_sending,
-                decoration: const InputDecoration(
-                  hintText: 'текст…',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _blow(),
-              ),
+        _composeRow(),
+      ],
+    );
+  }
+
+  Widget _composeRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            key: const Key('chat-compose'),
+            controller: _compose,
+            enabled: !_sending,
+            decoration: const InputDecoration(
+              hintText: 'текст…',
+              border: OutlineInputBorder(),
+              isDense: true,
             ),
-            const SizedBox(width: 8),
-            OutlinedButton(
-              key: const Key('chat-file'),
-              onPressed: _announcing ? null : _announcePicked,
-              child: Text(_announcing ? '…' : 'ФАЙЛ'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              key: const Key('chat-blow'),
-              onPressed: _sending ? null : _blow,
-              child: const Text('ДУНУТЬ'),
-            ),
-          ],
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => _blow(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton(
+          key: const Key('chat-file'),
+          onPressed: _announcing ? null : _announcePicked,
+          child: Text(_announcing ? '…' : 'ФАЙЛ'),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          key: const Key('chat-blow'),
+          onPressed: _sending ? null : _blow,
+          child: const Text('ДУНУТЬ'),
         ),
       ],
     );
   }
 
-  Widget _peersPane(String state, ChatSnapshot snap) {
+  Widget _peersList(String state, ChatSnapshot snap, {required Axis axis}) {
     if (state == 'no_network') {
       return const Text('НЕТ СЕТИ', key: Key('chat-peers-no-network'));
     }
     if (state == 'alone') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            key: const Key('chat-seek'),
-            onPressed: _seeking ? null : _seek,
-            child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
-          ),
-          if (_seekError != null) ...[
-            const SizedBox(height: 4),
-            Text(_seekError!, style: const TextStyle(color: Colors.red)),
-          ],
-        ],
+      return axis == Axis.horizontal
+          ? Row(
+              children: [
+                const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  key: const Key('chat-seek'),
+                  onPressed: _seeking ? null : _seek,
+                  child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                ),
+                if (_seekError != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(_seekError!, style: const TextStyle(color: Colors.red)),
+                  ),
+                ],
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  key: const Key('chat-seek'),
+                  onPressed: _seeking ? null : _seek,
+                  child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                ),
+                if (_seekError != null) ...[
+                  const SizedBox(height: 4),
+                  Text(_seekError!, style: const TextStyle(color: Colors.red)),
+                ],
+              ],
+            );
+    }
+    if (axis == Axis.horizontal) {
+      return ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: snap.peers.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (context, i) {
+          final p = snap.peers[i];
+          return Center(
+            child: Text(
+              p.displayName,
+              key: Key('chat-peer-${p.peerId}'),
+              style: DudkaType.mono(size: 13),
+            ),
+          );
+        },
       );
     }
     return ListView.builder(
       itemCount: snap.peers.length,
       itemBuilder: (context, i) {
         final p = snap.peers[i];
-        return Text(p.displayName, key: Key('chat-peer-${p.peerId}'));
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            p.displayName,
+            key: Key('chat-peer-${p.peerId}'),
+            style: DudkaType.mono(size: 13),
+          ),
+        );
       },
     );
   }
