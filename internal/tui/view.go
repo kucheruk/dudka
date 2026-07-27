@@ -28,11 +28,23 @@ type PeerRow struct {
 	DisplayName string
 }
 
-// MsgRow is one chat line for the feed pane (P041).
+// Feed row types (mirror engine message.type).
+const (
+	MsgTypeChat         = "chat"
+	MsgTypeFileAnnounce = "file_announce"
+)
+
+// MsgRow is one feed line for the feed pane (text P041, file announce P050).
 type MsgRow struct {
 	DisplayName string
 	Text        string
 	TS          time.Time
+	Type        string
+	FileID      string
+	FileName    string
+	Size        int64
+	Mime        string
+	Hash        string
 }
 
 // Snapshot is one frame of status + peers + feed.
@@ -100,16 +112,27 @@ func Render(s Snapshot) string {
 			if name == "" {
 				name = "—"
 			}
-			text := strings.TrimSpace(m.Text)
+			line := feedLine(m)
 			ts := m.TS
 			if ts.IsZero() {
-				fmt.Fprintf(&b, "  · %s · %s\n", name, text)
+				fmt.Fprintf(&b, "  · %s · %s\n", name, line)
 				continue
 			}
-			fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, text)
+			fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, line)
 		}
 	}
 	b.WriteString("INPUT\n")
 	b.WriteString("  >  (Enter = send · /nick Имя)\n")
 	return b.String()
+}
+
+func feedLine(m MsgRow) string {
+	if m.Type == MsgTypeFileAnnounce || (m.FileID != "" && m.FileName != "") {
+		name := strings.TrimSpace(m.FileName)
+		if name == "" {
+			name = "file"
+		}
+		return fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
+	}
+	return strings.TrimSpace(m.Text)
 }

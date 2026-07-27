@@ -86,7 +86,7 @@ func (h *Hub) Send(text string) (SendResult, error) {
 	}
 	h.mu.RLock()
 	msg := Message{
-		Type:              "chat",
+		Type:              TypeChat,
 		MsgID:             id,
 		PeerID:            h.peerID,
 		DisplayNameAtSend: h.name,
@@ -94,7 +94,43 @@ func (h *Hub) Send(text string) (SendResult, error) {
 		Text:              text,
 	}
 	h.mu.RUnlock()
+	return h.publish(msg)
+}
 
+// AnnounceFile publishes file metadata into the feed without transferring bytes (DUD-FILE-101 / P050).
+func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
+	a.Name = strings.TrimSpace(a.Name)
+	a.Mime = strings.TrimSpace(a.Mime)
+	a.Hash = strings.TrimSpace(a.Hash)
+	if err := ValidateFileAnnounce(a); err != nil {
+		return SendResult{}, err
+	}
+	msgID, err := identity.NewUUIDv4()
+	if err != nil {
+		return SendResult{}, err
+	}
+	fileID, err := identity.NewUUIDv4()
+	if err != nil {
+		return SendResult{}, err
+	}
+	h.mu.RLock()
+	msg := Message{
+		Type:              TypeFileAnnounce,
+		MsgID:             msgID,
+		PeerID:            h.peerID,
+		DisplayNameAtSend: h.name,
+		TS:                time.Now().UTC(),
+		FileID:            fileID,
+		FileName:          a.Name,
+		Size:              a.Size,
+		Mime:              a.Mime,
+		Hash:              a.Hash,
+	}
+	h.mu.RUnlock()
+	return h.publish(msg)
+}
+
+func (h *Hub) publish(msg Message) (SendResult, error) {
 	_ = h.store.Append(msg)
 	peers := h.peers.List()
 	for _, p := range peers {
@@ -103,10 +139,21 @@ func (h *Hub) Send(text string) (SendResult, error) {
 	}
 	queued := len(peers)
 	status := SendStatusForQueued(queued)
-	if status == StatusQueued {
-		h.logf("chat_queued msg_id=%s queued=%d text_len=%d", msg.MsgID, queued, len(msg.Text))
-	} else {
-		h.logf("chat_accepted msg_id=%s queued=0 text_len=%d", msg.MsgID, len(msg.Text))
+	switch msg.Type {
+	case TypeFileAnnounce:
+		if status == StatusQueued {
+			h.logf("file_announce_queued msg_id=%s file_id=%s queued=%d name=%q size=%d",
+				msg.MsgID, msg.FileID, queued, msg.FileName, msg.Size)
+		} else {
+			h.logf("file_announce_accepted msg_id=%s file_id=%s queued=0 name=%q size=%d",
+				msg.MsgID, msg.FileID, msg.FileName, msg.Size)
+		}
+	default:
+		if status == StatusQueued {
+			h.logf("chat_queued msg_id=%s queued=%d text_len=%d", msg.MsgID, queued, len(msg.Text))
+		} else {
+			h.logf("chat_accepted msg_id=%s queued=0 text_len=%d", msg.MsgID, len(msg.Text))
+		}
 	}
 	return SendResult{Status: status, Queued: queued, Message: msg}, nil
 }

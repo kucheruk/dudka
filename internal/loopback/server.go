@@ -16,7 +16,7 @@ import (
 	"dudka/internal/discovery"
 )
 
-// Server is the loopback HTTP surface (health/me/nick/peers/status/scan/send/messages).
+// Server is the loopback HTTP surface (health/me/nick/peers/status/scan/send/messages/files).
 type Server struct {
 	mu          sync.RWMutex
 	peerID      string
@@ -47,6 +47,7 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	s.mux.HandleFunc("POST /scan", s.handleScan)
 	s.mux.HandleFunc("POST /send", s.handleSend)
+	s.mux.HandleFunc("POST /files/announce", s.handleFileAnnounce)
 	s.mux.HandleFunc("GET /messages", s.handleMessages)
 	s.mux.HandleFunc("GET /tail", s.handleTail)
 	return s
@@ -216,6 +217,44 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, err := hub.Send(req.Text)
+	if err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+func (s *Server) handleFileAnnounce(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	if hub == nil {
+		http.Error(w, "chat unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+		Size int64  `json:"size"`
+		Mime string `json:"mime"`
+		Hash string `json:"hash"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	res, err := hub.AnnounceFile(chat.FileAnnounce{
+		Name: req.Name,
+		Size: req.Size,
+		Mime: req.Mime,
+		Hash: req.Hash,
+	})
 	if err != nil {
 		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
 		return

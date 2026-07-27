@@ -25,8 +25,8 @@ Status: Draft
 
 Проверка:
 
-- announce виден без автоматической полной загрузки бинарника на всех;
-- evidence: protocol test.
+- announce виден без автоматической полной загрузки бинарника на всех; *(P050: `POST /files/announce` → `type=file_announce` в `GET /messages` у peers; без `GET /files/{id}` body)*
+- evidence: protocol test (`scripts/file_announce_test.sh`).
 
 Зависимости: DUD-CHAT-101  
 ADR: не требуется

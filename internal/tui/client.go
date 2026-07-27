@@ -75,19 +75,35 @@ func (c *Client) Fetch() (Snapshot, error) {
 
 	var msgsEnv struct {
 		Messages []struct {
+			Type              string    `json:"type"`
 			DisplayNameAtSend string    `json:"display_name_at_send"`
 			Text              string    `json:"text"`
 			TS                time.Time `json:"ts"`
+			FileID            string    `json:"file_id"`
+			FileName          string    `json:"name"`
+			Size              int64     `json:"size"`
+			Mime              string    `json:"mime"`
+			Hash              string    `json:"hash"`
 		} `json:"messages"`
 	}
 	if err := c.getJSON("/messages", &msgsEnv); err != nil {
 		return Snapshot{EngineOK: false, Err: err.Error()}, err
 	}
 	for _, m := range msgsEnv.Messages {
+		typ := m.Type
+		if typ == "" {
+			typ = MsgTypeChat
+		}
 		snap.Messages = append(snap.Messages, MsgRow{
 			DisplayName: m.DisplayNameAtSend,
 			Text:        m.Text,
 			TS:          m.TS,
+			Type:        typ,
+			FileID:      m.FileID,
+			FileName:    m.FileName,
+			Size:        m.Size,
+			Mime:        m.Mime,
+			Hash:        m.Hash,
 		})
 	}
 
