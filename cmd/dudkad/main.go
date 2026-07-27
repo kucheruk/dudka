@@ -75,6 +75,7 @@ func main() {
 		return identity.SaveDisplayName(*dataDir, name)
 	})
 	api.SetPeers(peers)
+	api.SetStatusProvider(func() discovery.Status { return disc.Status() })
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)

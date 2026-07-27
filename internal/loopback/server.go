@@ -14,13 +14,14 @@ import (
 	"dudka/internal/discovery"
 )
 
-// Server is the loopback HTTP surface (P012 /health, P015 /me, P016 /nick, P021 /peers).
+// Server is the loopback HTTP surface (health/me/nick/peers/status).
 type Server struct {
 	mu          sync.RWMutex
 	peerID      string
 	name        string
 	persistName func(string) error
 	peers       *discovery.PeerStore
+	status      func() discovery.Status
 	mux         *http.ServeMux
 }
 
@@ -39,6 +40,7 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("GET /me", s.handleMe)
 	s.mux.HandleFunc("POST /nick", s.handleNick)
 	s.mux.HandleFunc("GET /peers", s.handlePeers)
+	s.mux.HandleFunc("GET /status", s.handleStatus)
 	return s
 }
 
@@ -56,6 +58,13 @@ func (s *Server) SetPeers(store *discovery.PeerStore) {
 	s.peers = store
 }
 
+// SetStatusProvider wires discovery proto status into GET /status (P023).
+func (s *Server) SetStatusProvider(fn func() discovery.Status) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.status = fn
+}
+
 func (s *Server) handlePeers(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	store := s.peers
@@ -66,6 +75,24 @@ func (s *Server) handlePeers(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{"peers": peers})
+}
+
+func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	fn := s.status
+	s.mu.RUnlock()
+	st := discovery.Status{
+		ProtoMajor:   discovery.DefaultProtoMajor,
+		Incompatible: []discovery.IncompatiblePeer{},
+	}
+	if fn != nil {
+		st = fn()
+		if st.Incompatible == nil {
+			st.Incompatible = []discovery.IncompatiblePeer{}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(st)
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request) {

@@ -31,15 +31,16 @@ type Config struct {
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
 type Node struct {
-	cfg      Config
-	mu       sync.Mutex
-	conn     net.PacketConn
-	tcpLn    net.Listener
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	local    net.Addr
-	dialing  map[string]struct{}
-	tcpPort  int
+	cfg     Config
+	mu      sync.Mutex
+	conn    net.PacketConn
+	tcpLn   net.Listener
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
+	local   net.Addr
+	dialing map[string]struct{}
+	tcpPort int
+	proto   *protoBook
 }
 
 // NewNode builds a stopped discovery node.
@@ -62,7 +63,7 @@ func NewNode(cfg Config) *Node {
 	if cfg.Peers == nil {
 		cfg.Peers = NewPeerStore()
 	}
-	return &Node{cfg: cfg, dialing: make(map[string]struct{})}
+	return &Node{cfg: cfg, dialing: make(map[string]struct{}), proto: newProtoBook()}
 }
 
 // LocalAddr returns the bound UDP address after Start.
@@ -81,6 +82,32 @@ func (n *Node) TCPPort() int {
 
 // Peers returns the neighbor table.
 func (n *Node) Peers() *PeerStore { return n.cfg.Peers }
+
+// Status returns proto health including recent incompatible peers (P023).
+func (n *Node) Status() Status {
+	n.mu.Lock()
+	major, minor := n.cfg.ProtoMajor, n.cfg.ProtoMinor
+	n.mu.Unlock()
+	if major == 0 {
+		major = DefaultProtoMajor
+	}
+	return Status{
+		ProtoMajor:   major,
+		ProtoMinor:   minor,
+		Incompatible: n.proto.list(),
+	}
+}
+
+func (n *Node) noteProtoMismatch(peerID string, theirs int) {
+	n.mu.Lock()
+	ours := n.cfg.ProtoMajor
+	n.mu.Unlock()
+	if ours == 0 {
+		ours = DefaultProtoMajor
+	}
+	n.proto.note(peerID, theirs)
+	n.cfg.Logf("%s", FormatProtoMismatch(peerID, theirs, ours))
+}
 
 // SetTarget updates the UDP announce destination (tests).
 func (n *Node) SetTarget(target string) {
@@ -197,11 +224,9 @@ func (n *Node) handleRegisterConn(conn net.Conn) {
 	if err != nil {
 		return
 	}
-	host := hostFromAddr(conn.RemoteAddr())
-	n.rememberPeer(peerFromRegister(req, host))
-	n.cfg.Logf("register_rx peer_id=%s name=%s from=%s", req.PeerID, req.DisplayName, conn.RemoteAddr().String())
 
 	n.mu.Lock()
+	oursMajor := n.cfg.ProtoMajor
 	self := Register{
 		Type:        "register_ok",
 		PeerID:      n.cfg.PeerID,
@@ -212,6 +237,27 @@ func (n *Node) handleRegisterConn(conn net.Conn) {
 		InstanceID:  n.cfg.InstanceID,
 	}
 	n.mu.Unlock()
+	if oursMajor == 0 {
+		oursMajor = DefaultProtoMajor
+		self.ProtoMajor = oursMajor
+	}
+
+	if !CompatibleProto(oursMajor, req.ProtoMajor) {
+		n.noteProtoMismatch(req.PeerID, req.ProtoMajor)
+		_ = writeRegister(conn, Register{
+			Type:       "register_reject",
+			PeerID:     self.PeerID,
+			ProtoMajor: oursMajor,
+			ProtoMinor: self.ProtoMinor,
+			InstanceID: self.InstanceID,
+			Reason:     "proto_major_mismatch",
+		})
+		return
+	}
+
+	host := hostFromAddr(conn.RemoteAddr())
+	n.rememberPeer(peerFromRegister(req, host))
+	n.cfg.Logf("register_rx peer_id=%s name=%s from=%s", req.PeerID, req.DisplayName, conn.RemoteAddr().String())
 	_ = writeRegister(conn, self)
 }
 
@@ -252,13 +298,20 @@ func (n *Node) maybeRegister(a Announce, from net.Addr) {
 	if a.TCPPort <= 0 {
 		return
 	}
+	n.mu.Lock()
+	ours := n.cfg.ProtoMajor
+	n.mu.Unlock()
+	if !CompatibleProto(ours, a.ProtoMajor) {
+		n.noteProtoMismatch(a.PeerID, a.ProtoMajor)
+		return
+	}
 	host := hostFromAddr(from)
 	n.mu.Lock()
 	if _, busy := n.dialing[a.PeerID]; busy {
 		n.mu.Unlock()
 		return
 	}
-	// Skip dial if already known with same instance (cheap; P022 may refine).
+	// Skip dial if already known with same instance.
 	for _, p := range n.cfg.Peers.List() {
 		if p.PeerID == a.PeerID && p.InstanceID == a.InstanceID {
 			n.mu.Unlock()
@@ -306,6 +359,21 @@ func (n *Node) dialRegister(host string, port int) {
 	br := bufio.NewReader(conn)
 	resp, err := readRegister(br)
 	if err != nil {
+		return
+	}
+	if resp.Type == "register_reject" {
+		peerID := resp.PeerID
+		if peerID == "" {
+			peerID = host
+		}
+		n.noteProtoMismatch(peerID, resp.ProtoMajor)
+		return
+	}
+	n.mu.Lock()
+	ours := n.cfg.ProtoMajor
+	n.mu.Unlock()
+	if !CompatibleProto(ours, resp.ProtoMajor) {
+		n.noteProtoMismatch(resp.PeerID, resp.ProtoMajor)
 		return
 	}
 	n.rememberPeer(peerFromRegister(resp, host))

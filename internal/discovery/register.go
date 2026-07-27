@@ -19,6 +19,7 @@ type Register struct {
 	ProtoMinor  int    `json:"proto_minor"`
 	TCPPort     int    `json:"tcp_port"`
 	InstanceID  string `json:"instance_id"`
+	Reason      string `json:"reason,omitempty"`
 }
 
 // EncodeRegister serializes a register line (newline-delimited JSON).
@@ -26,7 +27,7 @@ func EncodeRegister(r Register) ([]byte, error) {
 	if r.Type == "" {
 		r.Type = "register"
 	}
-	if r.ProtoMajor == 0 {
+	if r.Type != "register_reject" && r.ProtoMajor == 0 {
 		r.ProtoMajor = DefaultProtoMajor
 	}
 	raw, err := json.Marshal(r)
@@ -43,9 +44,12 @@ func DecodeRegister(raw []byte) (Register, error) {
 		return Register{}, err
 	}
 	switch r.Type {
-	case "", "register", "register_ok":
+	case "", "register", "register_ok", "register_reject":
 	default:
 		return Register{}, fmt.Errorf("discovery: unexpected register type %q", r.Type)
+	}
+	if r.Type == "register_reject" {
+		return r, nil
 	}
 	if r.PeerID == "" || r.InstanceID == "" {
 		return Register{}, fmt.Errorf("discovery: missing peer_id/instance_id")
