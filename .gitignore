@@ -1,0 +1,31 @@
+# Build / IDE
+/bin/
+/dist/
+/build/
+/.dart_tool/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.packages
+/**/Generated.xcconfig
+/**/*.iml
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Go
+/coverage.out
+*.test
+/vendor/
+
+# Local secrets / machine
+.env
+.env.*
+*.pem
+
+# Flutter
+**/Flutter/ephemeral/
+**/Flutter/Flutter.podspec
+**/Pods/
+**/pubspec.lock
+!apps/**/pubspec.lock

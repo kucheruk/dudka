@@ -1,0 +1,11 @@
+name: "dudka"
+title: "ДУДКА"
+category: product
+status: stub
+purpose: "Локальный чат квартиры: текст и файлы в одном Wi‑Fi без аккаунтов и облака"
+stack: ["Go", "Flutter"]
+default_branch: master
+remote: "ssh://git@winebottle.local:2222/vetinary/dudka.git"
+ci: none
+boards: ""
+entrypoints: ["AGENTS.md", "README.md", "PRODUCT.md", "DESIGN.md", "ROADMAP.md"]

@@ -1,0 +1,34 @@
+{
+  "title": "Визуальный мир ДУДКИ — re-roll 1",
+  "question": "Свежий ролл. Teletext победил взвешивание (идентификация ЦА + ясность задачи). Assigned №6 — табло метро — остаётся как alternate.",
+  "options": [
+    {
+      "id": "challenger-teletext",
+      "label": "Телетекст квартиры",
+      "kicker": "WINS WEIGHING",
+      "lineage": "broadcast teletext magazine → один «журнал» = один чат квартиры",
+      "body": "Почему победил: IT-семья узнаётconstrained-экран; Linux TUI почти бесплатно в той же грамматике; одна страница = один канал без комнат.\n\nПервый экран: чёрный фон, жёлтый заголовок «ДУДКА», cyan «онлайн N», белые строки сообщений в сетке; снизу поле ввода как строка page. Файлы — блок-мозаика/превью в ячейках + прогресс.\n\nМир: 8 broadcast-цветов, bitmap/grid typography, HOLD когда нет сети, REVEAL не нужен. Нативные жесты ОС сохраняются; бренд — в телетекст-сетке, не в кастомной навигации.\n\nРиск: слишком «ретро-гик» для не-айтишной половины семьи — смягчается крупным текстом, русским copy и отсутствием трёхзначных page codes в MVP (коды = anti-goal).",
+      "hero": "https://impeccable.style/worlds/cards/broadcast-programming-teletext-service-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/broadcast-programming-teletext-service.webp"
+    },
+    {
+      "id": "assigned",
+      "label": "Табло станции",
+      "kicker": "THE ROLL",
+      "lineage": "табло отправления метро/вокзала → лента «рейсов» семьи",
+      "body": "Assigned index 6 нового grounded-листа.\n\nПервый экран: плотные строки «время · кто · текст», как отправления; онлайн — как пути/платформы. Кнопка отправки = «в рейс».\n\nСильно по ясности ленты, слабее по уюту квартиры (холод транзита)."
+    },
+    {
+      "id": "challenger-industrial-quote",
+      "label": "Стокрум «в кавычках»",
+      "kicker": "CHALLENGER",
+      "lineage": "industrial streetwear quote grammar → честные лейблы UI",
+      "body": "Форма: белый/чёрный, hazard-полосы, лейблы в прямых кавычках («ЛЕНТА», «ДУНУТЬ»).\nФакты Дудки без поэзии — максимальная буквальность.\nСлабость: модный streetwear, мало «дома».",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "steer": true
+}

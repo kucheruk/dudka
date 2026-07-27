@@ -1,0 +1,25 @@
+{
+  "title": "Визуальный мир ДУДКИ — re-roll 2 (твой steer)",
+  "question": "Steer: современный гик/терминал, BBS/Terminate без фанатизма. Ролл → Terminate-lite dual-pane. Challengers с CRT/неон/психом отсеяны — ломают «без фанатизма».",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Terminate-lite",
+      "kicker": "THE ROLL",
+      "lineage": "BBS-терминал Terminate → спокойный dual-pane локального чата",
+      "body": "Мир: тёмный нейтральный фон (не кислотный phosphor), одна акцентная строка статуса, моноширинная лента сообщений, слева/сверху компактный список online — как user list в Terminate, но без ANSI-арт, без сканирующих линий, без пиксель-шрифта 8×8.\n\nПервый экран: сразу лента квартиры + кто онлайн + поле ввода. Файлы — строка с именем/размером/прогрессом и превью картинки в потоке, без «модов» и меню из 40 пунктов.\n\nLinux TUI = почти тот же layout. Flutter GUI = та же грамматика, нативные жесты ОС.\n\nРиск: скатиться в ретро-косплей — явный anti-goal; держим «терминал 2026», не музей 1994."
+    },
+    {
+      "id": "challenger-drum-machine",
+      "label": "Step-row как лента",
+      "kicker": "CHALLENGER",
+      "lineage": "drum machine step row → сообщения как шаги паттерна",
+      "body": "Единственный challenger, не требующий CRT-фанатизма.\nФорма: charcoal panel, сегментный tempo/статус, «сейчас» как chase-light по ленте.\nСлабость для Дудки: ритм-машина слабее объясняет «семейный чат», чем dual-pane BBS.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-drum-machine-step-row-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-drum-machine-step-row.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "steer": true
+}
