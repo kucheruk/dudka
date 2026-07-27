@@ -28,9 +28,11 @@ if [[ ! -f go.mod ]]; then
   grep -qiE 'no go\.mod|nothing to test|ok' "$out" \
     || fail "without go.mod, check.sh should explain no-op success; got: $(cat "$out")"
 else
-  # With a module, gate must invoke go test (smoke: script source mentions it).
+  # With a module, gate must invoke go test and succeed.
   grep -q 'go test' scripts/check.sh \
     || fail "with go.mod present, check.sh must run go test"
+  grep -q 'PASS\|ok' "$out" \
+    || fail "with go.mod, check.sh should run tests; got: $(cat "$out")"
 fi
 
 grep -q 'scripts/check.sh' README.md \

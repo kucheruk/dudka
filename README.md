@@ -4,10 +4,11 @@
 
 ## Статус
 
-Проектирование / заготовка. Код ещё не начат. Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
+Проектирование / заготовка. Корневой Go-модуль есть; каркас `cmd/` ещё впереди. Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
 
 - Forgejo: <http://winebottle.local:3030/vetinary/dudka>
 - Remote: `ssh://git@winebottle.local:2222/vetinary/dudka.git`
+- Go module: `dudka` (`go.mod`)
 
 ## Локальный гейт
 
@@ -17,7 +18,7 @@
 ./scripts/check.sh
 ```
 
-Пока нет `go.mod`, скрипт завершается успешно (no-op). После появления модуля Go гейт запускает `go test ./...`. Контракт гейта без модуля: `./scripts/check_test.sh`.
+Гейт запускает `go test ./...`. Контракт модуля: `./scripts/gomod_test.sh`; контракт гейта: `./scripts/check_test.sh`.
 
 ## Зачем
 
