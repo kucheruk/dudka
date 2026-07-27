@@ -17,8 +17,9 @@ import (
 
 func main() {
 	engine := flag.String("engine", "127.0.0.1:17880", "dudkad loopback base (host:port or URL)")
-	watch := flag.Bool("watch", false, "refresh + read stdin lines (Enter = send) until Ctrl+C")
+	watch := flag.Bool("watch", false, "refresh + read stdin lines (Enter = send, /nick Имя) until Ctrl+C")
 	send := flag.String("send", "", "send one text line to engine, print frame, exit")
+	nick := flag.String("nick", "", "change display name via engine, print frame, exit")
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 
@@ -32,6 +33,15 @@ func main() {
 			return
 		}
 		fmt.Print(tui.Render(snap))
+	}
+
+	if name := strings.TrimSpace(*nick); name != "" {
+		if _, err := client.SetNick(name); err != nil {
+			fmt.Fprintf(os.Stderr, "dudka: nick: %v\n", err)
+			os.Exit(1)
+		}
+		printFrame()
+		return
 	}
 
 	if text := strings.TrimSpace(*send); text != "" {
@@ -73,7 +83,7 @@ func main() {
 				return
 			}
 			if err := tui.HandleComposeLine(client, line); err != nil {
-				fmt.Fprintf(os.Stderr, "dudka: send: %v\n", err)
+				fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
 			}
 			fmt.Println("---")
 			printFrame()

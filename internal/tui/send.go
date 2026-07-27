@@ -47,12 +47,19 @@ func (c *Client) Send(text string) (SendResult, error) {
 	return res, nil
 }
 
-// HandleComposeLine trims a compose line and sends non-empty text (Enter = send).
+// HandleComposeLine handles compose input: /nick … changes nick; otherwise Enter = send.
 // Blank lines are ignored (no error).
 func HandleComposeLine(c *Client, line string) error {
 	text := strings.TrimSpace(line)
 	if text == "" {
 		return nil
+	}
+	if name, isNick, err := ParseNickCommand(text); isNick {
+		if err != nil {
+			return err
+		}
+		_, err := c.SetNick(name)
+		return err
 	}
 	_, err := c.Send(text)
 	return err

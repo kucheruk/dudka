@@ -90,6 +90,6 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send)\n")
+	b.WriteString("  >  (Enter = send · /nick Имя)\n")
 	return b.String()
 }

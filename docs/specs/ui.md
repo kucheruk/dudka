@@ -104,6 +104,7 @@ Linux TUI показывает те же сущности: peers, лента, co
 - *(P040: status strip + peers; пусто → «НИКОГО РЯДОМ»; `dudka -engine` / `internal/tui`)*
 - *(P041: FEED из `GET /messages`, строки `время · ник · текст`)*
 - *(P042: compose Enter/`-send` → `POST /send`; два peer обмениваются текстом)*
+- *(P043: `/nick Имя` / `-nick` → смена ника; видно в следующих сообщениях)*
 - evidence: smoke script.
 
 Зависимости: DUD-PRD-102  

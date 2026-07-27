@@ -51,13 +51,13 @@ ADR: не требуется
 ### DUD-CHAT-111
 
 Priority: P1  
-Status: Draft
+Status: Partial
 
 Смена `display_name` применяется к новым сообщениям и announce; уже показанные сообщения сохраняют `display_name_at_send`.
 
 Проверка:
 
-- после смены ника старые строки в ленте не переписываются;
+- после смены ника старые строки в ленте не переписываются; *(P043: TUI `/nick` / `-nick` → `POST /nick`; `display_name_at_send` на новых msg)*
 - evidence: UI test / protocol fixture.
 
 Зависимости: DUD-CHAT-110  

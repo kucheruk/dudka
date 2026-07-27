@@ -96,7 +96,11 @@ func main() {
 
 	api := loopback.New(peerID, displayName)
 	api.SetPersistName(func(name string) error {
-		return identity.SaveDisplayName(*dataDir, name)
+		if err := identity.SaveDisplayName(*dataDir, name); err != nil {
+			return err
+		}
+		disc.SetDisplayName(name)
+		return nil
 	})
 	api.SetPeers(peers)
 	api.SetChat(hub)

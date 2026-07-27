@@ -139,6 +139,13 @@ func (n *Node) SetTarget(target string) {
 	n.cfg.Target = target
 }
 
+// SetDisplayName updates the nick used in announce/register (DUD-CHAT-111 / P043).
+func (n *Node) SetDisplayName(name string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.cfg.DisplayName = strings.TrimSpace(name)
+}
+
 // Start binds TCP+UDP, begins announce/register loops, then dials DialHosts (LAN-only).
 func (n *Node) Start() error {
 	n.mu.Lock()
