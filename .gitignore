@@ -29,3 +29,7 @@
 **/Pods/
 **/pubspec.lock
 !apps/**/pubspec.lock
+apps/**/.dart_tool/
+apps/**/build/
+apps/**/.idea/
+apps/**/*.iml

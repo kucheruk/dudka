@@ -54,7 +54,9 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # ./dist/dudka -watch -engine 127.0.0.1:17880           # Enter = send · /nick Имя
 ```
 
-Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback,discovery,chat,tui}`.
+Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback,discovery,chat,tui}`, `apps/dudka` (Flutter shell).
+
+Flutter↔engine (P060): subprocess + HTTP loopback — см. [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); spike `GET /me` — `./scripts/flutter_bind_test.sh` / `./scripts/run_flutter_spike.sh`.
 
 ## Локальный гейт
 
