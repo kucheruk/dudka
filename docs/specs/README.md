@@ -9,6 +9,6 @@
 | [chat.md](chat.md) | `DUD-CHAT` — ник, текст, хвост |
 | [files.md](files.md) | `DUD-FILE` — файлы и превью |
 | [ui.md](ui.md) | `DUD-UI` — GUI/TUI |
-| [agents.md](agents.md) | `DUD-AGT` — домашние агенты, MCP на LAN, префикс ника |
+| [agents.md](agents.md) | `DUD-AGT` — домашние агенты, MCP на LAN, тройной префикс ника |
 
 Архитектурный обзор: [`../design/overview.md`](../design/overview.md).

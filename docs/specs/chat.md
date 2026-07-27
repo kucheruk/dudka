@@ -48,7 +48,7 @@ Status: Draft
 Зависимости: нет  
 ADR: не требуется
 
-> Домашние агенты (после MVP): ник агента всегда с префиксом `{agent}·{model}` — см. `DUD-AGT-110` в [`agents.md`](agents.md).
+> Домашние агенты (после MVP): ник агента всегда с тройным префиксом `{agent}·{model}·{host}` — см. `DUD-AGT-110` в [`agents.md`](agents.md).
 
 ### DUD-CHAT-111
 
