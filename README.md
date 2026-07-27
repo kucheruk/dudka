@@ -58,6 +58,20 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 
 Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shell в `apps/dudka` — DESIGN.md charcoal UI + adaptive dual-pane/peer strip + чат/файлы/превью; Flutter↔Flutter text+file (`./scripts/flutter_ff_test.sh`); RU UI (`./scripts/ru_ui_test.sh`); bind ADR [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); `./scripts/flutter_*_test.sh`, `./scripts/run_flutter_spike.sh`.
 
+## Сборка Linux (P080)
+
+Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):
+
+```bash
+./scripts/build_linux_tui.sh
+# → dist/dudka-linux-amd64  (TUI)
+# → dist/dudkad-linux-amd64 (engine)
+# → dist/dudka, dist/dudkad (symlink на текущий GOARCH)
+# GOARCH=arm64 ./scripts/build_linux_tui.sh
+```
+
+На Linux-машине: запустить `dudkad`, затем `dudka -engine 127.0.0.1:17880`.
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
@@ -68,6 +82,7 @@ Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shel
 
 Гейт запускает `go test ./...`, затем multi-peer **protocol tests** (`./scripts/protocol_tests.sh`: announce/peers/send/tail/WAN/TUI exchange и др., 2+ peer).  
 Мета-контракт P045: `./scripts/protocol_gate_test.sh`.  
+Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `./scripts/build_linux_tui_test.sh`.  
 Прочие контракты по задачам: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/send_length_test.sh`, `./scripts/file_announce_test.sh`, `./scripts/file_fetch_test.sh`, `./scripts/file_progress_test.sh`, `./scripts/file_cancel_test.sh`, `./scripts/largefile_warn_test.sh`, `./scripts/file_thumb_test.sh`, `./scripts/file_heic_test.sh`, `./scripts/tui_files_e2e_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_nick_test.sh`.
 
 ## Зачем

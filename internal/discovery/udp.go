@@ -12,12 +12,8 @@ func listenUDP(addr string) (net.PacketConn, error) {
 		Control: func(network, address string, c syscall.RawConn) error {
 			var opErr error
 			if err := c.Control(func(fd uintptr) {
-				opErr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
-				if opErr != nil {
-					return
-				}
-				// SO_REUSEPORT lets two dudkad on one host share the announce port.
-				opErr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_REUSEPORT, 1)
+				// SO_REUSEPORT (where available) lets two dudkad on one host share the announce port.
+				opErr = setReuseAddrPort(int(fd))
 			}); err != nil {
 				return err
 			}

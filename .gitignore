@@ -33,3 +33,6 @@ apps/**/.dart_tool/
 apps/**/build/
 apps/**/.idea/
 apps/**/*.iml
+
+# build outputs (P080+)
+dist/
