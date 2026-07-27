@@ -32,6 +32,7 @@ type Hub struct {
 	dialer  discovery.DialFunc
 	timeout time.Duration
 	logf    func(format string, args ...any)
+	syncing bool
 }
 
 // NewHub builds a chat hub. Store/Peers must be non-nil.

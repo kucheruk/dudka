@@ -77,9 +77,11 @@ func main() {
 		Interval:    *announceInterval,
 		Target:      *announceTarget,
 		DialHosts:   seeds,
-		Peers:       peers,
-		OnChatLine:  hub.HandleChatLine,
-		Logf:        func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		Peers:          peers,
+		OnChatLine:     hub.HandleChatLine,
+		OnTailRequest:  hub.HandleTailRequest,
+		OnPeerUpserted: hub.OnPeerUpserted,
+		Logf:           func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: discovery: %v\n", err)

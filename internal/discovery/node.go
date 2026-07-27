@@ -37,6 +37,10 @@ type Config struct {
 	DialHosts   []string // optional seed hosts from config; dialed after Start (LAN-only)
 	// OnChatLine handles inbound NDJSON lines with type "chat" (P030); host is remote IP.
 	OnChatLine func(host string, line []byte)
+	// OnTailRequest handles inbound type "tail_req" (P033); write response on conn.
+	OnTailRequest func(host string, conn net.Conn)
+	// OnPeerUpserted fires after the peer table changes (register / dial).
+	OnPeerUpserted func(Peer, UpsertResult)
 }
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
@@ -266,12 +270,21 @@ func (n *Node) handleSessionConn(conn net.Conn) {
 	}
 	typ := peekJSONType(line)
 	host := hostFromAddr(conn.RemoteAddr())
-	if typ == "chat" {
+	switch typ {
+	case "chat":
 		n.mu.Lock()
 		onChat := n.cfg.OnChatLine
 		n.mu.Unlock()
 		if onChat != nil {
 			onChat(host, line)
+		}
+		return
+	case "tail_req":
+		n.mu.Lock()
+		onTail := n.cfg.OnTailRequest
+		n.mu.Unlock()
+		if onTail != nil {
+			onTail(host, conn)
 		}
 		return
 	}

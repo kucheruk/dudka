@@ -92,6 +92,12 @@ func (n *Node) rememberPeer(p Peer) {
 	if res.InstanceChanged {
 		n.cfg.Logf("%s", FormatPeerUpdated(p.PeerID, res.OldInstanceID, p.InstanceID))
 	}
+	n.mu.Lock()
+	onUpsert := n.cfg.OnPeerUpserted
+	n.mu.Unlock()
+	if onUpsert != nil {
+		onUpsert(p, res)
+	}
 }
 
 func hostFromAddr(addr net.Addr) string {

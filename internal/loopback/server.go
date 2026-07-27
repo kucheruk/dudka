@@ -48,6 +48,7 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("POST /scan", s.handleScan)
 	s.mux.HandleFunc("POST /send", s.handleSend)
 	s.mux.HandleFunc("GET /messages", s.handleMessages)
+	s.mux.HandleFunc("GET /tail", s.handleTail)
 	return s
 }
 
@@ -239,6 +240,23 @@ func (s *Server) handleMessages(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{"messages": msgs})
+}
+
+func (s *Server) handleTail(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	view := chat.TailView{
+		Messages: []chat.Message{},
+	}
+	if hub != nil {
+		view = hub.Tail()
+		if view.Messages == nil {
+			view.Messages = []chat.Message{}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(view)
 }
 
 func writeMeJSON(w http.ResponseWriter, peerID, name string) {

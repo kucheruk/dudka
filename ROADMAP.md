@@ -50,7 +50,7 @@
 - [x] P030 `POST /send` текста → fan-out всем online — второй peer видит сообщение в `GET /messages` ≤ 2 s локально
 - [x] P031 Валидация длины текста (≤ 4000) — oversized → 4xx и понятная ошибка
 - [x] P032 Выбор tail-keeper (min peer_id) — unit-тест на наборах id
-- [ ] P033 Хвост 200 на keeper: третий peer после register получает `GET /tail` согласованный с keeper
+- [x] P033 Хвост 200 на keeper: третий peer после register получает `GET /tail` согласованный с keeper
 - [ ] P034 Уход keeper → перевыбор → новый peer всё ещё получает хвост (integration на 3 процессах)
 - [ ] P035 Best-effort: нет ложного «доставлено всем» в API/логах — только `accepted` / `queued`
 
