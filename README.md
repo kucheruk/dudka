@@ -97,6 +97,16 @@ open dist/dudka.app
 
 Контракт: `./scripts/build_windows_app_test.sh`.
 
+## Сборка Android (P083)
+
+```bash
+./scripts/build_android_apk.sh
+# → dist/dudka-android.apk + dist/dudka-android.aab
+# adb install -r dist/dudka-android.apk
+```
+
+Контракт: `./scripts/build_android_apk_test.sh`. Sidecar-движок на телефоне — см. `dist/BUILD-ANDROID.md`.
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
