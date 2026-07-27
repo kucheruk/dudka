@@ -30,11 +30,20 @@ trap 'rm -rf "$tmpdir"' EXIT
 go build -o "$tmpdir/dudkad" ./cmd/dudkad || fail "go build ./cmd/dudkad failed"
 go build -o "$tmpdir/dudka" ./cmd/dudka || fail "go build ./cmd/dudka failed"
 
-# Stubs may print extra lines (e.g. peer_id); version contract is the first line.
-# Capture full stdout first so head does not SIGPIPE the binary (exit 141).
-full_d="$("$tmpdir/dudkad" -data-dir "$tmpdir/data")"
+# dudkad stays up after ready; capture log then stop.
+log_d="$tmpdir/dudkad.log"
+"$tmpdir/dudkad" -data-dir "$tmpdir/data" -name "Skeleton" -listen "127.0.0.1:0" >"$log_d" 2>&1 &
+pid=$!
+for _ in $(seq 1 50); do
+  grep -q '^ready ' "$log_d" 2>/dev/null && break
+  kill -0 "$pid" 2>/dev/null || fail "dudkad exited early; log: $(cat "$log_d")"
+  sleep 0.1
+done
+kill "$pid" 2>/dev/null || true
+wait "$pid" 2>/dev/null || true
+
 full_t="$("$tmpdir/dudka")"
-out_d="$(printf '%s\n' "$full_d" | head -n 1)"
+out_d="$(head -n 1 "$log_d")"
 out_t="$(printf '%s\n' "$full_t" | head -n 1)"
 
 [[ "$out_d" == dudkad\ * ]] || fail "dudkad stdout want 'dudkad <version>', got: $out_d"

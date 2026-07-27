@@ -29,7 +29,7 @@
 
 - [x] P010 Локальный `peer_id` (UUID) создаётся при первом старте и лежит на диске — повторный старт печатает тот же id
 - [x] P011 Выбор `display_name`: CLI-флаг / prompt → иначе hostname → иначе «Прилагательное+Животное» — три ветки покрыты unit-тестом
-- [ ] P012 Процесс `dudkad` стартует, пишет в stdout `ready peer_id=… name=…` и слушает loopback health `GET /health` → 200
+- [x] P012 Процесс `dudkad` стартует, пишет в stdout `ready peer_id=… name=…` и слушает loopback health `GET /health` → 200
 
 ### 1.2 Loopback API (ещё без LAN)
 

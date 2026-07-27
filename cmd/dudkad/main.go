@@ -1,4 +1,4 @@
-// Command dudkad is the LAN chat engine (stub until discovery and loopback land).
+// Command dudkad is the LAN chat engine (stub until discovery lands).
 package main
 
 import (
@@ -8,12 +8,14 @@ import (
 	"path/filepath"
 
 	"dudka/internal/identity"
+	"dudka/internal/loopback"
 	"dudka/internal/version"
 )
 
 func main() {
 	dataDir := flag.String("data-dir", defaultDataDir(), "directory for local peer state")
 	nameFlag := flag.String("name", "", "display name (nick); overrides saved name")
+	listen := flag.String("listen", "127.0.0.1:17880", "loopback HTTP listen address")
 	flag.Parse()
 
 	fmt.Printf("dudkad %s\n", version.Version)
@@ -32,6 +34,20 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("display_name=%s\n", displayName)
+
+	api := loopback.New()
+	ln, err := api.Listen(*listen)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("listen=%s\n", ln.Addr().String())
+	fmt.Println(loopback.FormatReady(peerID, displayName))
+
+	if err := api.Serve(ln); err != nil {
+		fmt.Fprintf(os.Stderr, "dudkad: serve: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func defaultDataDir() string {
