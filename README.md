@@ -4,7 +4,8 @@
 
 ## Статус
 
-Фаза 0 (контур): модуль и stub-бинарники на месте. Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
+**Фаза 1 закрыта:** engine discovery + текст + Linux TUI; `./scripts/check.sh` гоняет unit + multi-peer protocol tests.  
+Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
 
 - Forgejo: <http://winebottle.local:3030/vetinary/dudka>
 - Remote: `ssh://git@winebottle.local:2222/vetinary/dudka.git`
@@ -47,7 +48,9 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/announce_test.sh`, `./scripts/peers_test.sh`, `./scripts/instance_test.sh`, `./scripts/proto_test.sh`, `./scripts/scan_test.sh`, `./scripts/wan_test.sh`, `./scripts/send_test.sh`, `./scripts/send_length_test.sh`, `./scripts/tail_test.sh`, `./scripts/keeper_leave_test.sh`, `./scripts/besteffort_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_send_test.sh`, `./scripts/tui_nick_test.sh`.
+Гейт запускает `go test ./...`, затем multi-peer **protocol tests** (`./scripts/protocol_tests.sh`: announce/peers/send/tail/WAN/TUI exchange и др., 2+ peer).  
+Мета-контракт P045: `./scripts/protocol_gate_test.sh`.  
+Прочие контракты по задачам: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/send_length_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_nick_test.sh`.
 
 ## Зачем
 
