@@ -31,6 +31,7 @@ adaptive
 - Рантайм без интернета: нет cloud sync, update-check, telemetry, relay.
 - UI MVP: только русский.
 - Осознанно не в MVP: комнаты, голос/звонки, E2E как продукт, интеграция с Диалогами/Доверием.
+- После MVP (бэклог): Дудка как **MCP-клиент** к домашним агентам в той же LAN (без интернета); ник агента всегда с префиксом `{имя}·{модель}` — см. [`docs/specs/agents.md`](docs/specs/agents.md) и фазу 7 в [`ROADMAP.md`](ROADMAP.md).
 
 ## Brand Commitments
 
