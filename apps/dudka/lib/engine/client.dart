@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-/// Thin loopback client for dudkad (P060–P063 / docs/design/flutter-bind.md).
+/// Thin loopback client for dudkad (P060–P065 / docs/design/flutter-bind.md).
 class EngineClient {
   EngineClient({
     required this.baseUrl,
@@ -70,6 +70,39 @@ class EngineClient {
       queued: (map['queued'] as num?)?.toInt() ?? 0,
       message: msg,
       text: msg?.text ?? t,
+    );
+  }
+
+  /// POST /scan — subnet/host probe when alone (P065 / DUD-UI-120).
+  Future<ScanResult> startScan({List<String>? hosts, int? port}) async {
+    final payload = <String, Object?>{};
+    if (hosts != null && hosts.isNotEmpty) payload['hosts'] = hosts;
+    if (port != null && port > 0) payload['port'] = port;
+    final res = await _http.post(
+      _uri('/scan'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode(payload),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /scan → ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final peersRaw = map['peers'];
+    final peers = <PeerInfo>[];
+    if (peersRaw is List) {
+      for (final item in peersRaw) {
+        if (item is! Map) continue;
+        final m = Map<String, dynamic>.from(item);
+        final id = (m['peer_id'] as String?)?.trim() ?? '';
+        final name = (m['display_name'] as String?)?.trim() ?? '';
+        if (id.isEmpty && name.isEmpty) continue;
+        peers.add(PeerInfo(peerId: id, displayName: name.isEmpty ? id : name));
+      }
+    }
+    return ScanResult(
+      probed: (map['probed'] as num?)?.toInt() ?? 0,
+      found: (map['found'] as num?)?.toInt() ?? peers.length,
+      peers: peers,
     );
   }
 
@@ -265,6 +298,18 @@ class SendResult {
   final int queued;
   final String text;
   final ChatMessage? message;
+}
+
+class ScanResult {
+  const ScanResult({
+    required this.probed,
+    required this.found,
+    required this.peers,
+  });
+
+  final int probed;
+  final int found;
+  final List<PeerInfo> peers;
 }
 
 class EngineException implements Exception {

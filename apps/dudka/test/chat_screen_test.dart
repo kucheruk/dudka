@@ -110,11 +110,12 @@ void main() {
     expect(find.textContaining('alone'), findsOneWidget);
     expect(find.textContaining('online 0'), findsOneWidget);
     expect(find.text('НИКОГО РЯДОМ'), findsOneWidget);
+    expect(find.text('ИСКАТЬ'), findsOneWidget);
     expect(find.byKey(const Key('chat-feed-empty')), findsOneWidget);
     client.close();
   });
 
-  testWidgets('no_network shows НЕТ СЕТИ in peers pane', (tester) async {
+  testWidgets('no_network shows НЕТ СЕТИ without ИСКАТЬ', (tester) async {
     final client = mockChatClient(meName: 'Katya', network: 'no_network');
     await tester.pumpWidget(
       MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
@@ -123,7 +124,6 @@ void main() {
 
     expect(find.textContaining('no_network'), findsOneWidget);
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);
-    // ИСКАТЬ button is P065.
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();
   });

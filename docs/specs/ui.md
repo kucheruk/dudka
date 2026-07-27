@@ -52,14 +52,15 @@ ADR: не требуется
 ### DUD-UI-120
 
 Priority: P0  
-Status: Draft
+Status: Accepted
 
 Состояния `alone` и `no_network` показываются разным copy на русском: «НИКОГО РЯДОМ» vs «НЕТ СЕТИ». В `alone` доступна команда «ИСКАТЬ» (subnet scan).
 
 Проверка:
 
-- оба состояния различимы без чтения логов;
-- evidence: UI fixtures (`internal/tui/network_test.go`, status `network` field).
+- оба состояния различимы без чтения логов; *(P044 TUI + P065 Flutter status/peers)*
+- в `alone` кнопка «ИСКАТЬ» → `POST /scan`, в `no_network` кнопки нет; *(P065)*
+- evidence: `internal/tui/network_test.go`, `apps/dudka/test/network_seek_test.dart`, `./scripts/flutter_seek_test.sh` (P065).
 
 Зависимости: DUD-NET-140  
 ADR: не требуется

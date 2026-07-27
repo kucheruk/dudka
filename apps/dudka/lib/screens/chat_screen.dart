@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
 
-/// Chat wireframe: status strip + peers + text feed + compose (P063/P064).
+/// Chat wireframe: status/peers/feed/compose + alone «ИСКАТЬ» (P063–P065).
 /// DESIGN step-row lands in P069.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
@@ -25,8 +25,10 @@ class _ChatScreenState extends State<ChatScreen> {
   ChatSnapshot? _snap;
   Object? _error;
   String? _sendError;
+  String? _seekError;
   bool _loading = true;
   bool _sending = false;
+  bool _seeking = false;
   Timer? _timer;
 
   @override
@@ -80,6 +82,23 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _sendError = e.toString());
     } finally {
       if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _seek() async {
+    if (_seeking) return;
+    setState(() {
+      _seeking = true;
+      _seekError = null;
+    });
+    try {
+      await widget.client.startScan();
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _seekError = e.toString());
+    } finally {
+      if (mounted) setState(() => _seeking = false);
     }
   }
 
@@ -173,7 +192,22 @@ class _ChatScreenState extends State<ChatScreen> {
       return const Text('НЕТ СЕТИ', key: Key('chat-peers-no-network'));
     }
     if (state == 'alone') {
-      return const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone'));
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            key: const Key('chat-seek'),
+            onPressed: _seeking ? null : _seek,
+            child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+          ),
+          if (_seekError != null) ...[
+            const SizedBox(height: 4),
+            Text(_seekError!, style: const TextStyle(color: Colors.red)),
+          ],
+        ],
+      );
     }
     return ListView.builder(
       itemCount: snap.peers.length,
