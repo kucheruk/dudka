@@ -89,7 +89,7 @@
 - [x] P061 Flutter app skeleton (iOS/Android или desktop — что дешевле первым) запускается и показывает `/me`
 - [x] P062 First-run экран ника (RU) → дальше сразу чат
 - [x] P063 Экран чата: status strip + peers + лента текста (пока без дизайна step-row — wireframe ок)
-- [ ] P064 Compose «ДУНУТЬ» шлёт текст — Flutter↔TUI в одной LAN
+- [x] P064 Compose «ДУНУТЬ» шлёт текст — Flutter↔TUI в одной LAN
 - [ ] P065 Состояния `alone` / `no_network` + кнопка «ИСКАТЬ»
 - [ ] P066 Мини-настройки: только ник
 - [ ] P067 Отправка/приём файла из Flutter с прогрессом и отменой

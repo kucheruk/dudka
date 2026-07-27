@@ -20,8 +20,6 @@ grep -q 'chat-feed' apps/dudka/lib/screens/chat_screen.dart || fail "feed pane k
 grep -q 'fetchSnapshot' apps/dudka/lib/engine/client.dart || fail "EngineClient.fetchSnapshot missing"
 grep -q 'НИКОГО РЯДОМ' apps/dudka/lib/screens/chat_screen.dart || fail "alone copy missing"
 grep -q 'НЕТ СЕТИ' apps/dudka/lib/screens/chat_screen.dart || fail "no_network copy missing"
-grep -q 'ДУНУТЬ' apps/dudka/lib/screens/chat_screen.dart && fail "compose send is P064" || true
-
 (
   cd apps/dudka
   flutter pub get >/dev/null

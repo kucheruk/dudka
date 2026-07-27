@@ -94,9 +94,8 @@ void main() {
     expect(find.byKey(const Key('chat-feed')), findsOneWidget);
     expect(find.textContaining('12:34 · Boris · hello lane'), findsOneWidget);
 
-    // Compose send is P064 — wireframe placeholder only.
-    expect(find.textContaining('ДУНУТЬ'), findsNothing);
-    expect(find.byKey(const Key('chat-compose-soon')), findsOneWidget);
+    expect(find.text('ДУНУТЬ'), findsOneWidget);
+    expect(find.byKey(const Key('chat-compose')), findsOneWidget);
 
     client.close();
   });

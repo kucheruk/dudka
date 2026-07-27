@@ -44,6 +44,35 @@ class EngineClient {
     return _parseMe(res.body, fallbackName: n);
   }
 
+  /// POST /send — publish chat text (P064 / DUD-CHAT-100).
+  Future<SendResult> sendText(String text) async {
+    final t = text.trim();
+    if (t.isEmpty) {
+      throw EngineException('text is required');
+    }
+    final res = await _http.post(
+      _uri('/send'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode({'text': t}),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /send → ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final status = (map['status'] as String?)?.trim() ?? '';
+    final msgRaw = map['message'];
+    ChatMessage? msg;
+    if (msgRaw is Map) {
+      msg = ChatMessage.fromJson(Map<String, dynamic>.from(msgRaw));
+    }
+    return SendResult(
+      status: status.isEmpty ? 'accepted' : status,
+      queued: (map['queued'] as num?)?.toInt() ?? 0,
+      message: msg,
+      text: msg?.text ?? t,
+    );
+  }
+
   /// One frame for the chat wireframe: /me + /peers + /status + /messages (P063).
   Future<ChatSnapshot> fetchSnapshot() async {
     final me = await fetchMe();
@@ -222,6 +251,20 @@ String formatFeedLine(ChatMessage m) {
   final hh = m.ts.toUtc().hour.toString().padLeft(2, '0');
   final mm = m.ts.toUtc().minute.toString().padLeft(2, '0');
   return '$hh:$mm · $name · $body';
+}
+
+class SendResult {
+  const SendResult({
+    required this.status,
+    required this.queued,
+    required this.text,
+    this.message,
+  });
+
+  final String status;
+  final int queued;
+  final String text;
+  final ChatMessage? message;
 }
 
 class EngineException implements Exception {

@@ -26,8 +26,9 @@ Status: Partial
 Проверка:
 
 - cold start со сохранённым ником → чат ≤ заявленного NFR;
-- status strip + peers + текстовая лента (wireframe); *(P063: Flutter `ChatScreen` ← `/me` `/peers` `/status` `/messages`; compose send — P064; DESIGN step-row — P069)*
-- evidence: `apps/dudka/test/chat_screen_test.dart`, `./scripts/flutter_chat_test.sh` (P063).
+- status strip + peers + текстовая лента (wireframe); *(P063: Flutter `ChatScreen` ← `/me` `/peers` `/status` `/messages`; DESIGN step-row — P069)*
+- compose «ДУНУТЬ» → `POST /send`; Flutter↔TUI в LAN; *(P064: `EngineClient.sendText`, `./scripts/flutter_send_test.sh`)*
+- evidence: `apps/dudka/test/chat_screen_test.dart`, `apps/dudka/test/compose_send_test.dart`, `./scripts/flutter_chat_test.sh`, `./scripts/flutter_send_test.sh` (P063/P064).
 
 Зависимости: DUD-PRD-110  
 ADR: не требуется

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
 
-/// Chat wireframe: status strip + peers + text feed (P063 / DUD-UI-101).
-/// Compose send lands in P064; DESIGN step-row in P069.
+/// Chat wireframe: status strip + peers + text feed + compose (P063/P064).
+/// DESIGN step-row lands in P069.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -21,9 +21,12 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _compose = TextEditingController();
   ChatSnapshot? _snap;
   Object? _error;
+  String? _sendError;
   bool _loading = true;
+  bool _sending = false;
   Timer? _timer;
 
   @override
@@ -38,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _compose.dispose();
     super.dispose();
   }
 
@@ -56,6 +60,26 @@ class _ChatScreenState extends State<ChatScreen> {
         _error = e;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _blow() async {
+    if (_sending) return;
+    final text = _compose.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _sending = true;
+      _sendError = null;
+    });
+    try {
+      await widget.client.sendText(text);
+      _compose.clear();
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sendError = e.toString());
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -88,7 +112,6 @@ class _ChatScreenState extends State<ChatScreen> {
           key: const Key('chat-status'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        // Keep legacy nick key for P062 tests during transition.
         Text('вы: ${snap.me.name}', key: const Key('chat-nick'), style: const TextStyle(color: Colors.black54)),
         const SizedBox(height: 12),
         const Text('PEERS', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
@@ -112,11 +135,34 @@ class _ChatScreenState extends State<ChatScreen> {
             child: _feedPane(snap),
           ),
         ),
+        if (_sendError != null) ...[
+          const SizedBox(height: 4),
+          Text(_sendError!, style: const TextStyle(color: Colors.red)),
+        ],
         const SizedBox(height: 8),
-        const Text(
-          'compose скоро (P064)',
-          key: Key('chat-compose-soon'),
-          style: TextStyle(color: Colors.black54),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('chat-compose'),
+                controller: _compose,
+                enabled: !_sending,
+                decoration: const InputDecoration(
+                  hintText: 'текст…',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _blow(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              key: const Key('chat-blow'),
+              onPressed: _sending ? null : _blow,
+              child: const Text('ДУНУТЬ'),
+            ),
+          ],
         ),
       ],
     );
