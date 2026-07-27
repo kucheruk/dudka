@@ -87,6 +87,16 @@ open dist/dudka.app
 
 Контракт: `./scripts/build_macos_app_test.sh`.
 
+## Сборка Windows (P082)
+
+```bash
+./scripts/build_windows_app.sh
+# → dist/dudkad-windows-amd64.exe + dist/dudka-windows-amd64.exe
+# Flutter GUI: только на Windows-хосте — см. dist/BUILD-WINDOWS.md
+```
+
+Контракт: `./scripts/build_windows_app_test.sh`.
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
