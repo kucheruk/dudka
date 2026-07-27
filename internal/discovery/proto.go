@@ -20,10 +20,13 @@ func CompatibleProto(localMajor, remoteMajor int) bool {
 // FormatProtoMismatch is the log/status line for P023.
 func FormatProtoMismatch(peerID string, theirs, ours int) string {
 	return fmt.Sprintf(
-		"proto_mismatch peer_id=%s theirs=%d ours=%d",
+		"proto_mismatch peer_id=%s theirs=%d ours=%d — обнови Дудку",
 		peerID, theirs, ours,
 	)
 }
+
+// ProtoMismatchUserCopy is the RU UX line for P092 (no crash, clear upgrade cue).
+const ProtoMismatchUserCopy = "обнови Дудку"
 
 // IncompatiblePeer is a neighbor rejected for proto_major mismatch.
 type IncompatiblePeer struct {
@@ -34,10 +37,14 @@ type IncompatiblePeer struct {
 
 // Status is a snapshot of local discovery proto health (P023) and LAN (P044).
 type Status struct {
-	ProtoMajor   int                `json:"proto_major"`
-	ProtoMinor   int                `json:"proto_minor"`
-	Network      string             `json:"network"` // ok | no_network (DUD-NET-140)
-	Incompatible []IncompatiblePeer `json:"incompatible"`
+	ProtoMajor    int                `json:"proto_major"`
+	ProtoMinor    int                `json:"proto_minor"`
+	Network       string             `json:"network"` // ok | no_network (DUD-NET-140)
+	Incompatible  []IncompatiblePeer `json:"incompatible"`
+	AnnouncePort  int                `json:"announce_port"`
+	SessionPort   int                `json:"session_port"`
+	PortRelocated bool               `json:"port_relocated"`
+	PortNote      string             `json:"port_note,omitempty"`
 }
 
 type protoBook struct {

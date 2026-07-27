@@ -222,6 +222,13 @@ class EngineClient {
     final network = (st['network'] as String?)?.trim();
     final protoMajor = (st['proto_major'] as num?)?.toInt() ?? 0;
     final protoMinor = (st['proto_minor'] as num?)?.toInt() ?? 0;
+    final announcePort = (st['announce_port'] as num?)?.toInt() ?? 0;
+    final sessionPort = (st['session_port'] as num?)?.toInt() ?? 0;
+    final portRelocated = st['port_relocated'] == true;
+    final portNote = (st['port_note'] as String?)?.trim() ?? '';
+    final incompatibleRaw = st['incompatible'];
+    final incompatibleCount =
+        incompatibleRaw is List ? incompatibleRaw.length : 0;
 
     final msgsRes = await _http.get(_uri('/messages'));
     if (msgsRes.statusCode != 200) {
@@ -246,6 +253,11 @@ class EngineClient {
       network: (network == null || network.isEmpty) ? 'ok' : network,
       protoMajor: protoMajor,
       protoMinor: protoMinor,
+      announcePort: announcePort,
+      sessionPort: sessionPort,
+      portRelocated: portRelocated,
+      portNote: portNote,
+      incompatibleCount: incompatibleCount,
       messages: messages,
       transfers: transfers,
     );
@@ -436,6 +448,11 @@ class ChatSnapshot {
     required this.protoMinor,
     required this.messages,
     this.transfers = const [],
+    this.announcePort = 0,
+    this.sessionPort = 0,
+    this.portRelocated = false,
+    this.portNote = '',
+    this.incompatibleCount = 0,
   });
 
   final MeInfo me;
@@ -443,6 +460,11 @@ class ChatSnapshot {
   final String network;
   final int protoMajor;
   final int protoMinor;
+  final int announcePort;
+  final int sessionPort;
+  final bool portRelocated;
+  final String portNote;
+  final int incompatibleCount;
   final List<ChatMessage> messages;
   final List<TransferInfo> transfers;
 
@@ -475,6 +497,9 @@ String displayNetworkState({required String network, required int peerCount}) {
   }
 }
 
+/// RU UX for proto mismatch neighbors (P092).
+const String protoMismatchUserCopy = 'обнови Дудку';
+
 String formatStatusStrip(ChatSnapshot snap) {
   final me = snap.me.name.trim().isEmpty ? '—' : snap.me.name.trim();
   final n = snap.peers.length;
@@ -482,6 +507,15 @@ String formatStatusStrip(ChatSnapshot snap) {
   final buf = StringBuffer('ДУДКА · $me · онлайн $n · $state');
   if (snap.protoMajor > 0) {
     buf.write(' · прото ${snap.protoMajor}.${snap.protoMinor}');
+  }
+  if (snap.announcePort > 0 || snap.sessionPort > 0) {
+    buf.write(' · порт ${snap.announcePort}/${snap.sessionPort}');
+  }
+  if (snap.portRelocated && snap.portNote.isNotEmpty) {
+    buf.write(' · ${snap.portNote}');
+  }
+  if (snap.incompatibleCount > 0) {
+    buf.write(' · $protoMismatchUserCopy');
   }
   return buf.toString();
 }

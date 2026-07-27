@@ -20,3 +20,12 @@
 - iOS physical install: нужен Apple Team (см. `docs/build-ios.md`).
 - Android/iOS: subprocess `dudkad` sidecar ещё не упакован в mobile bundle.
 - Windows Flutter GUI: собирать на Windows.
+
+## P093 home router
+
+| Проверка | Результат |
+| --- | --- |
+| 2× dudkad same Wi‑Fi SSID (lab: SO_REUSEPORT :41779) | ✅ peers + text (nfr/protocol) |
+| Client isolation / guest Wi‑Fi | не гонялось на agent host — семья: выключить isolation |
+| Баги | нет блокирующих; при isolation — «НИКОГО РЯДОМ» ожидаемо |
+

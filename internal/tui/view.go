@@ -66,17 +66,25 @@ type TransferRow struct {
 
 // Snapshot is one frame of status + peers + feed.
 type Snapshot struct {
-	MeName     string
-	PeerID     string
-	Peers      []PeerRow
-	Messages   []MsgRow
-	Transfers  []TransferRow
-	Network    string // ok | no_network; empty treated as ok
-	ProtoMajor int
-	ProtoMinor int
-	EngineOK   bool
-	Err        string
+	MeName        string
+	PeerID        string
+	Peers         []PeerRow
+	Messages      []MsgRow
+	Transfers     []TransferRow
+	Network       string // ok | no_network; empty treated as ok
+	ProtoMajor    int
+	ProtoMinor    int
+	Incompatible  int
+	AnnouncePort  int
+	SessionPort   int
+	PortRelocated bool
+	PortNote      string
+	EngineOK      bool
+	Err           string
 }
+
+// ProtoMismatchCopy is the RU UX for incompatible neighbors (P092).
+const ProtoMismatchCopy = "обнови Дудку"
 
 // DisplayNetworkState maps engine network+peers to a Russian status token (P072 / DUD-PRD-103).
 func DisplayNetworkState(network string, peerCount int) string {
@@ -110,7 +118,16 @@ func Render(s Snapshot) string {
 	if s.ProtoMajor > 0 {
 		fmt.Fprintf(&b, " · прото %d.%d", s.ProtoMajor, s.ProtoMinor)
 	}
+	if s.AnnouncePort > 0 || s.SessionPort > 0 {
+		fmt.Fprintf(&b, " · порт %d/%d", s.AnnouncePort, s.SessionPort)
+	}
 	b.WriteByte('\n')
+	if s.PortRelocated && s.PortNote != "" {
+		fmt.Fprintf(&b, "  %s\n", s.PortNote)
+	}
+	if s.Incompatible > 0 {
+		fmt.Fprintf(&b, "  несовместимый сосед — %s\n", ProtoMismatchCopy)
+	}
 	b.WriteString("СОСЕДИ\n")
 	switch {
 	case s.Network == NetworkNoNetwork:

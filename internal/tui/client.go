@@ -61,9 +61,14 @@ func (c *Client) Fetch() (Snapshot, error) {
 	}
 
 	var st struct {
-		ProtoMajor int    `json:"proto_major"`
-		ProtoMinor int    `json:"proto_minor"`
-		Network    string `json:"network"`
+		ProtoMajor    int    `json:"proto_major"`
+		ProtoMinor    int    `json:"proto_minor"`
+		Network       string `json:"network"`
+		AnnouncePort  int    `json:"announce_port"`
+		SessionPort   int    `json:"session_port"`
+		PortRelocated bool   `json:"port_relocated"`
+		PortNote      string `json:"port_note"`
+		Incompatible  []any  `json:"incompatible"`
 	}
 	if err := c.getJSON("/status", &st); err != nil {
 		return Snapshot{EngineOK: false, Err: err.Error()}, err
@@ -71,6 +76,11 @@ func (c *Client) Fetch() (Snapshot, error) {
 	snap.ProtoMajor = st.ProtoMajor
 	snap.ProtoMinor = st.ProtoMinor
 	snap.Network = st.Network
+	snap.AnnouncePort = st.AnnouncePort
+	snap.SessionPort = st.SessionPort
+	snap.PortRelocated = st.PortRelocated
+	snap.PortNote = st.PortNote
+	snap.Incompatible = len(st.Incompatible)
 	if snap.Network == "" {
 		snap.Network = NetworkOK
 	}

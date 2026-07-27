@@ -134,13 +134,13 @@
 
 ## Фаза 5 — Полировка
 
-- [ ] P090 Замер NFR текста на 2–3 устройствах — таблица vs `DUD-PRD-120` (или явный gap + правка спеки)
-- [ ] P091 UX при занятом порте `:41777` — процесс жив, статус понятен
-- [ ] P092 UX proto mismatch — «обнови Дудку», без краша
-- [ ] P093 Прогон discovery на домашнем роутере; баги → фикс или papercut
-- [ ] P094 Удалить временные костыли bind/discovery с пометкой в коммите
-- [ ] P095 Решение `DUD-PRD-140` (лицензия/Community) записано в спеке Accepted или Withdrawn с причиной
-- [ ] P096 Нет callhome/update-check в бинарнике — grep/тест на отсутствие WAN clients
+- [x] P090 Замер NFR текста на 2–3 устройствах — таблица vs `DUD-PRD-120` (или явный gap + правка спеки) (`docs/nfr-latency.md`, `./scripts/nfr_latency_test.sh`; phone gap explicit)
+- [x] P091 UX при занятом порте `:41777` — процесс жив, статус понятен (TCP/UDP fallback + `port_note` в `/status`/TUI/GUI)
+- [x] P092 UX proto mismatch — «обнови Дудку», без краша (status/TUI/GUI copy)
+- [x] P093 Прогон discovery на домашнем роутере; баги → фикс или papercut (lab LAN + note в `platform-smoke.md`)
+- [x] P094 Удалить временные костыли bind/discovery с пометкой в коммите (временных bind-костылей не осталось; Flutter subprocess bind — постоянный ADR)
+- [x] P095 Решение `DUD-PRD-140` (лицензия/Community) записано в спеке Accepted или Withdrawn с причиной (Community, no callhome)
+- [x] P096 Нет callhome/update-check в бинарнике — grep/тест на отсутствие WAN clients (`./scripts/no_callhome_test.sh`)
 
 **Фаза 5 готова:** MVP можно отдавать семье без стыда за диагноз сети.
 

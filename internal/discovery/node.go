@@ -56,10 +56,13 @@ type Node struct {
 	tcpLn   net.Listener
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-	local   net.Addr
-	dialing map[string]struct{}
-	tcpPort int
-	proto   *protoBook
+	local         net.Addr
+	dialing       map[string]struct{}
+	tcpPort       int
+	udpPort       int
+	portRelocated bool
+	portNote      string
+	proto         *protoBook
 }
 
 // NewNode builds a stopped discovery node.
@@ -113,6 +116,9 @@ func (n *Node) Peers() *PeerStore { return n.cfg.Peers }
 func (n *Node) Status() Status {
 	n.mu.Lock()
 	major, minor := n.cfg.ProtoMajor, n.cfg.ProtoMinor
+	ann, sess := n.udpPort, n.tcpPort
+	reloc := n.portRelocated
+	note := n.portNote
 	n.mu.Unlock()
 	if major == 0 {
 		major = DefaultProtoMajor
@@ -122,10 +128,14 @@ func (n *Node) Status() Status {
 		network = NetworkNoNetwork
 	}
 	return Status{
-		ProtoMajor:   major,
-		ProtoMinor:   minor,
-		Network:      network,
-		Incompatible: n.proto.list(),
+		ProtoMajor:    major,
+		ProtoMinor:    minor,
+		Network:       network,
+		Incompatible:  n.proto.list(),
+		AnnouncePort:  ann,
+		SessionPort:   sess,
+		PortRelocated: reloc,
+		PortNote:      note,
 	}
 }
 
@@ -166,38 +176,70 @@ func (n *Node) Start() error {
 		return errors.New("discovery: peer_id and instance_id required")
 	}
 
-	tcpBind := n.cfg.TCPBind
-	if tcpBind == "" {
-		if n.cfg.TCPPort == 0 {
-			tcpBind = ":0"
-		} else {
-			tcpBind = fmt.Sprintf(":%d", n.cfg.TCPPort)
+	var (
+		tcpLn        net.Listener
+		tcpPort      int
+		tcpRelocated bool
+		err          error
+	)
+	if n.cfg.TCPBind != "" {
+		tcpLn, err = net.Listen("tcp", n.cfg.TCPBind)
+		if err != nil {
+			n.mu.Unlock()
+			return fmt.Errorf("discovery: tcp listen: %w", err)
+		}
+		tcpPort = tcpLn.Addr().(*net.TCPAddr).Port
+	} else {
+		tcpLn, tcpPort, tcpRelocated, err = listenTCPWithFallback(n.cfg.TCPPort, DefaultPortSpan)
+		if err != nil {
+			n.mu.Unlock()
+			return fmt.Errorf("discovery: tcp listen: %w", err)
 		}
 	}
-	tcpLn, err := net.Listen("tcp", tcpBind)
-	if err != nil {
-		n.mu.Unlock()
-		return fmt.Errorf("discovery: tcp listen: %w", err)
-	}
-	tcpAddr := tcpLn.Addr().(*net.TCPAddr)
-	n.tcpPort = tcpAddr.Port
-	n.cfg.TCPPort = n.tcpPort
+	n.tcpPort = tcpPort
+	n.cfg.TCPPort = tcpPort
 
-	bind := n.cfg.Bind
-	if bind == "" {
-		bind = fmt.Sprintf(":%d", n.cfg.UDPPort)
-	}
-	conn, err := listenUDP(bind)
-	if err != nil {
-		_ = tcpLn.Close()
-		n.mu.Unlock()
-		return err
+	var (
+		conn         net.PacketConn
+		udpPort      int
+		udpRelocated bool
+	)
+	if n.cfg.Bind != "" {
+		conn, err = listenUDP(n.cfg.Bind)
+		if err != nil {
+			_ = tcpLn.Close()
+			n.mu.Unlock()
+			return err
+		}
+		if ua, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			udpPort = ua.Port
+		}
+	} else {
+		preferredUDP := n.cfg.UDPPort
+		if preferredUDP == 0 {
+			preferredUDP = DefaultUDPPort
+		}
+		conn, udpPort, udpRelocated, err = listenUDPWithFallback(preferredUDP, DefaultPortSpan)
+		if err != nil {
+			_ = tcpLn.Close()
+			n.mu.Unlock()
+			return err
+		}
+		// Keep cfg.UDPPort as the announce *destination* port (default 41777).
+		// Listen may relocate; status exposes actual bind via udpPort (P091).
 	}
 	if err := setBroadcast(conn); err != nil {
 		_ = conn.Close()
 		_ = tcpLn.Close()
 		n.mu.Unlock()
 		return err
+	}
+
+	n.udpPort = udpPort
+	n.portRelocated = tcpRelocated || udpRelocated
+	if n.portRelocated {
+		n.portNote = fmt.Sprintf("порт %d занят — слушаем announce=%d session=%d", DefaultUDPPort, udpPort, tcpPort)
+		n.cfg.Logf("port_relocated announce=%d session=%d note=%q", udpPort, tcpPort, n.portNote)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
