@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
+import '../theme/dudka_theme.dart';
 
 /// Mini-settings: только ник (P066 / DUD-UI-115). Никаких лишних полей профиля.
 class SettingsNickScreen extends StatefulWidget {
@@ -73,30 +74,25 @@ class _SettingsNickScreenState extends State<SettingsNickScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Ник',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text('НИК', style: DudkaType.label()),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Так вас видят соседи в чате. Больше ничего настраивать не нужно.',
-              style: TextStyle(color: Colors.black54),
+              style: DudkaType.mono(size: 13, color: DudkaColors.silkscreenDim),
             ),
             const SizedBox(height: 24),
             TextField(
               key: const Key('settings-nick-field'),
               controller: _ctrl,
               enabled: !_busy,
-              decoration: const InputDecoration(
-                labelText: 'Ник',
-                border: OutlineInputBorder(),
-              ),
+              style: DudkaType.mono(),
+              decoration: const InputDecoration(labelText: 'Ник'),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _save(),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
             ],
             const SizedBox(height: 24),
             FilledButton(

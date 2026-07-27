@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
 import '../nick/fallback.dart';
+import '../theme/dudka_theme.dart';
 
 /// First-run: единственный обязательный шаг — ник (RU), затем чат (P062 / DUD-UI-110).
 class FirstRunNickScreen extends StatefulWidget {
@@ -72,31 +73,29 @@ class _FirstRunNickScreenState extends State<FirstRunNickScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Как вас зовут?',
-              key: Key('firstrun-title'),
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              key: const Key('firstrun-title'),
+              style: DudkaType.display(),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Ник видят соседи в чате. Можно пропустить — подставим имя устройства или случайное.',
-              style: TextStyle(color: Colors.black54),
+              style: DudkaType.mono(size: 13, color: DudkaColors.silkscreenDim),
             ),
             const SizedBox(height: 24),
             TextField(
               key: const Key('nick-field'),
               controller: _ctrl,
               enabled: !_busy,
-              decoration: const InputDecoration(
-                labelText: 'Ник',
-                border: OutlineInputBorder(),
-              ),
+              style: DudkaType.mono(),
+              decoration: const InputDecoration(labelText: 'Ник'),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(skip: false),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(_error!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
             ],
             const SizedBox(height: 24),
             FilledButton(

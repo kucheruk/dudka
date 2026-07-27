@@ -7,6 +7,7 @@ import 'nick/fallback.dart';
 import 'screens/chat_screen.dart';
 import 'screens/first_run_nick_screen.dart';
 import 'session/first_run_store.dart';
+import 'theme/dudka_theme.dart';
 
 /// Flutter shell (P061/P062): first-run nick → chat.
 class DudkaApp extends StatefulWidget {
@@ -80,6 +81,7 @@ class _DudkaAppState extends State<DudkaApp> {
     return MaterialApp(
       title: 'ДУДКА',
       debugShowCheckedModeBanner: false,
+      theme: buildDudkaTheme(),
       home: _home(),
     );
   }

@@ -89,9 +89,9 @@ Status: Draft
 
 Проверка:
 
-- во время передачи виден прогресс; *(P052: TUI `NN%` на FILE-строке, `GET /files/transfers`; P067 Flutter `%`)*
-- Cancel; *(P053: `/cancel <file_id>` → `CANCELLED discarded`, не 100%; P067 Flutter «ОТМЕНА»)*
-- evidence: UI fixtures / `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`, `./scripts/flutter_files_test.sh` (P067).
+- во время передачи виден прогресс; *(P052: TUI `NN%`; P067 Flutter `%`; P069 step-row pads)*
+- Cancel; *(P053 / P067 Flutter «ОТМЕНА»)*
+- evidence: UI fixtures / `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`, `./scripts/flutter_files_test.sh`, `./scripts/flutter_theme_test.sh` (P067/P069).
 
 Зависимости: DUD-FILE-110  
 ADR: не требуется
@@ -133,14 +133,15 @@ ADR: не требуется
 ### DUD-UI-160
 
 Priority: P1  
-Status: Draft
+Status: Accepted
 
 Визуал GUI следует DESIGN.md: charcoal panel, silkscreen labels, mono stack, step colors; без облачных иллюстраций и «мессенджерных» пузырей как основной язык.
 
 Проверка:
 
-- design review против DESIGN.md Do's/Don'ts;
-- evidence: скриншоты в карточке.
+- design review против DESIGN.md Do's/Don'ts; *(P069: `buildDudkaTheme`, mono + charcoal, без CRT)*
+- file progress как step-row (4 pads); *(P069: `StepProgress`)*
+- evidence: `apps/dudka/test/theme_test.dart`, `./scripts/flutter_theme_test.sh` (P069).
 
 Зависимости: нет  
 ADR: не требуется

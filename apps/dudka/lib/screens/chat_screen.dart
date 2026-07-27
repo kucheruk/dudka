@@ -4,10 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
+import '../theme/dudka_theme.dart';
+import '../widgets/step_progress.dart';
 import 'settings_nick_screen.dart';
 
-/// Chat shell: status/peers/feed/compose + files/thumbs (P063–P068).
-/// DESIGN step-row lands in P069.
+/// Chat shell: DESIGN.md charcoal panel + step-progress (P063–P069).
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -238,33 +239,48 @@ class _ChatScreenState extends State<ChatScreen> {
         Text(
           formatStatusStrip(snap),
           key: const Key('chat-status'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: DudkaType.mono(size: 13, weight: FontWeight.w700, letterSpacing: 1.2),
         ),
-        Text('вы: ${snap.me.name}', key: const Key('chat-nick'), style: const TextStyle(color: Colors.black54)),
+        Text(
+          'вы: ${snap.me.name}',
+          key: const Key('chat-nick'),
+          style: DudkaType.mono(size: 12, color: DudkaColors.silkscreenDim),
+        ),
         const SizedBox(height: 12),
-        const Text('PEERS', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        Text('PEERS', style: DudkaType.label()),
         const SizedBox(height: 4),
         Expanded(
           flex: 2,
           child: Container(
             key: const Key('chat-peers'),
             alignment: Alignment.topLeft,
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+            ),
+            padding: const EdgeInsets.only(top: 8),
             child: _peersPane(state, snap),
           ),
         ),
         const SizedBox(height: 8),
-        const Text('ЛЕНТА', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        Text('ЛЕНТА', style: DudkaType.label()),
         const SizedBox(height: 4),
         Expanded(
           flex: 5,
           child: Container(
             key: const Key('chat-feed'),
             alignment: Alignment.topLeft,
+            decoration: const BoxDecoration(
+              color: DudkaColors.panelDeep,
+              border: Border(top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+            ),
+            padding: const EdgeInsets.only(top: 8),
             child: _feedPane(snap),
           ),
         ),
-        if (_sendError != null) Text(_sendError!, style: const TextStyle(color: Colors.red)),
-        if (_fileError != null) Text(_fileError!, style: const TextStyle(color: Colors.red)),
+        if (_sendError != null)
+          Text(_sendError!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+        if (_fileError != null)
+          Text(_fileError!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -390,14 +406,25 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _fileActions(String fileId, TransferInfo? tr) {
     final status = tr?.status ?? '';
     if (status == 'downloading') {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${tr!.percent}%', key: Key('file-progress-$fileId')),
-          const SizedBox(width: 8),
-          TextButton(
-            key: Key('file-cancel-$fileId'),
-            onPressed: () => _cancelFile(fileId),
-            child: const Text('ОТМЕНА'),
+          StepProgress(percent: tr!.percent, key: Key('file-steps-$fileId')),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(
+                '${tr.percent}%',
+                key: Key('file-progress-$fileId'),
+                style: DudkaType.mono(size: 12, color: DudkaColors.segment),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                key: Key('file-cancel-$fileId'),
+                onPressed: () => _cancelFile(fileId),
+                child: const Text('ОТМЕНА'),
+              ),
+            ],
           ),
         ],
       );
