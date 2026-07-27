@@ -42,6 +42,9 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 			},
 		})
 	})
+	mux.HandleFunc("GET /files/transfers", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"transfers": []any{}})
+	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
@@ -89,6 +92,9 @@ func TestFetchNoNetworkRendersDistinctCopy(t *testing.T) {
 	})
 	mux.HandleFunc("GET /messages", func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"messages": []any{}})
+	})
+	mux.HandleFunc("GET /files/transfers", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"transfers": []any{}})
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

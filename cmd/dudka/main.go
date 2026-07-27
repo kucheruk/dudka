@@ -20,19 +20,21 @@ func main() {
 	watch := flag.Bool("watch", false, "refresh + read stdin lines (Enter = send, /nick Имя) until Ctrl+C")
 	send := flag.String("send", "", "send one text line to engine, print frame, exit")
 	nick := flag.String("nick", "", "change display name via engine, print frame, exit")
+	fetchID := flag.String("fetch", "", "start file download by file_id and print progress frames until done")
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 
 	fmt.Printf("dudka %s\n", version.Version)
 
 	client := tui.NewClient(*engine)
-	printFrame := func() {
+	printFrame := func() tui.Snapshot {
 		snap, err := client.Fetch()
 		if err != nil {
 			fmt.Print(tui.Render(tui.Snapshot{EngineOK: false, Err: err.Error()}))
-			return
+			return tui.Snapshot{}
 		}
 		fmt.Print(tui.Render(snap))
+		return snap
 	}
 
 	if name := strings.TrimSpace(*nick); name != "" {
@@ -51,6 +53,34 @@ func main() {
 		}
 		printFrame()
 		return
+	}
+
+	if fid := strings.TrimSpace(*fetchID); fid != "" {
+		if _, err := client.StartFetch(fid); err != nil {
+			fmt.Fprintf(os.Stderr, "dudka: fetch: %v\n", err)
+			os.Exit(1)
+		}
+		deadline := time.Now().Add(30 * time.Second)
+		for time.Now().Before(deadline) {
+			snap := printFrame()
+			done := false
+			for _, tr := range snap.Transfers {
+				if tr.FileID == fid && (tr.Status == tui.TransferDone || tr.Status == tui.TransferError || tr.Percent >= 100) {
+					done = true
+					if tr.Status == tui.TransferError {
+						os.Exit(1)
+					}
+					break
+				}
+			}
+			if done {
+				return
+			}
+			fmt.Println("---")
+			time.Sleep(50 * time.Millisecond)
+		}
+		fmt.Fprintf(os.Stderr, "dudka: fetch timeout\n")
+		os.Exit(1)
 	}
 
 	printFrame()

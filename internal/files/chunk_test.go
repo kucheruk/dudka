@@ -57,7 +57,7 @@ func TestServeAndFetchChunksReassemble(t *testing.T) {
 	}
 
 	outPath := filepath.Join(dir, "out.bin")
-	got, err := files.ReadChunks(bytes.NewReader(wire.Bytes()), "fid-1", outPath)
+	got, err := files.ReadChunks(bytes.NewReader(wire.Bytes()), "fid-1", outPath, int64(len(payload)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

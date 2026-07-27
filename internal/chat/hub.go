@@ -21,9 +21,10 @@ type Config struct {
 	Dialer    discovery.DialFunc
 	Timeout   time.Duration
 	Logf      func(format string, args ...any)
-	Blobs     *files.Store // local source blobs (P051)
-	InboxDir  string       // where fetched files land (P051)
-	ChunkSize int64        // LAN chunk limit; 0 → files.DefaultChunkSize
+	Blobs         *files.Store  // local source blobs (P051)
+	InboxDir      string        // where fetched files land (P051)
+	ChunkSize     int64         // LAN chunk limit; 0 → files.DefaultChunkSize
+	ProgressYield time.Duration // optional pause after each progress tick (tests / slow UI)
 }
 
 // Hub fans out local sends to online peers and ingests inbound chat lines.
@@ -36,10 +37,13 @@ type Hub struct {
 	dialer    discovery.DialFunc
 	timeout   time.Duration
 	logf      func(format string, args ...any)
-	blobs     *files.Store
-	inboxDir  string
-	chunkSize int64
-	syncing   bool
+	blobs         *files.Store
+	inboxDir      string
+	chunkSize     int64
+	progressYield time.Duration
+	xfers         *transferBook
+	fetching      map[string]bool
+	syncing       bool
 }
 
 // NewHub builds a chat hub. Store/Peers must be non-nil.
@@ -70,10 +74,18 @@ func NewHub(cfg Config) *Hub {
 		dialer:    cfg.Dialer,
 		timeout:   cfg.Timeout,
 		logf:      cfg.Logf,
-		blobs:     cfg.Blobs,
-		inboxDir:  cfg.InboxDir,
-		chunkSize: cfg.ChunkSize,
+		blobs:         cfg.Blobs,
+		inboxDir:      cfg.InboxDir,
+		chunkSize:     cfg.ChunkSize,
+		progressYield: cfg.ProgressYield,
+		xfers:         newTransferBook(),
+		fetching:      make(map[string]bool),
 	}
+}
+
+// Transfers returns download progress snapshots (P052).
+func (h *Hub) Transfers() []Transfer {
+	return h.xfers.list()
 }
 
 // SetName updates display_name used for subsequent sends (DUD-CHAT-111 foreshadow).

@@ -34,6 +34,13 @@ const (
 	MsgTypeFileAnnounce = "file_announce"
 )
 
+// Transfer statuses mirrored from engine (P052).
+const (
+	TransferDownloading = "downloading"
+	TransferDone        = "done"
+	TransferError       = "error"
+)
+
 // MsgRow is one feed line for the feed pane (text P041, file announce P050).
 type MsgRow struct {
 	DisplayName string
@@ -47,12 +54,21 @@ type MsgRow struct {
 	Hash        string
 }
 
+// TransferRow is download progress for a file_id (P052).
+type TransferRow struct {
+	FileID  string
+	Name    string
+	Percent int
+	Status  string
+}
+
 // Snapshot is one frame of status + peers + feed.
 type Snapshot struct {
 	MeName     string
 	PeerID     string
 	Peers      []PeerRow
 	Messages   []MsgRow
+	Transfers  []TransferRow
 	Network    string // ok | no_network; empty treated as ok
 	ProtoMajor int
 	ProtoMinor int
@@ -107,12 +123,16 @@ func Render(s Snapshot) string {
 	if len(s.Messages) == 0 {
 		b.WriteString("  —\n")
 	} else {
+		progress := map[string]TransferRow{}
+		for _, tr := range s.Transfers {
+			progress[tr.FileID] = tr
+		}
 		for _, m := range s.Messages {
 			name := strings.TrimSpace(m.DisplayName)
 			if name == "" {
 				name = "—"
 			}
-			line := feedLine(m)
+			line := feedLine(m, progress[m.FileID])
 			ts := m.TS
 			if ts.IsZero() {
 				fmt.Fprintf(&b, "  · %s · %s\n", name, line)
@@ -122,17 +142,21 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send · /nick Имя)\n")
+	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id>)\n")
 	return b.String()
 }
 
-func feedLine(m MsgRow) string {
+func feedLine(m MsgRow, tr TransferRow) string {
 	if m.Type == MsgTypeFileAnnounce || (m.FileID != "" && m.FileName != "") {
 		name := strings.TrimSpace(m.FileName)
 		if name == "" {
 			name = "file"
 		}
-		return fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
+		line := fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
+		if tr.FileID != "" {
+			line = fmt.Sprintf("%s %d%%", line, tr.Percent)
+		}
+		return line
 	}
 	return strings.TrimSpace(m.Text)
 }

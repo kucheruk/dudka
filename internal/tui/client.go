@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -107,8 +109,62 @@ func (c *Client) Fetch() (Snapshot, error) {
 		})
 	}
 
+	var xferEnv struct {
+		Transfers []struct {
+			FileID  string `json:"file_id"`
+			Name    string `json:"name"`
+			Percent int    `json:"percent"`
+			Status  string `json:"status"`
+		} `json:"transfers"`
+	}
+	if err := c.getJSON("/files/transfers", &xferEnv); err != nil {
+		return Snapshot{EngineOK: false, Err: err.Error()}, err
+	}
+	for _, tr := range xferEnv.Transfers {
+		snap.Transfers = append(snap.Transfers, TransferRow{
+			FileID:  tr.FileID,
+			Name:    tr.Name,
+			Percent: tr.Percent,
+			Status:  tr.Status,
+		})
+	}
+
 	snap.EngineOK = true
 	return snap, nil
+}
+
+// StartFetch begins an async download; progress appears on GET /files/transfers (P052).
+func (c *Client) StartFetch(fileID string) (TransferRow, error) {
+	fileID = strings.TrimSpace(fileID)
+	if fileID == "" {
+		return TransferRow{}, fmt.Errorf("tui: empty file_id")
+	}
+	wait := false
+	body, _ := json.Marshal(map[string]any{"file_id": fileID, "wait": wait})
+	resp, err := c.client.Post(c.base+"/files/fetch", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return TransferRow{}, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return TransferRow{}, fmt.Errorf("tui: fetch → %s: %s", resp.Status, strings.TrimSpace(string(raw)))
+	}
+	var tr TransferRow
+	var wire struct {
+		FileID  string `json:"file_id"`
+		Name    string `json:"name"`
+		Percent int    `json:"percent"`
+		Status  string `json:"status"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return TransferRow{}, err
+	}
+	tr.FileID = wire.FileID
+	tr.Name = wire.Name
+	tr.Percent = wire.Percent
+	tr.Status = wire.Status
+	return tr, nil
 }
 
 func (c *Client) getJSON(path string, dst any) error {

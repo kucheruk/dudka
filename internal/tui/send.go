@@ -47,7 +47,7 @@ func (c *Client) Send(text string) (SendResult, error) {
 	return res, nil
 }
 
-// HandleComposeLine handles compose input: /nick … changes nick; otherwise Enter = send.
+// HandleComposeLine handles compose input: /nick, /fetch, or Enter = send.
 // Blank lines are ignored (no error).
 func HandleComposeLine(c *Client, line string) error {
 	text := strings.TrimSpace(line)
@@ -61,6 +61,26 @@ func HandleComposeLine(c *Client, line string) error {
 		_, err := c.SetNick(name)
 		return err
 	}
+	if fileID, isFetch, err := ParseFetchCommand(text); isFetch {
+		if err != nil {
+			return err
+		}
+		_, err := c.StartFetch(fileID)
+		return err
+	}
 	_, err := c.Send(text)
 	return err
+}
+
+// ParseFetchCommand recognizes `/fetch <file_id>` (P052).
+func ParseFetchCommand(line string) (fileID string, ok bool, err error) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "/fetch") {
+		return "", false, nil
+	}
+	rest := strings.TrimSpace(strings.TrimPrefix(line, "/fetch"))
+	if rest == "" {
+		return "", true, fmt.Errorf("tui: /fetch needs a file_id")
+	}
+	return rest, true, nil
 }

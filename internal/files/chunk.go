@@ -172,7 +172,8 @@ func ServeChunks(w io.Writer, store *Store, req ChunkReq) error {
 }
 
 // ReadChunks consumes chunk lines from r and writes the reassembled file to destPath.
-func ReadChunks(r io.Reader, fileID string, destPath string) (int64, error) {
+// total is the expected size from file-announce (for percent); onProgress may be nil.
+func ReadChunks(r io.Reader, fileID string, destPath string, total int64, onProgress ProgressFunc) (int64, error) {
 	br := bufio.NewReader(r)
 	tmp := destPath + ".partial"
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
@@ -188,6 +189,13 @@ func ReadChunks(r io.Reader, fileID string, destPath string) (int64, error) {
 			_ = os.Remove(tmp)
 		}
 	}()
+
+	report := func(written int64) {
+		if onProgress != nil {
+			onProgress(written, total)
+		}
+	}
+	report(0)
 
 	var written int64
 	expect := int64(0)
@@ -222,6 +230,7 @@ func ReadChunks(r io.Reader, fileID string, destPath string) (int64, error) {
 			}
 			written += int64(len(data))
 			expect += int64(len(data))
+			report(written)
 		}
 		if c.EOF {
 			if cerr := f.Close(); cerr != nil {
@@ -232,6 +241,11 @@ func ReadChunks(r io.Reader, fileID string, destPath string) (int64, error) {
 				return written, rerr
 			}
 			tmp = ""
+			if total > 0 {
+				report(total)
+			} else {
+				report(written)
+			}
 			return written, nil
 		}
 		if err == io.EOF {
