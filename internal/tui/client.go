@@ -86,6 +86,7 @@ func (c *Client) Fetch() (Snapshot, error) {
 			Size              int64     `json:"size"`
 			Mime              string    `json:"mime"`
 			Hash              string    `json:"hash"`
+			ThumbPath         string    `json:"thumb_path"`
 		} `json:"messages"`
 	}
 	if err := c.getJSON("/messages", &msgsEnv); err != nil {
@@ -106,6 +107,7 @@ func (c *Client) Fetch() (Snapshot, error) {
 			Size:        m.Size,
 			Mime:        m.Mime,
 			Hash:        m.Hash,
+			ThumbPath:   m.ThumbPath,
 		})
 	}
 

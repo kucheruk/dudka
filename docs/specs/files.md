@@ -72,9 +72,9 @@ Status: Draft
 
 Проверка:
 
-- jpeg/png дают превью в ленте у получателя при живом источнике;
+- jpeg/png/webp дают превью в ленте у получателя при живом источнике; *(P056: `thumb_b64` на announce → локальный `thumb_path`, TUI `THUMB <path>`; HEIC — P057)*
 - не-image не рисует ложное превью;
-- evidence: UI snapshot + ручной прогон HEIC на iOS.
+- evidence: UI/protocol (`scripts/file_thumb_test.sh`); ручной прогон HEIC на iOS — с P057.
 
 Зависимости: DUD-FILE-101  
 ADR: не требуется

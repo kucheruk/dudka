@@ -61,13 +61,14 @@ func main() {
 		os.Exit(1)
 	}
 	hub := chat.NewHub(chat.Config{
-		PeerID:   peerID,
-		Name:     displayName,
-		Store:    msgs,
-		Peers:    peers,
-		Blobs:    blobs,
-		InboxDir: filepath.Join(*dataDir, "inbox"),
-		Logf:     func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		PeerID:    peerID,
+		Name:      displayName,
+		Store:     msgs,
+		Peers:     peers,
+		Blobs:     blobs,
+		InboxDir:  filepath.Join(*dataDir, "inbox"),
+		ThumbsDir: filepath.Join(*dataDir, "thumbs"),
+		Logf:      func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	var seeds []string
 	for _, h := range strings.Split(*dialHosts, ",") {

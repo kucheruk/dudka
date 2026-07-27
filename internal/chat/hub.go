@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strings"
@@ -24,6 +25,7 @@ type Config struct {
 	Logf      func(format string, args ...any)
 	Blobs         *files.Store  // local source blobs (P051)
 	InboxDir      string        // where fetched files land (P051)
+	ThumbsDir     string        // local JPEG previews for image announces (P056)
 	ChunkSize     int64         // LAN chunk limit; 0 → files.DefaultChunkSize
 	ProgressYield time.Duration // optional pause after each progress tick (tests / slow UI)
 }
@@ -40,6 +42,7 @@ type Hub struct {
 	logf      func(format string, args ...any)
 	blobs         *files.Store
 	inboxDir      string
+	thumbsDir     string
 	chunkSize     int64
 	progressYield time.Duration
 	xfers         *transferBook
@@ -78,6 +81,7 @@ func NewHub(cfg Config) *Hub {
 		logf:      cfg.Logf,
 		blobs:         cfg.Blobs,
 		inboxDir:      cfg.InboxDir,
+		thumbsDir:     cfg.ThumbsDir,
 		chunkSize:     cfg.ChunkSize,
 		progressYield: cfg.ProgressYield,
 		xfers:         newTransferBook(),
@@ -132,6 +136,7 @@ func (h *Hub) Send(text string) (SendResult, error) {
 
 // AnnounceFile publishes file metadata into the feed without transferring bytes (DUD-FILE-101 / P050).
 // When Content is set, bytes are stored locally for later chunk serving (P051) and never placed on the announce wire.
+// For jpeg/png/webp content a small JPEG thumb is written locally and sent as thumb_b64 (P056).
 func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
 	a.Name = strings.TrimSpace(a.Name)
 	a.Mime = strings.TrimSpace(a.Mime)
@@ -163,6 +168,7 @@ func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
 			return SendResult{}, err
 		}
 	}
+	thumbB64, thumbPath := h.buildThumb(fileID, a.Mime, a.Content)
 	h.mu.RLock()
 	msg := Message{
 		Type:              TypeFileAnnounce,
@@ -175,9 +181,48 @@ func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
 		Size:              a.Size,
 		Mime:              a.Mime,
 		Hash:              a.Hash,
+		ThumbB64:          thumbB64,
+		ThumbPath:         thumbPath,
 	}
 	h.mu.RUnlock()
 	return h.publish(msg)
+}
+
+// buildThumb creates a small JPEG preview for jpeg/png/webp content (P056).
+func (h *Hub) buildThumb(fileID, mime string, content []byte) (thumbB64, thumbPath string) {
+	if len(content) == 0 || h.thumbsDir == "" {
+		return "", ""
+	}
+	thumb, ok, err := files.MakeThumb(content, mime)
+	if err != nil {
+		h.logf("file_thumb_err file_id=%s err=%v", fileID, err)
+		return "", ""
+	}
+	if !ok {
+		return "", ""
+	}
+	path, err := files.WriteThumb(h.thumbsDir, fileID, thumb)
+	if err != nil {
+		h.logf("file_thumb_write_err file_id=%s err=%v", fileID, err)
+		return "", ""
+	}
+	return base64.StdEncoding.EncodeToString(thumb), path
+}
+
+func (h *Hub) materializeThumb(msg *Message) {
+	if msg == nil || msg.Type != TypeFileAnnounce || msg.ThumbB64 == "" || h.thumbsDir == "" {
+		return
+	}
+	raw, err := base64.StdEncoding.DecodeString(msg.ThumbB64)
+	if err != nil || len(raw) == 0 {
+		return
+	}
+	path, err := files.WriteThumb(h.thumbsDir, msg.FileID, raw)
+	if err != nil {
+		h.logf("file_thumb_rx_err file_id=%s err=%v", msg.FileID, err)
+		return
+	}
+	msg.ThumbPath = path
 }
 
 func (h *Hub) publish(msg Message) (SendResult, error) {
@@ -215,6 +260,7 @@ func (h *Hub) HandleChatLine(_ string, line []byte) {
 		h.logf("chat_rx_err err=%v", err)
 		return
 	}
+	h.materializeThumb(&msg)
 	if h.store.Append(msg) {
 		h.logf("chat_rx msg_id=%s peer_id=%s", msg.MsgID, msg.PeerID)
 	}

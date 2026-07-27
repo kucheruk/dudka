@@ -53,6 +53,7 @@ type MsgRow struct {
 	Size        int64
 	Mime        string
 	Hash        string
+	ThumbPath   string // local preview path when present (P056)
 }
 
 // TransferRow is download progress for a file_id (P052).
@@ -154,6 +155,9 @@ func feedLine(m MsgRow, tr TransferRow) string {
 			name = "file"
 		}
 		line := fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
+		if p := strings.TrimSpace(m.ThumbPath); p != "" {
+			line = fmt.Sprintf("%s THUMB %s", line, p)
+		}
 		switch tr.Status {
 		case TransferCancelled:
 			line = fmt.Sprintf("%s CANCELLED discarded", line)

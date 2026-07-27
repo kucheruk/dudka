@@ -20,6 +20,8 @@ type Message struct {
 	Size              int64     `json:"size,omitempty"`
 	Mime              string    `json:"mime,omitempty"`
 	Hash              string    `json:"hash,omitempty"`
+	ThumbB64          string    `json:"thumb_b64,omitempty"`  // small JPEG preview on the wire (P056)
+	ThumbPath         string    `json:"thumb_path,omitempty"` // local materialized path; not on wire
 }
 
 // EncodeMessage serializes a feed line (newline-delimited JSON).
@@ -33,6 +35,7 @@ func EncodeMessage(m Message) ([]byte, error) {
 	case "", TypeChat:
 		m.Type = TypeChat
 		m.FileID, m.FileName, m.Mime, m.Hash = "", "", "", ""
+		m.ThumbB64, m.ThumbPath = "", ""
 		m.Size = 0
 	case TypeFileAnnounce:
 		if err := ValidateFileAnnounce(FileAnnounce{
@@ -44,6 +47,7 @@ func EncodeMessage(m Message) ([]byte, error) {
 			return nil, fmt.Errorf("chat: file_id required")
 		}
 		m.Text = ""
+		m.ThumbPath = "" // local only — receivers materialize from thumb_b64
 	default:
 		return nil, fmt.Errorf("chat: unexpected type %q", m.Type)
 	}

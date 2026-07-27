@@ -166,7 +166,9 @@ func (h *Hub) fetchTail(p discovery.Peer) error {
 		return err
 	}
 	for _, msg := range env.Messages {
-		_ = h.store.Append(msg)
+		m := msg
+		h.materializeThumb(&m)
+		_ = h.store.Append(m)
 	}
 	return nil
 }
