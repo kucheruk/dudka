@@ -89,9 +89,9 @@ Status: Draft
 
 Проверка:
 
-- во время передачи виден прогресс; *(P052: TUI `NN%` на FILE-строке, `GET /files/transfers`)*
-- Cancel; *(P053: `/cancel <file_id>` → `CANCELLED discarded`, не 100%)*
-- evidence: UI fixtures / `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`.
+- во время передачи виден прогресс; *(P052: TUI `NN%` на FILE-строке, `GET /files/transfers`; P067 Flutter `%`)*
+- Cancel; *(P053: `/cancel <file_id>` → `CANCELLED discarded`, не 100%; P067 Flutter «ОТМЕНА»)*
+- evidence: UI fixtures / `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`, `./scripts/flutter_files_test.sh` (P067).
 
 Зависимости: DUD-FILE-110  
 ADR: не требуется

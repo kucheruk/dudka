@@ -49,6 +49,12 @@ EngineClient mockChatClient({
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
+        case '/files/transfers':
+          return http.Response(
+            '{"transfers":[]}',
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
         default:
           return http.Response('nope', 404);
       }

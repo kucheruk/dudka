@@ -44,6 +44,12 @@ EngineClient mockClient({required String Function() meName, String? Function(Str
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
+        case '/files/transfers':
+          return http.Response(
+            '{"transfers":[]}',
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
         case '/nick':
           final map = jsonDecode(req.body) as Map<String, dynamic>;
           final name = (map['name'] as String?) ?? '';

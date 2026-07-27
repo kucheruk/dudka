@@ -34,7 +34,7 @@ ADR: не требуется
 ### DUD-FILE-110
 
 Priority: P0  
-Status: Draft
+Status: Partial
 
 Получатель инициирует скачивание чанками у источника (или у peer, подтвердившего наличие полного файла). UI показывает прогресс 0–100% и позволяет отменить; отмена прекращает запись частичного файла или помечает его discarded.
 
@@ -43,7 +43,8 @@ Status: Draft
 - получатель после fetch имеет полный файл на диске, байты совпадают с источником; *(P051: TCP `file_chunk_req`/`file_chunk`, `POST /files/fetch`, inbox path)*
 - во время скачивания API отдаёт прогресс 0–100%; *(P052: `GET /files/transfers`, `wait:false` async fetch; TUI `%` на FILE-строке)*
 - отмена на 50% не оставляет «успешный» файл в UX; *(P053: `POST /files/cancel` → `status=cancelled`, partial discarded, не `done`)*
-- evidence: integration + UI (`scripts/file_fetch_test.sh`, `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`).
+- Flutter: announce/fetch/progress/cancel в shell; *(P067: `EngineClient.announceFile`/`startFetch`/`cancelFetch`, `ChatScreen` СКАЧАТЬ/ОТМЕНА)*
+- evidence: `scripts/file_fetch_test.sh`, `scripts/file_progress_test.sh`, `scripts/file_cancel_test.sh`, `./scripts/flutter_files_test.sh` (P067).
 
 Зависимости: DUD-FILE-101  
 ADR: не требуется

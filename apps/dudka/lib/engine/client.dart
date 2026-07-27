@@ -1,8 +1,9 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
-/// Thin loopback client for dudkad (P060–P065 / docs/design/flutter-bind.md).
+/// Thin loopback client for dudkad (P060–P067 / docs/design/flutter-bind.md).
 class EngineClient {
   EngineClient({
     required this.baseUrl,
@@ -106,7 +107,91 @@ class EngineClient {
     );
   }
 
-  /// One frame for the chat wireframe: /me + /peers + /status + /messages (P063).
+  /// POST /files/announce — publish file into feed (P067 / DUD-FILE-101).
+  Future<ChatMessage> announceFile({
+    required String name,
+    required String mime,
+    required List<int> content,
+    String? hash,
+  }) async {
+    final n = name.trim();
+    final m = mime.trim();
+    if (n.isEmpty) throw EngineException('file name required');
+    if (m.isEmpty) throw EngineException('file mime required');
+    final digest = hash?.trim().isNotEmpty == true
+        ? hash!.trim()
+        : 'sha256:${sha256.convert(content)}';
+    final res = await _http.post(
+      _uri('/files/announce'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode({
+        'name': n,
+        'size': content.length,
+        'mime': m,
+        'hash': digest,
+        'content_b64': base64Encode(content),
+      }),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /files/announce → ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final msgRaw = map['message'];
+    if (msgRaw is! Map) {
+      throw EngineException('POST /files/announce missing message');
+    }
+    return ChatMessage.fromJson(Map<String, dynamic>.from(msgRaw));
+  }
+
+  /// POST /files/fetch with wait:false — start async download (P067 / P052).
+  Future<TransferInfo> startFetch(String fileId) async {
+    final id = fileId.trim();
+    if (id.isEmpty) throw EngineException('file_id required');
+    final res = await _http.post(
+      _uri('/files/fetch'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode({'file_id': id, 'wait': false}),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /files/fetch → ${res.statusCode}: ${res.body}');
+    }
+    return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// POST /files/cancel (P067 / P053).
+  Future<TransferInfo> cancelFetch(String fileId) async {
+    final id = fileId.trim();
+    if (id.isEmpty) throw EngineException('file_id required');
+    final res = await _http.post(
+      _uri('/files/cancel'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode({'file_id': id}),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /files/cancel → ${res.statusCode}: ${res.body}');
+    }
+    return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// GET /files/transfers (P067 / P052).
+  Future<List<TransferInfo>> fetchTransfers() async {
+    final res = await _http.get(_uri('/files/transfers'));
+    if (res.statusCode != 200) {
+      throw EngineException('GET /files/transfers → ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final raw = map['transfers'];
+    final out = <TransferInfo>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is! Map) continue;
+        out.add(TransferInfo.fromJson(Map<String, dynamic>.from(item)));
+      }
+    }
+    return out;
+  }
+
+  /// One frame: /me + /peers + /status + /messages + /files/transfers (P063/P067).
   Future<ChatSnapshot> fetchSnapshot() async {
     final me = await fetchMe();
 
@@ -152,6 +237,8 @@ class EngineClient {
       }
     }
 
+    final transfers = await fetchTransfers();
+
     return ChatSnapshot(
       me: me,
       peers: peers,
@@ -159,6 +246,7 @@ class EngineClient {
       protoMajor: protoMajor,
       protoMinor: protoMinor,
       messages: messages,
+      transfers: transfers,
     );
   }
 
@@ -200,6 +288,9 @@ class ChatMessage {
     required this.type,
     this.fileId = '',
     this.fileName = '',
+    this.size = 0,
+    this.mime = '',
+    this.hash = '',
   });
 
   final String msgId;
@@ -210,6 +301,12 @@ class ChatMessage {
   final String type;
   final String fileId;
   final String fileName;
+  final int size;
+  final String mime;
+  final String hash;
+
+  bool get isFileAnnounce =>
+      type == 'file_announce' || (fileId.isNotEmpty && fileName.isNotEmpty);
 
   factory ChatMessage.fromJson(Map<String, dynamic> m) {
     final tsRaw = m['ts'];
@@ -229,9 +326,58 @@ class ChatMessage {
       type: (typ == null || typ.isEmpty) ? 'chat' : typ,
       fileId: (m['file_id'] as String?)?.trim() ?? '',
       fileName: (m['name'] as String?)?.trim() ?? '',
+      size: (m['size'] as num?)?.toInt() ?? 0,
+      mime: (m['mime'] as String?)?.trim() ?? '',
+      hash: (m['hash'] as String?)?.trim() ?? '',
     );
   }
 }
+
+class TransferInfo {
+  const TransferInfo({
+    required this.fileId,
+    required this.name,
+    required this.percent,
+    required this.status,
+    this.received = 0,
+    this.total = 0,
+    this.path = '',
+  });
+
+  final String fileId;
+  final String name;
+  final int percent;
+  final String status;
+  final int received;
+  final int total;
+  final String path;
+
+  factory TransferInfo.fromJson(Map<String, dynamic> m) {
+    return TransferInfo(
+      fileId: (m['file_id'] as String?)?.trim() ?? '',
+      name: (m['name'] as String?)?.trim() ?? '',
+      percent: (m['percent'] as num?)?.toInt() ?? 0,
+      status: (m['status'] as String?)?.trim() ?? '',
+      received: (m['received'] as num?)?.toInt() ?? 0,
+      total: (m['total'] as num?)?.toInt() ?? 0,
+      path: (m['path'] as String?)?.trim() ?? '',
+    );
+  }
+}
+
+class LocalFileBytes {
+  const LocalFileBytes({
+    required this.name,
+    required this.mime,
+    required this.bytes,
+  });
+
+  final String name;
+  final String mime;
+  final List<int> bytes;
+}
+
+typedef LocalFilePicker = Future<LocalFileBytes?> Function();
 
 class ChatSnapshot {
   const ChatSnapshot({
@@ -241,6 +387,7 @@ class ChatSnapshot {
     required this.protoMajor,
     required this.protoMinor,
     required this.messages,
+    this.transfers = const [],
   });
 
   final MeInfo me;
@@ -249,6 +396,14 @@ class ChatSnapshot {
   final int protoMajor;
   final int protoMinor;
   final List<ChatMessage> messages;
+  final List<TransferInfo> transfers;
+
+  TransferInfo? transferFor(String fileId) {
+    for (final t in transfers) {
+      if (t.fileId == fileId) return t;
+    }
+    return null;
+  }
 }
 
 /// UI network state for status strip (mirrors TUI / DUD-NET-140).
@@ -272,9 +427,10 @@ String formatStatusStrip(ChatSnapshot snap) {
 String formatFeedLine(ChatMessage m) {
   final name = m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
   String body;
-  if (m.type == 'file_announce' || (m.fileId.isNotEmpty && m.fileName.isNotEmpty)) {
+  if (m.isFileAnnounce) {
     final fn = m.fileName.trim().isEmpty ? 'file' : m.fileName.trim();
     body = 'FILE $fn';
+    if (m.size > 0) body = '$body ${m.size}';
   } else {
     body = m.text.trim();
   }

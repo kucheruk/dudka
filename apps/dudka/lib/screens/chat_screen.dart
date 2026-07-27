@@ -1,21 +1,24 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
 import 'settings_nick_screen.dart';
 
-/// Chat wireframe: status/peers/feed/compose + alone «ИСКАТЬ» + nick settings (P063–P066).
-/// DESIGN step-row lands in P069.
+/// Chat shell: status/peers/feed/compose + files with progress/cancel (P063–P067).
+/// DESIGN step-row lands in P069; image thumbs in P068.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.client,
     this.pollInterval = const Duration(seconds: 1),
+    this.pickLocalFile,
   });
 
   final EngineClient client;
   final Duration pollInterval;
+  final LocalFilePicker? pickLocalFile;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -27,9 +30,11 @@ class _ChatScreenState extends State<ChatScreen> {
   Object? _error;
   String? _sendError;
   String? _seekError;
+  String? _fileError;
   bool _loading = true;
   bool _sending = false;
   bool _seeking = false;
+  bool _announcing = false;
   Timer? _timer;
 
   @override
@@ -119,6 +124,83 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<LocalFileBytes?> _defaultPickPath() async {
+    final ctrl = TextEditingController();
+    final path = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Файл'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(hintText: '/path/to/file'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (path == null || path.isEmpty) return null;
+    final f = File(path);
+    if (!f.existsSync()) {
+      throw EngineException('файл не найден: $path');
+    }
+    final name = path.split(Platform.pathSeparator).last;
+    final mime = name.endsWith('.txt') ? 'text/plain' : 'application/octet-stream';
+    return LocalFileBytes(name: name, mime: mime, bytes: await f.readAsBytes());
+  }
+
+  Future<void> _announcePicked() async {
+    if (_announcing) return;
+    setState(() {
+      _announcing = true;
+      _fileError = null;
+    });
+    try {
+      final picker = widget.pickLocalFile ?? _defaultPickPath;
+      final picked = await picker();
+      if (picked == null) return;
+      await widget.client.announceFile(
+        name: picked.name,
+        mime: picked.mime,
+        content: picked.bytes,
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _fileError = e.toString());
+    } finally {
+      if (mounted) setState(() => _announcing = false);
+    }
+  }
+
+  Future<void> _fetchFile(String fileId) async {
+    setState(() => _fileError = null);
+    try {
+      await widget.client.startFetch(fileId);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _fileError = e.toString());
+    }
+  }
+
+  Future<void> _cancelFile(String fileId) async {
+    setState(() => _fileError = null);
+    try {
+      await widget.client.cancelFetch(fileId);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _fileError = e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,10 +263,8 @@ class _ChatScreenState extends State<ChatScreen> {
             child: _feedPane(snap),
           ),
         ),
-        if (_sendError != null) ...[
-          const SizedBox(height: 4),
-          Text(_sendError!, style: const TextStyle(color: Colors.red)),
-        ],
+        if (_sendError != null) Text(_sendError!, style: const TextStyle(color: Colors.red)),
+        if (_fileError != null) Text(_fileError!, style: const TextStyle(color: Colors.red)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -201,6 +281,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _blow(),
               ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              key: const Key('chat-file'),
+              onPressed: _announcing ? null : _announcePicked,
+              child: Text(_announcing ? '…' : 'ФАЙЛ'),
             ),
             const SizedBox(width: 8),
             FilledButton(
@@ -253,11 +339,57 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: snap.messages.length,
       itemBuilder: (context, i) {
         final m = snap.messages[i];
-        return Text(
-          formatFeedLine(m),
+        if (!m.isFileAnnounce) {
+          return Text(
+            formatFeedLine(m),
+            key: Key('chat-msg-${m.msgId.isEmpty ? i : m.msgId}'),
+          );
+        }
+        final tr = snap.transferFor(m.fileId);
+        return Padding(
           key: Key('chat-msg-${m.msgId.isEmpty ? i : m.msgId}'),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(formatFeedLine(m)),
+              const SizedBox(height: 4),
+              _fileActions(m.fileId, tr),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _fileActions(String fileId, TransferInfo? tr) {
+    final status = tr?.status ?? '';
+    if (status == 'downloading') {
+      return Row(
+        children: [
+          Text('${tr!.percent}%', key: Key('file-progress-$fileId')),
+          const SizedBox(width: 8),
+          TextButton(
+            key: Key('file-cancel-$fileId'),
+            onPressed: () => _cancelFile(fileId),
+            child: const Text('ОТМЕНА'),
+          ),
+        ],
+      );
+    }
+    if (status == 'done') {
+      return Text('готово', key: Key('file-done-$fileId'));
+    }
+    if (status == 'cancelled') {
+      return Text('отменено', key: Key('file-cancelled-$fileId'));
+    }
+    if (status == 'error') {
+      return Text('ошибка', key: Key('file-error-$fileId'));
+    }
+    return TextButton(
+      key: Key('file-fetch-$fileId'),
+      onPressed: () => _fetchFile(fileId),
+      child: const Text('СКАЧАТЬ'),
     );
   }
 }
