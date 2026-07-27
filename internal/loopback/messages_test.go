@@ -52,8 +52,12 @@ func TestSendAndMessagesEndpoints(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&sent); err != nil {
 		t.Fatal(err)
 	}
-	if sent["status"] != "accepted" {
+	st, _ := sent["status"].(string)
+	if !chat.IsBestEffortStatus(st) {
 		t.Fatalf("status=%v", sent["status"])
+	}
+	if _, ok := sent["queued"]; !ok {
+		t.Fatalf("missing queued: %v", sent)
 	}
 
 	get, err := http.Get(base + "/messages")

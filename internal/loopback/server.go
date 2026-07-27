@@ -215,16 +215,13 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid json\n", http.StatusBadRequest)
 		return
 	}
-	msg, err := hub.Send(req.Text)
+	res, err := hub.Send(req.Text)
 	if err != nil {
 		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status":  "accepted",
-		"message": msg,
-	})
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 func (s *Server) handleMessages(w http.ResponseWriter, _ *http.Request) {

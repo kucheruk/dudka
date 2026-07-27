@@ -52,7 +52,7 @@
 - [x] P032 Выбор tail-keeper (min peer_id) — unit-тест на наборах id
 - [x] P033 Хвост 200 на keeper: третий peer после register получает `GET /tail` согласованный с keeper
 - [x] P034 Уход keeper → перевыбор → новый peer всё ещё получает хвост (integration на 3 процессах)
-- [ ] P035 Best-effort: нет ложного «доставлено всем» в API/логах — только `accepted` / `queued`
+- [x] P035 Best-effort: нет ложного «доставлено всем» в API/логах — только `accepted` / `queued`
 
 ### 1.5 Linux TUI v0
 

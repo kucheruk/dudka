@@ -76,10 +76,12 @@ send_body='{"text":"p030 hello from alice"}'
 curl -sS --max-time 2 -X POST "http://${listen_a}/send" \
   -H 'Content-Type: application/json' \
   -d "$send_body" >"$tmpdir/send.json" || fail "POST /send failed"
-python3 - "$tmpdir/send.json" <<'PY' || fail "send not accepted"
+python3 - "$tmpdir/send.json" <<'PY' || fail "send not accepted/queued"
 import json, sys
 d = json.load(open(sys.argv[1]))
-assert d.get("status") == "accepted", d
+assert d.get("status") in ("accepted", "queued"), d
+assert "queued" in d, d
+assert "delivered" not in json.dumps(d).lower(), d
 assert d.get("message", {}).get("text") == "p030 hello from alice", d
 PY
 

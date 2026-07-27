@@ -46,11 +46,11 @@ func TestSendAcceptsExactMaxCodePoints(t *testing.T) {
 		Peers:  discovery.NewPeerStore(),
 	})
 	exact := strings.Repeat("x", chat.MaxTextCodePoints)
-	msg, err := hub.Send(exact)
+	res, err := hub.Send(exact)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if utf8.RuneCountInString(msg.Text) != chat.MaxTextCodePoints {
-		t.Fatalf("len=%d", utf8.RuneCountInString(msg.Text))
+	if utf8.RuneCountInString(res.Message.Text) != chat.MaxTextCodePoints {
+		t.Fatalf("len=%d", utf8.RuneCountInString(res.Message.Text))
 	}
 }

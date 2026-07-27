@@ -58,10 +58,11 @@ func TestFanoutSecondPeerSeesMessageWithin2s(t *testing.T) {
 		Timeout: time.Second,
 	})
 
-	msg, err := hubA.Send("hello lan")
+	res, err := hubA.Send("hello lan")
 	if err != nil {
 		t.Fatal(err)
 	}
+	msg := res.Message
 	if msg.Text != "hello lan" || msg.MsgID == "" {
 		t.Fatalf("bad local msg %+v", msg)
 	}

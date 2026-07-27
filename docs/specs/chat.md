@@ -97,14 +97,14 @@ ADR: не требуется
 ### DUD-CHAT-130
 
 Priority: P2  
-Status: Draft
+Status: Accepted
 
 MVP допускает best-effort доставку текста без обязательного end-to-end ack; сообщение, не попавшее в хвост и не доставленное offline peer, может быть потеряно. Это отражается в PRODUCT/UI copy («видят те, кто онлайн»).
 
 Проверка:
 
 - copy и спека согласованы;
-- нет ложного индикатора «доставлено всем», если нет ack-протокола;
+- нет ложного индикатора «доставлено всем», если нет ack-протокола; *(P035: `POST /send` → только `accepted`/`queued` + поле `queued`; логи `chat_accepted`/`chat_queued`/`chat_fanout_ok`, без delivered)*
 - evidence: review copy.
 
 Зависимости: DUD-CHAT-101  

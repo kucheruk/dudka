@@ -73,15 +73,16 @@ func (h *Hub) SetName(name string) {
 // Messages returns the local log.
 func (h *Hub) Messages() []Message { return h.store.List() }
 
-// Send builds a message, stores it locally, and fans out to all known peers.
-func (h *Hub) Send(text string) (Message, error) {
+// Send builds a message, stores it locally, and schedules best-effort fan-out.
+// Status is only accepted/queued — never a delivery claim (DUD-CHAT-130 / P035).
+func (h *Hub) Send(text string) (SendResult, error) {
 	text = strings.TrimSpace(text)
 	if err := ValidateText(text); err != nil {
-		return Message{}, err
+		return SendResult{}, err
 	}
 	id, err := identity.NewUUIDv4()
 	if err != nil {
-		return Message{}, err
+		return SendResult{}, err
 	}
 	h.mu.RLock()
 	msg := Message{
@@ -98,10 +99,16 @@ func (h *Hub) Send(text string) (Message, error) {
 	peers := h.peers.List()
 	for _, p := range peers {
 		p := p
-		go h.deliver(p, msg)
+		go h.fanout(p, msg)
 	}
-	h.logf("chat_send msg_id=%s peers=%d text_len=%d", msg.MsgID, len(peers), len(msg.Text))
-	return msg, nil
+	queued := len(peers)
+	status := SendStatusForQueued(queued)
+	if status == StatusQueued {
+		h.logf("chat_queued msg_id=%s queued=%d text_len=%d", msg.MsgID, queued, len(msg.Text))
+	} else {
+		h.logf("chat_accepted msg_id=%s queued=0 text_len=%d", msg.MsgID, len(msg.Text))
+	}
+	return SendResult{Status: status, Queued: queued, Message: msg}, nil
 }
 
 // HandleChatLine is a discovery.OnChatLine callback for inbound TCP chat frames.
@@ -116,7 +123,8 @@ func (h *Hub) HandleChatLine(_ string, line []byte) {
 	}
 }
 
-func (h *Hub) deliver(p discovery.Peer, msg Message) {
+// fanout is best-effort write to one peer; success is not an end-to-end ack.
+func (h *Hub) fanout(p discovery.Peer, msg Message) {
 	if p.Host == "" || p.TCPPort <= 0 {
 		return
 	}
@@ -140,5 +148,5 @@ func (h *Hub) deliver(p discovery.Peer, msg Message) {
 		h.logf("chat_write_err peer_id=%s err=%v", p.PeerID, err)
 		return
 	}
-	h.logf("chat_deliver_ok peer_id=%s msg_id=%s", p.PeerID, msg.MsgID)
+	h.logf("chat_fanout_ok peer_id=%s msg_id=%s", p.PeerID, msg.MsgID)
 }
