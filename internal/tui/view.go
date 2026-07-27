@@ -143,7 +143,7 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id> · /cancel <file_id>)\n")
+	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id> · /fetch! <file_id> · /cancel <file_id>)\n")
 	return b.String()
 }
 
@@ -166,6 +166,8 @@ func feedLine(m MsgRow, tr TransferRow) string {
 		default:
 			if tr.FileID != "" {
 				line = fmt.Sprintf("%s %d%%", line, tr.Percent)
+			} else if IsLargeFile(m.Size) {
+				line = fmt.Sprintf("%s WARN>100MiB", line)
 			}
 		}
 		return line

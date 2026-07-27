@@ -57,8 +57,8 @@ Status: Draft
 
 Проверка:
 
-- файл 101 MiB можно начать передавать после warning;
-- evidence: UI test / ручной чеклист.
+- файл 101 MiB можно начать передавать после warning; *(P054: TUI `WARN>100MiB`, `/fetch` → warning, `/fetch!` или `-fetch` продолжает)*
+- evidence: UI test (`scripts/largefile_warn_test.sh`).
 
 Зависимости: DUD-FILE-110  
 ADR: не требуется

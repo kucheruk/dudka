@@ -61,12 +61,18 @@ func HandleComposeLine(c *Client, line string) error {
 		_, err := c.SetNick(name)
 		return err
 	}
-	if fileID, isFetch, err := ParseFetchCommand(text); isFetch {
+	if fileID, force, isFetch, err := ParseFetchCommand(text); isFetch {
 		if err != nil {
 			return err
 		}
-		_, err := c.StartFetch(fileID)
-		return err
+		plan, err := c.BeginFetch(fileID, force)
+		if err != nil {
+			return err
+		}
+		if plan.Warning != "" {
+			return &ErrLargeFileWarning{FileID: fileID, Msg: plan.Warning}
+		}
+		return nil
 	}
 	if fileID, isCancel, err := ParseCancelCommand(text); isCancel {
 		if err != nil {
@@ -79,17 +85,52 @@ func HandleComposeLine(c *Client, line string) error {
 	return err
 }
 
-// ParseFetchCommand recognizes `/fetch <file_id>` (P052).
-func ParseFetchCommand(line string) (fileID string, ok bool, err error) {
+// ErrLargeFileWarning is returned when /fetch needs confirmation for >100 MiB (P054).
+// It is not a hard block — /fetch! or force proceeds.
+type ErrLargeFileWarning struct {
+	FileID string
+	Msg    string
+}
+
+func (e *ErrLargeFileWarning) Error() string {
+	if e == nil {
+		return ""
+	}
+	return e.Msg
+}
+
+// ParseFetchCommand recognizes `/fetch <file_id>`, `/fetch! <id>`, `/fetch <id> --yes` (P052/P054).
+func ParseFetchCommand(line string) (fileID string, force bool, ok bool, err error) {
 	line = strings.TrimSpace(line)
-	if !strings.HasPrefix(line, "/fetch") {
-		return "", false, nil
+	if line == "" {
+		return "", false, false, nil
 	}
-	rest := strings.TrimSpace(strings.TrimPrefix(line, "/fetch"))
-	if rest == "" {
-		return "", true, fmt.Errorf("tui: /fetch needs a file_id")
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return "", false, false, nil
 	}
-	return rest, true, nil
+	cmd := fields[0]
+	switch {
+	case strings.EqualFold(cmd, "/fetch!"):
+		force = true
+	case strings.EqualFold(cmd, "/fetch"):
+		force = false
+	default:
+		return "", false, false, nil
+	}
+	if len(fields) < 2 {
+		return "", force, true, fmt.Errorf("tui: /fetch needs a file_id")
+	}
+	fileID = fields[1]
+	for _, f := range fields[2:] {
+		if f == "--yes" || f == "-y" || strings.EqualFold(f, "yes") {
+			force = true
+		}
+	}
+	if strings.TrimSpace(fileID) == "" {
+		return "", force, true, fmt.Errorf("tui: /fetch needs a file_id")
+	}
+	return fileID, force, true, nil
 }
 
 // ParseCancelCommand recognizes `/cancel <file_id>` (P053).

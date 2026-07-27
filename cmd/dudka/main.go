@@ -56,8 +56,22 @@ func main() {
 	}
 
 	if fid := strings.TrimSpace(*fetchID); fid != "" {
-		if _, err := client.StartFetch(fid); err != nil {
+		plan, err := client.BeginFetch(fid, false)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "dudka: fetch: %v\n", err)
+			os.Exit(1)
+		}
+		if plan.Warning != "" {
+			// Non-interactive: show warning, then proceed (DUD-FILE-111 — no hard block).
+			fmt.Fprintln(os.Stderr, plan.Warning)
+			plan, err = client.BeginFetch(fid, true)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "dudka: fetch: %v\n", err)
+				os.Exit(1)
+			}
+		}
+		if !plan.Started {
+			fmt.Fprintf(os.Stderr, "dudka: fetch did not start\n")
 			os.Exit(1)
 		}
 		deadline := time.Now().Add(30 * time.Second)
@@ -65,7 +79,7 @@ func main() {
 			snap := printFrame()
 			done := false
 			for _, tr := range snap.Transfers {
-				if tr.FileID == fid && (tr.Status == tui.TransferDone || tr.Status == tui.TransferError || tr.Percent >= 100) {
+				if tr.FileID == fid && (tr.Status == tui.TransferDone || tr.Status == tui.TransferError || tr.Status == tui.TransferCancelled || tr.Percent >= 100) {
 					done = true
 					if tr.Status == tui.TransferError {
 						os.Exit(1)
@@ -113,7 +127,11 @@ func main() {
 				return
 			}
 			if err := tui.HandleComposeLine(client, line); err != nil {
-				fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
+				if _, ok := err.(*tui.ErrLargeFileWarning); ok {
+					fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				} else {
+					fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
+				}
 			}
 			fmt.Println("---")
 			printFrame()
