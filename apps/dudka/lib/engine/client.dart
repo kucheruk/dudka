@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
-/// Thin loopback client for dudkad (P060–P067 / docs/design/flutter-bind.md).
+/// Thin loopback client for dudkad (P060–P071 / docs/design/flutter-bind.md).
 class EngineClient {
   EngineClient({
     required this.baseUrl,

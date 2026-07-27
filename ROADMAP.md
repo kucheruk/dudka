@@ -96,7 +96,7 @@
 - [x] P068 Превью картинок в ленте Flutter
 - [x] P069 Визуал `DESIGN.md`: charcoal panel, silkscreen labels, mono, step-progress (без CRT-фанатизма)
 - [x] P070 Wide layout dual-pane; narrow — peer strip (resize desktop не теряет текст compose)
-- [ ] P071 Flutter↔Flutter текст+файл на двух устройствах
+- [x] P071 Flutter↔Flutter текст+файл на двух устройствах
 - [ ] P072 Все user-facing строки GUI — русский (`DUD-PRD-103`)
 
 **Фаза 3 готова:** GUI и TUI вместе живут в квартире.
