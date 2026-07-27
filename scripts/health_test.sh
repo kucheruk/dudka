@@ -46,10 +46,6 @@ code="$(curl -sS -o "$tmpdir/body" -w '%{http_code}' --max-time 2 "http://${list
 [[ "$code" == "200" ]] || fail "GET /health status=$code body=$(cat "$tmpdir/body")"
 [[ "$(cat "$tmpdir/body")" == "ok" ]] || fail "health body want ok, got $(cat "$tmpdir/body")"
 
-# Non-goal P015: /me must not exist yet (404).
-me_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 "http://${listen}/me" || true)"
-[[ "$me_code" == "404" ]] || fail "GET /me should be 404 before P015, got $me_code"
-
 kill "$pid" 2>/dev/null || true
 wait "$pid" 2>/dev/null || true
 pid=""

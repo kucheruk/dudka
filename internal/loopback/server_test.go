@@ -13,7 +13,7 @@ import (
 
 func TestHealthReturns200(t *testing.T) {
 	t.Parallel()
-	srv := loopback.New()
+	srv := loopback.New("peer-health", "Health")
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func TestHealthReturns200(t *testing.T) {
 
 func TestListenRejectsNonLoopback(t *testing.T) {
 	t.Parallel()
-	srv := loopback.New()
+	srv := loopback.New("peer-health", "Health")
 	_, err := srv.Listen("0.0.0.0:0")
 	if err == nil {
 		t.Fatal("expected error for non-loopback listen addr")

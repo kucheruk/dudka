@@ -35,7 +35,7 @@ func main() {
 	}
 	fmt.Printf("display_name=%s\n", displayName)
 
-	api := loopback.New()
+	api := loopback.New(peerID, displayName)
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)
