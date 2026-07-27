@@ -327,16 +327,16 @@ func (n *Node) maybeRegister(a Announce, from net.Addr) {
 			delete(n.dialing, a.PeerID)
 			n.mu.Unlock()
 		}()
-		n.dialRegister(host, a.TCPPort)
+		_, _ = n.dialRegister(host, a.TCPPort)
 	}()
 }
 
-func (n *Node) dialRegister(host string, port int) {
+func (n *Node) dialRegister(host string, port int) (*Peer, error) {
 	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.DialTimeout("tcp", addr, n.cfg.DialTimeout)
 	if err != nil {
 		n.cfg.Logf("register_dial_err addr=%s err=%v", addr, err)
-		return
+		return nil, err
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(n.cfg.DialTimeout))
@@ -354,12 +354,12 @@ func (n *Node) dialRegister(host string, port int) {
 	n.mu.Unlock()
 
 	if err := writeRegister(conn, req); err != nil {
-		return
+		return nil, err
 	}
 	br := bufio.NewReader(conn)
 	resp, err := readRegister(br)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if resp.Type == "register_reject" {
 		peerID := resp.PeerID
@@ -367,17 +367,19 @@ func (n *Node) dialRegister(host string, port int) {
 			peerID = host
 		}
 		n.noteProtoMismatch(peerID, resp.ProtoMajor)
-		return
+		return nil, fmt.Errorf("discovery: register rejected")
 	}
 	n.mu.Lock()
 	ours := n.cfg.ProtoMajor
 	n.mu.Unlock()
 	if !CompatibleProto(ours, resp.ProtoMajor) {
 		n.noteProtoMismatch(resp.PeerID, resp.ProtoMajor)
-		return
+		return nil, fmt.Errorf("discovery: proto mismatch")
 	}
-	n.rememberPeer(peerFromRegister(resp, host))
+	p := peerFromRegister(resp, host)
+	n.rememberPeer(p)
 	n.cfg.Logf("register_ok peer_id=%s name=%s addr=%s", resp.PeerID, resp.DisplayName, addr)
+	return &p, nil
 }
 
 func (n *Node) announceLoop(ctx context.Context) {

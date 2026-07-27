@@ -2,6 +2,7 @@
 package loopback
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"dudka/internal/discovery"
 )
 
-// Server is the loopback HTTP surface (health/me/nick/peers/status).
+// Server is the loopback HTTP surface (health/me/nick/peers/status/scan).
 type Server struct {
 	mu          sync.RWMutex
 	peerID      string
@@ -22,6 +23,7 @@ type Server struct {
 	persistName func(string) error
 	peers       *discovery.PeerStore
 	status      func() discovery.Status
+	scan        func(context.Context, discovery.ScanRequest) (discovery.ScanResult, error)
 	mux         *http.ServeMux
 }
 
@@ -41,6 +43,7 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("POST /nick", s.handleNick)
 	s.mux.HandleFunc("GET /peers", s.handlePeers)
 	s.mux.HandleFunc("GET /status", s.handleStatus)
+	s.mux.HandleFunc("POST /scan", s.handleScan)
 	return s
 }
 
@@ -63,6 +66,45 @@ func (s *Server) SetStatusProvider(fn func() discovery.Status) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.status = fn
+}
+
+// SetScanProvider wires discovery Scan into POST /scan (P024).
+func (s *Server) SetScanProvider(fn func(context.Context, discovery.ScanRequest) (discovery.ScanResult, error)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.scan = fn
+}
+
+func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	fn := s.scan
+	s.mu.RUnlock()
+	if fn == nil {
+		http.Error(w, "scan unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req discovery.ScanRequest
+	if len(strings.TrimSpace(string(body))) > 0 {
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "invalid json\n", http.StatusBadRequest)
+			return
+		}
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), discovery.DefaultScanTimeout)
+	defer cancel()
+	res, err := fn(ctx, req)
+	if err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 func (s *Server) handlePeers(w http.ResponseWriter, _ *http.Request) {

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -76,6 +77,9 @@ func main() {
 	})
 	api.SetPeers(peers)
 	api.SetStatusProvider(func() discovery.Status { return disc.Status() })
+	api.SetScanProvider(func(ctx context.Context, req discovery.ScanRequest) (discovery.ScanResult, error) {
+		return disc.Scan(ctx, req)
+	})
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)
