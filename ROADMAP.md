@@ -38,7 +38,7 @@
 
 ### 1.3 Discovery
 
-- [ ] P020 UDP broadcast announce на `:41777` раз в N секунд — второй процесс в той же LAN видит пакет (tcpdump/лог `announce_rx`)
+- [x] P020 UDP broadcast announce на `:41777` раз в N секунд — второй процесс в той же LAN видит пакет (tcpdump/лог `announce_rx`)
 - [ ] P021 По announce — TCP register: оба peer появляются друг у друга в памяти — `GET /peers` на loopback показывает соседа
 - [ ] P022 `instance_id` меняется при рестарте — сосед помечает peer «обновился», без дубля двух зомби-записей
 - [ ] P023 Несовместимый `proto_major` в register — отказ + строка в логе/статусе, сессия не портится

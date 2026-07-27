@@ -16,18 +16,13 @@
 go build -o dist/dudkad ./cmd/dudkad   # engine
 go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./dist/dudkad -data-dir /tmp/dudka-demo -name Вася -listen 127.0.0.1:17880
-# → dudkad 0.0.0-dev
-# → peer_id=<uuid>
-# → display_name=Вася
-# → listen=127.0.0.1:17880
 # → ready peer_id=<uuid> name=Вася
-# curl -s http://127.0.0.1:17880/health  →  ok
-# curl -s http://127.0.0.1:17880/me      →  {"peer_id":"…","name":"Вася"}
-# curl -s -X POST http://127.0.0.1:17880/nick -H 'Content-Type: application/json' -d '{"name":"Петя"}'
+# → UDP announce broadcast :41777 every 2s; peers log announce_rx …
+# curl -s http://127.0.0.1:17880/me → {"peer_id":"…","name":"Вася"}
 ./dist/dudka    # → dudka 0.0.0-dev
 ```
 
-Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback}`.
+Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback,discovery}`.
 
 ## Локальный гейт
 
@@ -37,7 +32,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/announce_test.sh`.
 
 ## Зачем
 

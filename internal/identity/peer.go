@@ -38,7 +38,7 @@ func LoadOrCreate(dataDir string) (string, error) {
 		return "", fmt.Errorf("identity: read peer_id: %w", err)
 	}
 
-	id, err := newUUIDv4()
+	id, err := NewUUIDv4()
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +48,8 @@ func LoadOrCreate(dataDir string) (string, error) {
 	return id, nil
 }
 
-func newUUIDv4() (string, error) {
+// NewUUIDv4 returns a random RFC 4122 version-4 UUID string.
+func NewUUIDv4() (string, error) {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		return "", fmt.Errorf("identity: generate uuid: %w", err)
