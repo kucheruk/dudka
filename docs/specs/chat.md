@@ -26,7 +26,7 @@ Status: Partial
 Проверка:
 
 - три online peer: все трое видят сообщение; *(P030: два peer через `POST /send` → `GET /messages` ≤ 2 s; третий — позже)*
-- oversized text отвергается с понятной ошибкой UI; *(P031)*
+- oversized text отвергается с понятной ошибкой UI; *(P031: `ValidateText` / `ErrTextTooLong`, HTTP 4xx на `POST /send`)*
 - evidence: protocol tests.
 
 Зависимости: DUD-NET-111  

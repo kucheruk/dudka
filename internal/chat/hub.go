@@ -75,8 +75,8 @@ func (h *Hub) Messages() []Message { return h.store.List() }
 // Send builds a message, stores it locally, and fans out to all known peers.
 func (h *Hub) Send(text string) (Message, error) {
 	text = strings.TrimSpace(text)
-	if text == "" {
-		return Message{}, fmt.Errorf("chat: text is required")
+	if err := ValidateText(text); err != nil {
+		return Message{}, err
 	}
 	id, err := identity.NewUUIDv4()
 	if err != nil {

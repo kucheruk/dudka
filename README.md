@@ -27,6 +27,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # ./dist/dudkad -dial-hosts 8.8.8.8 …
 # curl -s -X POST http://127.0.0.1:17880/send -d '{"text":"привет"}' → accepted + fan-out
 # curl -s http://127.0.0.1:17880/messages → лента у всех online
+# текст > 4000 code points → 4xx + понятная ошибка (P031)
 ./dist/dudka    # → dudka 0.0.0-dev
 ```
 
@@ -40,7 +41,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/announce_test.sh`, `./scripts/peers_test.sh`, `./scripts/instance_test.sh`, `./scripts/proto_test.sh`, `./scripts/scan_test.sh`, `./scripts/wan_test.sh`, `./scripts/send_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/announce_test.sh`, `./scripts/peers_test.sh`, `./scripts/instance_test.sh`, `./scripts/proto_test.sh`, `./scripts/scan_test.sh`, `./scripts/wan_test.sh`, `./scripts/send_test.sh`, `./scripts/send_length_test.sh`.
 
 ## Зачем
 
