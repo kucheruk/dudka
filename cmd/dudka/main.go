@@ -21,6 +21,7 @@ func main() {
 	send := flag.String("send", "", "send one text line to engine, print frame, exit")
 	nick := flag.String("nick", "", "change display name via engine, print frame, exit")
 	fetchID := flag.String("fetch", "", "start file download by file_id and print progress frames until done")
+	announcePath := flag.String("announce", "", "announce a local file into the feed (image thumb + binary) and print frame")
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 
@@ -51,6 +52,17 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dudka: send: %v\n", err)
 			os.Exit(1)
 		}
+		printFrame()
+		return
+	}
+
+	if path := strings.TrimSpace(*announcePath); path != "" {
+		res, err := client.AnnouncePath(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dudka: announce: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "announced file_id=%s name=%s mime=%s\n", res.FileID, res.Name, res.Mime)
 		printFrame()
 		return
 	}

@@ -144,7 +144,7 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send · /nick Имя · /fetch <file_id> · /fetch! <file_id> · /cancel <file_id>)\n")
+	b.WriteString("  >  (Enter = send · /nick Имя · /announce <path> · /fetch <file_id> · /fetch! <file_id> · /cancel <file_id>)\n")
 	return b.String()
 }
 

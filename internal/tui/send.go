@@ -47,7 +47,7 @@ func (c *Client) Send(text string) (SendResult, error) {
 	return res, nil
 }
 
-// HandleComposeLine handles compose input: /nick, /fetch, or Enter = send.
+// HandleComposeLine handles compose input: /nick, /announce, /fetch, /cancel, or Enter = send.
 // Blank lines are ignored (no error).
 func HandleComposeLine(c *Client, line string) error {
 	text := strings.TrimSpace(line)
@@ -59,6 +59,13 @@ func HandleComposeLine(c *Client, line string) error {
 			return err
 		}
 		_, err := c.SetNick(name)
+		return err
+	}
+	if path, isAnn, err := ParseAnnounceCommand(text); isAnn {
+		if err != nil {
+			return err
+		}
+		_, err := c.AnnouncePath(path)
 		return err
 	}
 	if fileID, force, isFetch, err := ParseFetchCommand(text); isFetch {
@@ -142,6 +149,19 @@ func ParseCancelCommand(line string) (fileID string, ok bool, err error) {
 	rest := strings.TrimSpace(strings.TrimPrefix(line, "/cancel"))
 	if rest == "" {
 		return "", true, fmt.Errorf("tui: /cancel needs a file_id")
+	}
+	return rest, true, nil
+}
+
+// ParseAnnounceCommand recognizes `/announce <path>` (P058).
+func ParseAnnounceCommand(line string) (path string, ok bool, err error) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "/announce") {
+		return "", false, nil
+	}
+	rest := strings.TrimSpace(strings.TrimPrefix(line, "/announce"))
+	if rest == "" {
+		return "", true, fmt.Errorf("tui: /announce needs a file path")
 	}
 	return rest, true, nil
 }
