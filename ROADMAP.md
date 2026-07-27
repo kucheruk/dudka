@@ -125,8 +125,8 @@
 - [x] P120 Копирайт/outline страницы Дудки (1 screen: что это, LAN-only, без аккаунтов) — [`docs/landing-zamoo.md`](docs/landing-zamoo.md)
 - [x] P121 HTML-страница `zamoo.team/dudka.html` в стиле сайта: герой + блоки ОС (плейсхолдеры)
 - [x] P122 Ссылка «Дудка» в футере главной `zamoo.team/index.html`
-- [ ] P123 Живые скриншоты + ссылки на установщики (macOS/Windows/Linux/Android/iOS) — когда артефакты фазы 4 готовы
-- [ ] P124 Oneliner установки семьи (док + блок на странице), когда есть стабильные артефакты из P080–P085
+- [x] P123 Живые скриншоты + ссылки на установщики (macOS/Windows/Linux/Android/iOS) — когда артефакты фазы 4 готовы (`zamoo.team/dudka.html` + `assets/dudka/*`; install → build scripts; DESIGN stills — Screen Recording TCC на агентском Mac)
+- [x] P124 Oneliner установки семьи (док + блок на странице), когда есть стабильные артефакты из P080–P085 (`docs/family-install.md` + блок `#oneliner-title` на `dudka.html`)
 
 **Фаза 4b готова:** с zamoo.team можно понять Дудку и скачать/поставить без аккаунта.
 
