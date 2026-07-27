@@ -41,9 +41,9 @@ Status: Draft
 
 Проверка:
 
-- три ветки имени покрыты тестами;
+- три ветки имени покрыты тестами; *(P011 engine + P062 Flutter `nick/fallback.dart` + skip→«Прилагательное+Животное»)*
 - `peer_id` переживает рестарт приложения;
-- evidence: unit + ручной first-run.
+- evidence: `apps/dudka/test/nick_fallback_test.dart`, `apps/dudka/test/first_run_test.dart`, `./scripts/flutter_firstrun_test.sh` (P062).
 
 Зависимости: нет  
 ADR: не требуется

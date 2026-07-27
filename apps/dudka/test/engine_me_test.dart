@@ -40,7 +40,8 @@ void main() {
         home: MeScreen(engineBase: 'http://127.0.0.1:9', client: client),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(find.byKey(const Key('me-name')), findsOneWidget);
     expect(find.text('name: Anya'), findsOneWidget);
     expect(find.text('peer_id: peer-spike'), findsOneWidget);

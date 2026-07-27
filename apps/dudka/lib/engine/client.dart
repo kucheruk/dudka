@@ -33,6 +33,26 @@ class EngineClient {
     return MeInfo(peerId: peerId, name: name.isEmpty ? '—' : name);
   }
 
+  /// POST /nick — set display name (P016 / P062 first-run).
+  Future<MeInfo> setNick(String name) async {
+    final n = name.trim();
+    if (n.isEmpty) {
+      throw EngineException('nick is required');
+    }
+    final res = await _http.post(
+      _uri('/nick'),
+      headers: {'content-type': 'application/json; charset=utf-8'},
+      body: jsonEncode({'name': n}),
+    );
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException('POST /nick → ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final peerId = (map['peer_id'] as String?)?.trim() ?? '';
+    final out = (map['name'] as String?)?.trim() ?? n;
+    return MeInfo(peerId: peerId, name: out);
+  }
+
   void close() => _http.close();
 }
 

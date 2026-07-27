@@ -16,10 +16,12 @@ command -v flutter >/dev/null 2>&1 || fail "flutter not on PATH"
 command -v dart >/dev/null 2>&1 || fail "dart not on PATH"
 
 [[ -f apps/dudka/lib/app.dart ]] || fail "lib/app.dart missing (skeleton)"
-[[ -f apps/dudka/lib/screens/me_screen.dart ]] || fail "MeScreen missing"
+[[ -f apps/dudka/lib/screens/me_screen.dart ]] || fail "MeScreen missing (spike/debug)"
+[[ -f apps/dudka/lib/screens/chat_screen.dart ]] || fail "ChatScreen missing"
 [[ -f apps/dudka/lib/engine/host.dart ]] || fail "EngineHost missing"
 [[ -f apps/dudka/macos/Runner.xcodeproj/project.pbxproj ]] || fail "macOS target missing"
-grep -q 'MeScreen' apps/dudka/lib/app.dart || fail "DudkaApp must host MeScreen"
+grep -qE 'ChatScreen|FirstRunNickScreen' apps/dudka/lib/app.dart \
+  || fail "DudkaApp must host first-run/chat shell"
 grep -q 'EngineHost' apps/dudka/lib/main.dart || fail "main must wire EngineHost spawn path"
 grep -qiE 'macOS|macos|desktop' docs/design/flutter-bind.md \
   || fail "ADR must name macOS/desktop as first skeleton target"

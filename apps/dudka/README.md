@@ -16,11 +16,12 @@ flutter run -d macos --dart-define=DUDKA_ENGINE=http://127.0.0.1:17880
 flutter run -d macos --dart-define=DUDKAD_BIN=$PWD/../../dist/dudkad
 ```
 
-Home screen shows `GET /me` (`name`, `peer_id`).
+Cold start: first-run nick (RU) → chat (`GET /me` in chat). Skip uses hostname / «Прилагательное+Животное».
 
 ## Checks
 
 ```bash
+./scripts/flutter_firstrun_test.sh   # P062
 ./scripts/flutter_skeleton_test.sh   # P061
 ./scripts/flutter_bind_test.sh       # P060 bind contract
 ```

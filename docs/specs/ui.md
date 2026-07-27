@@ -34,14 +34,15 @@ ADR: не требуется
 ### DUD-UI-110
 
 Priority: P0  
-Status: Draft
+Status: Accepted
 
 First-run: единственное обязательное действие — ввод или подтверждение ника (с fallbacks из DUD-CHAT-110). Затем сразу DUD-UI-101.
 
 Проверка:
 
-- нет второго обязательного шага (аватар, телефон, email);
-- evidence: flow test.
+- нет второго обязательного шага (аватар, телефон, email); *(P062: Flutter `FirstRunNickScreen` — только ник + «Продолжить»/«Пропустить»)*
+- cold start без подтверждённого ника → RU first-run → чат; с подтверждённым → сразу чат;
+- evidence: `apps/dudka/test/first_run_test.dart`, `./scripts/flutter_firstrun_test.sh` (P062).
 
 Зависимости: DUD-CHAT-110  
 ADR: не требуется
