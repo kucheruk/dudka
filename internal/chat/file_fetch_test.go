@@ -75,7 +75,7 @@ func TestFetchFileFromSourceWritesFullDiskCopy(t *testing.T) {
 	res, err := hubA.AnnounceFile(chat.FileAnnounce{
 		Name:    "hello.txt",
 		Mime:    "text/plain",
-		Hash:    "sha256:test",
+		Hash:    files.SHA256Sum(payload),
 		Content: payload,
 	})
 	if err != nil {

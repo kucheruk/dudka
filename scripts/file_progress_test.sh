@@ -63,18 +63,14 @@ done
 # ~6KiB payload so async fetch has visible mid percents on default 64KiB chunks? 
 # Use content that still works; progress ticks at least 0→100. For mid%, rely on unit tests;
 # here assert transfers reach 100% and TUI frame shows percent.
-content_b64="$(python3 - <<'PY'
-import base64
-print(base64.b64encode(b"p052-" + b"x"*200).decode())
-PY
-)"
-ann="$(python3 - "$content_b64" <<'PY'
-import json, sys
+ann="$(python3 - <<'PY'
+import base64, hashlib, json
+payload = b"p052-" + b"x"*200
 print(json.dumps({
   "name": "prog.bin",
   "mime": "application/octet-stream",
-  "hash": "sha256:p052",
-  "content_b64": sys.argv[1],
+  "hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+  "content_b64": base64.b64encode(payload).decode(),
 }))
 PY
 )"

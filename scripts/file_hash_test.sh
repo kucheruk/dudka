@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Task-level contract for P051: chunk download from source → full file on disk.
+# Task-level contract for P055 / DUD-FILE-130: hash mismatch after download → corrupt error, not success.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -7,12 +7,12 @@ cd "$ROOT"
 export DUDKA_NO_PROMPT=1
 
 fail() {
-  echo "file_fetch_test FAIL: $*" >&2
+  echo "file_hash_test FAIL: $*" >&2
   exit 1
 }
 
-go test ./internal/files/ ./internal/chat/ ./internal/loopback/ -run 'Chunk|FetchFile|FilesFetch' -count=1 >/dev/null \
-  || fail "unit tests failed"
+go test ./internal/files/ ./internal/chat/ -run 'Hash|Corrupt|Verify|FetchHash' -count=1 >/dev/null \
+  || fail "unit/integration hash tests failed"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"; for p in ${pid_a:-} ${pid_b:-}; do [[ -n "$p" ]] && kill "$p" 2>/dev/null || true; done' EXIT
@@ -68,68 +68,59 @@ PY
 done
 [[ "$found" -eq 1 ]] || fail "peers empty"
 
-# 24-byte payload → multiple 8-byte chunks on the wire when ChunkSize defaults apply;
-# engine uses 64KiB default, but still transfers via file_chunk frames (not announce body).
+# Source stores real bytes but announce lies about hash → Bob must reject after download.
 ann="$(python3 - <<'PY'
 import base64, hashlib, json
-payload = b"p051-chunked-payload-OK!!"
+payload = b"p055-real-bytes-on-disk"
+wrong = "sha256:" + hashlib.sha256(b"p055-tampered-expected").hexdigest()
 print(json.dumps({
-  "name": "payload.bin",
+  "name": "corrupt.bin",
   "mime": "application/octet-stream",
-  "hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+  "hash": wrong,
   "content_b64": base64.b64encode(payload).decode(),
 }))
 PY
 )"
 curl -sS --max-time 2 -X POST "http://${listen_a}/files/announce" \
-  -H 'Content-Type: application/json' \
-  -d "$ann" >"$tmpdir/ann.json" || fail "announce failed"
-file_id="$(python3 - "$tmpdir/ann.json" <<'PY'
-import json, sys
-d = json.load(open(sys.argv[1]))
-m = d["message"]
-assert m["type"] == "file_announce"
-assert m["file_id"]
-# content must not ride on the announce message
-assert not m.get("content_b64")
-assert not m.get("text")
-print(m["file_id"])
-PY
-)"
+  -H 'Content-Type: application/json' -d "$ann" >"$tmpdir/ann.json" || fail "announce"
+file_id="$(python3 -c 'import json; print(json.load(open("'"$tmpdir/ann.json"'"))["message"]["file_id"])')"
 
-# Wait until Bob sees announce.
-seen=0
 for _ in $(seq 1 40); do
   mb="$(curl -sS --max-time 1 "http://${listen_b}/messages" || true)"
-  if python3 - "$mb" "$file_id" <<'PY'
-import json, sys
-data = json.loads(sys.argv[1])
-fid = sys.argv[2]
-for m in data.get("messages") or []:
-    if m.get("file_id") == fid and m.get("type") == "file_announce":
-        raise SystemExit(0)
-raise SystemExit(1)
-PY
-  then
-    seen=1
-    break
-  fi
+  echo "$mb" | grep -q "$file_id" && break
   sleep 0.05
 done
-[[ "$seen" -eq 1 ]] || fail "bob missing announce"
+echo "$(curl -sS --max-time 1 "http://${listen_b}/messages")" | grep -q "$file_id" \
+  || fail "bob missing announce"
 
-curl -sS --max-time 5 -X POST "http://${listen_b}/files/fetch" \
+set +e
+http_code="$(curl -sS --max-time 5 -o "$tmpdir/fetch.body" -w '%{http_code}' \
+  -X POST "http://${listen_b}/files/fetch" \
   -H 'Content-Type: application/json' \
-  -d "{\"file_id\":\"${file_id}\"}" >"$tmpdir/fetch.json" || fail "fetch failed"
-python3 - "$tmpdir/fetch.json" <<'PY' || fail "fetch result bad"
-import json, sys, pathlib
-d = json.load(open(sys.argv[1]))
-path = pathlib.Path(d["path"])
-assert path.is_file(), d
-data = path.read_bytes()
-assert data == b"p051-chunked-payload-OK!!", data
-assert d.get("size") == len(data), d
-assert d.get("file_id"), d
+  -d "{\"file_id\":\"${file_id}\"}")"
+set -e
+[[ "$http_code" != "200" ]] || fail "fetch HTTP must fail, got 200: $(cat "$tmpdir/fetch.body")"
+body="$(cat "$tmpdir/fetch.body")"
+echo "$body" | grep -qE 'повреждён|поврежден' || fail "fetch body missing corrupt text: $body"
+
+python3 - "$listen_b" "$file_id" "$tmpdir/b" <<'PY' || fail "transfer status / inbox check"
+import json, pathlib, sys, urllib.request
+listen, fid, data = sys.argv[1], sys.argv[2], sys.argv[3]
+raw = urllib.request.urlopen(f"http://{listen}/files/transfers", timeout=2).read()
+trs = json.loads(raw).get("transfers") or []
+hit = [t for t in trs if t.get("file_id") == fid]
+assert hit, trs
+tr = hit[0]
+assert tr.get("status") == "error", tr
+assert not tr.get("path"), tr
+err = (tr.get("error") or "")
+assert ("повреждён" in err) or ("поврежден" in err), err
+inbox = pathlib.Path(data) / "inbox"
+if inbox.is_dir():
+    for p in inbox.rglob("*"):
+        if p.is_file() and fid in p.name:
+            raise SystemExit(f"corrupt success file remains: {p}")
+print("ok")
 PY
 
 kill "$pid_a" "$pid_b" 2>/dev/null || true
@@ -137,4 +128,4 @@ wait "$pid_a" 2>/dev/null || true
 wait "$pid_b" 2>/dev/null || true
 pid_a=""; pid_b=""
 
-echo "file_fetch_test OK"
+echo "file_hash_test OK"

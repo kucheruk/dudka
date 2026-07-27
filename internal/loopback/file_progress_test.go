@@ -59,7 +59,7 @@ func TestTransfersEndpointReportsPercent(t *testing.T) {
 		ProgressYield: 5 * time.Millisecond,
 	})
 	res, err := hubA.AnnounceFile(chat.FileAnnounce{
-		Name: "p.bin", Mime: "application/octet-stream", Hash: "sha256:p",
+		Name: "p.bin", Mime: "application/octet-stream", Hash: files.SHA256Sum(payload),
 		Content: payload,
 	})
 	if err != nil {

@@ -58,7 +58,7 @@ func TestFetchExposesTransferProgressToHundred(t *testing.T) {
 	})
 
 	res, err := hubA.AnnounceFile(chat.FileAnnounce{
-		Name: "big.bin", Mime: "application/octet-stream", Hash: "sha256:p",
+		Name: "big.bin", Mime: "application/octet-stream", Hash: files.SHA256Sum(payload),
 		Content: payload,
 	})
 	if err != nil {

@@ -58,7 +58,7 @@ func TestPostFilesFetchDownloadsFromSource(t *testing.T) {
 	})
 
 	res, err := hubA.AnnounceFile(chat.FileAnnounce{
-		Name: "x.bin", Mime: "application/octet-stream", Hash: "sha256:x",
+		Name: "x.bin", Mime: "application/octet-stream", Hash: files.SHA256Sum(payload),
 		Content: payload,
 	})
 	if err != nil {

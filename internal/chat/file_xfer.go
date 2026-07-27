@@ -231,6 +231,10 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 				h.failTransfer(fileID, msg.FileName, msg.Size, err)
 				return FetchResult{}, err
 			}
+			if err := files.VerifyFile(p, msg.Hash); err != nil {
+				h.failTransfer(fileID, msg.FileName, msg.Size, err)
+				return FetchResult{}, err
+			}
 			if !h.xfers.putActive(Transfer{
 				FileID:   fileID,
 				Name:     msg.FileName,
@@ -309,6 +313,15 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 		return h.finishCancelled(fileID, msg, n, dest)
 	}
 	if err != nil {
+		_ = os.Remove(dest)
+		_ = os.Remove(dest + ".partial")
+		if tr, ok := h.xfers.get(fileID); ok && tr.Status == TransferCancelled {
+			return h.finishCancelled(fileID, msg, n, dest)
+		}
+		h.failTransfer(fileID, msg.FileName, msg.Size, err)
+		return FetchResult{}, err
+	}
+	if err := files.VerifyFile(dest, msg.Hash); err != nil {
 		_ = os.Remove(dest)
 		_ = os.Remove(dest + ".partial")
 		if tr, ok := h.xfers.get(fileID); ok && tr.Status == TransferCancelled {

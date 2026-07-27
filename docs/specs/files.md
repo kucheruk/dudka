@@ -88,8 +88,8 @@ Status: Draft
 
 Проверка:
 
-- битый последний чанк → ошибка;
-- evidence: protocol test.
+- битый последний чанк / неверный announce hash → ошибка, transfer `error` (не `done`), файл из inbox убран; *(P055: `files.VerifyFile` / `IsCorrupt`, SHA-256 `sha256:<hex>`)*
+- evidence: protocol test (`scripts/file_hash_test.sh`).
 
 Зависимости: DUD-FILE-110  
 ADR: не требуется
