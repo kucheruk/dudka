@@ -40,7 +40,7 @@
 
 - [x] P020 UDP broadcast announce на `:41777` раз в N секунд — второй процесс в той же LAN видит пакет (tcpdump/лог `announce_rx`)
 - [x] P021 По announce — TCP register: оба peer появляются друг у друга в памяти — `GET /peers` на loopback показывает соседа
-- [ ] P022 `instance_id` меняется при рестарте — сосед помечает peer «обновился», без дубля двух зомби-записей
+- [x] P022 `instance_id` меняется при рестарте — сосед помечает peer «обновился», без дубля двух зомби-записей
 - [ ] P023 Несовместимый `proto_major` в register — отказ + строка в логе/статусе, сессия не портится
 - [ ] P024 Subnet scan fallback: команда/endpoint `POST /scan` находит peer при выключенном broadcast (тест: фильтр UDP)
 - [ ] P025 Guard: попытка dial на публичный IP из конфига не уходит в WAN — тест с фейковым dialer (`DUD-NET-101`)

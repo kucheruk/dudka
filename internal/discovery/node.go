@@ -198,7 +198,7 @@ func (n *Node) handleRegisterConn(conn net.Conn) {
 		return
 	}
 	host := hostFromAddr(conn.RemoteAddr())
-	n.cfg.Peers.Upsert(peerFromRegister(req, host))
+	n.rememberPeer(peerFromRegister(req, host))
 	n.cfg.Logf("register_rx peer_id=%s name=%s from=%s", req.PeerID, req.DisplayName, conn.RemoteAddr().String())
 
 	n.mu.Lock()
@@ -308,7 +308,7 @@ func (n *Node) dialRegister(host string, port int) {
 	if err != nil {
 		return
 	}
-	n.cfg.Peers.Upsert(peerFromRegister(resp, host))
+	n.rememberPeer(peerFromRegister(resp, host))
 	n.cfg.Logf("register_ok peer_id=%s name=%s addr=%s", resp.PeerID, resp.DisplayName, addr)
 }
 

@@ -35,11 +35,11 @@ func TestRegisterRoundTrip(t *testing.T) {
 func TestPeerStoreUpsertAndList(t *testing.T) {
 	t.Parallel()
 	s := discovery.NewPeerStore()
-	s.Upsert(discovery.Peer{
+	_ = s.Upsert(discovery.Peer{
 		PeerID: "p1", DisplayName: "A", InstanceID: "i1",
 		Host: "127.0.0.1", TCPPort: 1, LastSeen: time.Now(),
 	})
-	s.Upsert(discovery.Peer{
+	_ = s.Upsert(discovery.Peer{
 		PeerID: "p1", DisplayName: "A2", InstanceID: "i1",
 		Host: "127.0.0.1", TCPPort: 1, LastSeen: time.Now(),
 	})

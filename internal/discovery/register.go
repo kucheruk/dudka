@@ -83,6 +83,13 @@ func peerFromRegister(r Register, host string) Peer {
 	}
 }
 
+func (n *Node) rememberPeer(p Peer) {
+	res := n.cfg.Peers.Upsert(p)
+	if res.InstanceChanged {
+		n.cfg.Logf("%s", FormatPeerUpdated(p.PeerID, res.OldInstanceID, p.InstanceID))
+	}
+}
+
 func hostFromAddr(addr net.Addr) string {
 	host, _, err := net.SplitHostPort(addr.String())
 	if err != nil {
