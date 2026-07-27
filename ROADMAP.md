@@ -110,7 +110,7 @@
 - [x] P081 Сборка macOS desktop (Flutter) → открывается `.app` / архив
 - [x] P082 Сборка Windows desktop → запускаемый артефакт (`./scripts/build_windows_app.sh` → `dist/dudkad-windows-*.exe` + TUI; Flutter GUI на Windows-хосте — `dist/BUILD-WINDOWS.md`)
 - [x] P083 Сборка Android APK/AAB для sidecar — ставится на телефон семьи (`./scripts/build_android_apk.sh` → `dist/dudka-android.apk`/`.aab`; engine sidecar note in `BUILD-ANDROID.md`)
-- [ ] P084 iOS: ad-hoc или TestFlight path задокументирован; билд хотя бы на одном устройстве
+- [x] P084 iOS: ad-hoc или TestFlight path задокументирован; билд хотя бы на одном устройстве (`docs/build-ios.md`, `./scripts/build_ios_app.sh` → unsigned iphoneos Runner.app; physical install needs Apple signing)
 - [ ] P085 README «как поставить семье за 5 минут» без аккаунтов
 - [ ] P086 Смоук-таблица платформ в `docs/` (что проверено руками) — обновляется при каждой поставке
 

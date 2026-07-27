@@ -107,6 +107,15 @@ open dist/dudka.app
 
 Контракт: `./scripts/build_android_apk_test.sh`. Sidecar-движок на телефоне — см. `dist/BUILD-ANDROID.md`.
 
+## Сборка iOS (P084)
+
+```bash
+./scripts/build_ios_app.sh
+# → dist/dudka-ios-Runner.app + dist/dudka-ios-unsigned.zip (unsigned device build)
+```
+
+Ad-hoc / TestFlight: [`docs/build-ios.md`](docs/build-ios.md). Контракт: `./scripts/build_ios_app_test.sh`.
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
