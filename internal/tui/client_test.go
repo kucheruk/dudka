@@ -25,7 +25,9 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 		})
 	})
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{"proto_major": 1, "proto_minor": 0})
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"proto_major": 1, "proto_minor": 0, "network": "ok",
+		})
 	})
 	mux.HandleFunc("GET /messages", func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -57,6 +59,9 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 	if snap.ProtoMajor != 1 {
 		t.Fatalf("proto=%d", snap.ProtoMajor)
 	}
+	if snap.Network != tui.NetworkOK {
+		t.Fatalf("network=%q", snap.Network)
+	}
 	if len(snap.Messages) != 1 || snap.Messages[0].Text != "из engine" {
 		t.Fatalf("messages=%+v", snap.Messages)
 	}
@@ -65,5 +70,38 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 		if !strings.Contains(frame, part) {
 			t.Fatalf("missing %q in:\n%s", part, frame)
 		}
+	}
+}
+
+func TestFetchNoNetworkRendersDistinctCopy(t *testing.T) {
+	t.Parallel()
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /me", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"peer_id": "p1", "name": "Аня"})
+	})
+	mux.HandleFunc("GET /peers", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"peers": []any{}})
+	})
+	mux.HandleFunc("GET /status", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"proto_major": 1, "proto_minor": 0, "network": "no_network",
+		})
+	})
+	mux.HandleFunc("GET /messages", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"messages": []any{}})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	snap, err := tui.NewClient(srv.URL).Fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.Network != tui.NetworkNoNetwork {
+		t.Fatalf("network=%q", snap.Network)
+	}
+	frame := tui.Render(snap)
+	if !strings.Contains(frame, tui.NoNetworkCopy) || strings.Contains(frame, tui.EmptyPeersCopy) {
+		t.Fatalf("want no_network copy distinct from alone:\n%s", frame)
 	}
 }

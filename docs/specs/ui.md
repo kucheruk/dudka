@@ -51,12 +51,12 @@ ADR: не требуется
 Priority: P0  
 Status: Draft
 
-Состояния `alone` и `no_network` показываются разным copy на русском: «НИКОГО РЯДОМ» vs отсутствие сети. В `alone` доступна команда «ИСКАТЬ» (subnet scan).
+Состояния `alone` и `no_network` показываются разным copy на русском: «НИКОГО РЯДОМ» vs «НЕТ СЕТИ». В `alone` доступна команда «ИСКАТЬ» (subnet scan).
 
 Проверка:
 
 - оба состояния различимы без чтения логов;
-- evidence: UI fixtures.
+- evidence: UI fixtures (`internal/tui/network_test.go`, status `network` field).
 
 Зависимости: DUD-NET-140  
 ADR: не требуется

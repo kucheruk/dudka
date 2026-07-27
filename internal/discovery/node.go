@@ -106,7 +106,8 @@ func (n *Node) TCPPort() int {
 // Peers returns the neighbor table.
 func (n *Node) Peers() *PeerStore { return n.cfg.Peers }
 
-// Status returns proto health including recent incompatible peers (P023).
+// Status returns proto health including recent incompatible peers (P023)
+// and LAN availability (P044 / DUD-NET-140).
 func (n *Node) Status() Status {
 	n.mu.Lock()
 	major, minor := n.cfg.ProtoMajor, n.cfg.ProtoMinor
@@ -114,9 +115,14 @@ func (n *Node) Status() Status {
 	if major == 0 {
 		major = DefaultProtoMajor
 	}
+	network := NetworkOK
+	if !HasUsableLAN() {
+		network = NetworkNoNetwork
+	}
 	return Status{
 		ProtoMajor:   major,
 		ProtoMinor:   minor,
+		Network:      network,
 		Incompatible: n.proto.list(),
 	}
 }

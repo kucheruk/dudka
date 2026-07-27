@@ -7,8 +7,20 @@ import (
 	"time"
 )
 
-// EmptyPeersCopy is shown when online peers list is empty (DUD-UI-120 / P040).
+// EmptyPeersCopy is shown when LAN is up but online peers list is empty (DUD-UI-120 / P040).
 const EmptyPeersCopy = "НИКОГО РЯДОМ"
+
+// NoNetworkCopy is shown when there is no usable Wi‑Fi/LAN (DUD-UI-120 / P044).
+const NoNetworkCopy = "НЕТ СЕТИ"
+
+// AloneHint is the alone-state affordance for subnet scan (DUD-UI-120).
+const AloneHint = "ИСКАТЬ"
+
+// Network state mirrors engine GET /status (DUD-NET-140).
+const (
+	NetworkOK        = "ok"
+	NetworkNoNetwork = "no_network"
+)
 
 // PeerRow is one neighbor for the peers pane.
 type PeerRow struct {
@@ -29,6 +41,7 @@ type Snapshot struct {
 	PeerID     string
 	Peers      []PeerRow
 	Messages   []MsgRow
+	Network    string // ok | no_network; empty treated as ok
 	ProtoMajor int
 	ProtoMinor int
 	EngineOK   bool
@@ -51,7 +64,10 @@ func Render(s Snapshot) string {
 	}
 	n := len(s.Peers)
 	state := "ok"
-	if n == 0 {
+	switch {
+	case s.Network == NetworkNoNetwork:
+		state = "no_network"
+	case n == 0:
 		state = "alone"
 	}
 	fmt.Fprintf(&b, "ДУДКА · %s · online %d · %s", me, n, state)
@@ -60,9 +76,13 @@ func Render(s Snapshot) string {
 	}
 	b.WriteByte('\n')
 	b.WriteString("PEERS\n")
-	if n == 0 {
+	switch state {
+	case "no_network":
+		fmt.Fprintf(&b, "  %s\n", NoNetworkCopy)
+	case "alone":
 		fmt.Fprintf(&b, "  %s\n", EmptyPeersCopy)
-	} else {
+		fmt.Fprintf(&b, "  (%s — subnet scan)\n", AloneHint)
+	default:
 		for _, p := range s.Peers {
 			name := strings.TrimSpace(p.DisplayName)
 			if name == "" {

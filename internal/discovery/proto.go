@@ -32,10 +32,11 @@ type IncompatiblePeer struct {
 	SeenAt     time.Time `json:"seen_at"`
 }
 
-// Status is a snapshot of local discovery proto health (P023).
+// Status is a snapshot of local discovery proto health (P023) and LAN (P044).
 type Status struct {
 	ProtoMajor   int                `json:"proto_major"`
 	ProtoMinor   int                `json:"proto_minor"`
+	Network      string             `json:"network"` // ok | no_network (DUD-NET-140)
 	Incompatible []IncompatiblePeer `json:"incompatible"`
 }
 

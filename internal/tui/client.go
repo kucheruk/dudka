@@ -59,14 +59,19 @@ func (c *Client) Fetch() (Snapshot, error) {
 	}
 
 	var st struct {
-		ProtoMajor int `json:"proto_major"`
-		ProtoMinor int `json:"proto_minor"`
+		ProtoMajor int    `json:"proto_major"`
+		ProtoMinor int    `json:"proto_minor"`
+		Network    string `json:"network"`
 	}
 	if err := c.getJSON("/status", &st); err != nil {
 		return Snapshot{EngineOK: false, Err: err.Error()}, err
 	}
 	snap.ProtoMajor = st.ProtoMajor
 	snap.ProtoMinor = st.ProtoMinor
+	snap.Network = st.Network
+	if snap.Network == "" {
+		snap.Network = NetworkOK
+	}
 
 	var msgsEnv struct {
 		Messages []struct {
