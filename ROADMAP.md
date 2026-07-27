@@ -34,7 +34,7 @@
 ### 1.2 Loopback API (ещё без LAN)
 
 - [x] P015 Минимальный loopback JSON: `GET /me` отдаёт peer_id и name — `curl` с 127.0.0.1 работает, с чужого IP отвергается
-- [ ] P016 `POST /nick` меняет name, следующий `GET /me` показывает новое — старые msg не трогаем (пока msg нет)
+- [x] P016 `POST /nick` меняет name, следующий `GET /me` показывает новое — старые msg не трогаем (пока msg нет)
 
 ### 1.3 Discovery
 

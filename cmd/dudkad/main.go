@@ -36,6 +36,9 @@ func main() {
 	fmt.Printf("display_name=%s\n", displayName)
 
 	api := loopback.New(peerID, displayName)
+	api.SetPersistName(func(name string) error {
+		return identity.SaveDisplayName(*dataDir, name)
+	})
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)

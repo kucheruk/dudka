@@ -101,6 +101,25 @@ func cryptoPick(n int) int {
 	return int(v.Int64())
 }
 
+// SaveDisplayName writes the nick to dataDir (used by POST /nick / P016).
+func SaveDisplayName(dataDir, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("identity: display name is empty")
+	}
+	if strings.TrimSpace(dataDir) == "" {
+		return errors.New("identity: data dir is empty")
+	}
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		return fmt.Errorf("identity: mkdir data dir: %w", err)
+	}
+	path := filepath.Join(dataDir, DisplayNameFile)
+	if err := os.WriteFile(path, []byte(name+"\n"), 0o600); err != nil {
+		return fmt.Errorf("identity: write display_name: %w", err)
+	}
+	return nil
+}
+
 // LoadOrCreateDisplayName returns a persisted nick, resolving and saving on first use.
 func LoadOrCreateDisplayName(dataDir, flagName string, prompt io.Reader, promptEnabled bool) (string, error) {
 	if strings.TrimSpace(dataDir) == "" {

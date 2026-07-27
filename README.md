@@ -23,6 +23,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # → ready peer_id=<uuid> name=Вася
 # curl -s http://127.0.0.1:17880/health  →  ok
 # curl -s http://127.0.0.1:17880/me      →  {"peer_id":"…","name":"Вася"}
+# curl -s -X POST http://127.0.0.1:17880/nick -H 'Content-Type: application/json' -d '{"name":"Петя"}'
 ./dist/dudka    # → dudka 0.0.0-dev
 ```
 
@@ -36,7 +37,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`.
 
 ## Зачем
 

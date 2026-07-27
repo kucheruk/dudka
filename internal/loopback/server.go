@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 )
 
-// Server is the loopback HTTP surface (P012 /health, P015 /me).
+// Server is the loopback HTTP surface (P012 /health, P015 /me, P016 /nick).
 type Server struct {
-	mu     sync.RWMutex
-	peerID string
-	name   string
-	mux    *http.ServeMux
+	mu          sync.RWMutex
+	peerID      string
+	name        string
+	persistName func(string) error
+	mux         *http.ServeMux
 }
 
 // New returns a Server bound to the given local identity.
@@ -32,16 +34,63 @@ func New(peerID, name string) *Server {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	s.mux.HandleFunc("GET /me", s.handleMe)
+	s.mux.HandleFunc("POST /nick", s.handleNick)
 	return s
+}
+
+// SetPersistName registers an optional hook to save the nick (e.g. to data-dir).
+func (s *Server) SetPersistName(fn func(string) error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.persistName = fn
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	writeMeJSON(w, s.peerID, s.name)
+}
+
+func (s *Server) handleNick(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		http.Error(w, "name is required\n", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	persist := s.persistName
+	s.name = name
+	peerID := s.peerID
+	s.mu.Unlock()
+
+	if persist != nil {
+		if err := persist(name); err != nil {
+			http.Error(w, "persist failed\n", http.StatusInternalServerError)
+			return
+		}
+	}
+	writeMeJSON(w, peerID, name)
+}
+
+func writeMeJSON(w http.ResponseWriter, peerID, name string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"peer_id": s.peerID,
-		"name":    s.name,
+		"peer_id": peerID,
+		"name":    name,
 	})
 }
 
