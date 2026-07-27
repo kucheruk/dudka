@@ -32,10 +32,10 @@ PY
 log_a="$tmpdir/a.log"
 log_b="$tmpdir/b.log"
 "$bin" -data-dir "$tmpdir/a" -name "Alice" -listen "127.0.0.1:0" \
-  -announce-port "$port" -announce-interval 200ms >"$log_a" 2>&1 &
+  -announce-port "$port" -session-port 0 -announce-interval 200ms >"$log_a" 2>&1 &
 pid_a=$!
 "$bin" -data-dir "$tmpdir/b" -name "Bob" -listen "127.0.0.1:0" \
-  -announce-port "$port" -announce-interval 200ms >"$log_b" 2>&1 &
+  -announce-port "$port" -session-port 0 -announce-interval 200ms >"$log_b" 2>&1 &
 pid_b=$!
 
 peer_a=""

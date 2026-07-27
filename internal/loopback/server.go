@@ -10,14 +10,17 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"dudka/internal/discovery"
 )
 
-// Server is the loopback HTTP surface (P012 /health, P015 /me, P016 /nick).
+// Server is the loopback HTTP surface (P012 /health, P015 /me, P016 /nick, P021 /peers).
 type Server struct {
 	mu          sync.RWMutex
 	peerID      string
 	name        string
 	persistName func(string) error
+	peers       *discovery.PeerStore
 	mux         *http.ServeMux
 }
 
@@ -35,6 +38,7 @@ func New(peerID, name string) *Server {
 	})
 	s.mux.HandleFunc("GET /me", s.handleMe)
 	s.mux.HandleFunc("POST /nick", s.handleNick)
+	s.mux.HandleFunc("GET /peers", s.handlePeers)
 	return s
 }
 
@@ -43,6 +47,25 @@ func (s *Server) SetPersistName(fn func(string) error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.persistName = fn
+}
+
+// SetPeers wires the discovery peer table into GET /peers.
+func (s *Server) SetPeers(store *discovery.PeerStore) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.peers = store
+}
+
+func (s *Server) handlePeers(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	store := s.peers
+	s.mu.RUnlock()
+	peers := []discovery.Peer{}
+	if store != nil {
+		peers = store.List()
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"peers": peers})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request) {

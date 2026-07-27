@@ -15,7 +15,7 @@ const (
 	DefaultProtoMinor = 0
 )
 
-// Announce is the UDP broadcast payload (DUD-NET-111). TCP register is out of scope for P020.
+// Announce is the UDP broadcast payload (DUD-NET-111).
 type Announce struct {
 	Type        string `json:"type"`
 	PeerID      string `json:"peer_id"`

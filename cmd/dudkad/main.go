@@ -21,6 +21,7 @@ func main() {
 	announcePort := flag.Int("announce-port", discovery.DefaultUDPPort, "UDP announce listen/broadcast port")
 	announceInterval := flag.Duration("announce-interval", 2*time.Second, "UDP announce period")
 	announceTarget := flag.String("announce-target", "", "optional unicast host:port instead of broadcast (tests)")
+	sessionPort := flag.Int("session-port", discovery.DefaultUDPPort, "TCP register port; 0 = ephemeral")
 	flag.Parse()
 
 	fmt.Printf("dudkad %s\n", version.Version)
@@ -47,14 +48,16 @@ func main() {
 	}
 	fmt.Printf("instance_id=%s\n", instanceID)
 
+	peers := discovery.NewPeerStore()
 	disc := discovery.NewNode(discovery.Config{
 		PeerID:      peerID,
 		DisplayName: displayName,
 		InstanceID:  instanceID,
 		UDPPort:     *announcePort,
-		TCPPort:     *announcePort, // session TCP comes in P021; advertise same port for now
+		TCPPort:     *sessionPort,
 		Interval:    *announceInterval,
 		Target:      *announceTarget,
+		Peers:       peers,
 		Logf:        func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {
@@ -65,11 +68,13 @@ func main() {
 	if addr := disc.LocalAddr(); addr != nil {
 		fmt.Printf("announce=%s\n", addr.String())
 	}
+	fmt.Printf("session_tcp=%d\n", disc.TCPPort())
 
 	api := loopback.New(peerID, displayName)
 	api.SetPersistName(func(name string) error {
 		return identity.SaveDisplayName(*dataDir, name)
 	})
+	api.SetPeers(peers)
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)
