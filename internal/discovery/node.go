@@ -6,9 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
+
+// DialFunc opens a TCP connection; injectable for DUD-NET-101 tests (fake dialer).
+type DialFunc func(network, address string, timeout time.Duration) (net.Conn, error)
 
 // Config configures a discovery node (announce + TCP register).
 type Config struct {
@@ -27,6 +31,8 @@ type Config struct {
 	OnAnnounce  func(Announce, net.Addr)
 	Logf        func(format string, args ...any)
 	DialTimeout time.Duration
+	Dialer      DialFunc // default: net.DialTimeout
+	DialHosts   []string // optional seed hosts from config; dialed after Start (LAN-only)
 }
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
@@ -56,6 +62,9 @@ func NewNode(cfg Config) *Node {
 	}
 	if cfg.DialTimeout <= 0 {
 		cfg.DialTimeout = 2 * time.Second
+	}
+	if cfg.Dialer == nil {
+		cfg.Dialer = net.DialTimeout
 	}
 	if cfg.Logf == nil {
 		cfg.Logf = func(string, ...any) {}
@@ -116,14 +125,15 @@ func (n *Node) SetTarget(target string) {
 	n.cfg.Target = target
 }
 
-// Start binds TCP+UDP, begins announce/register loops.
+// Start binds TCP+UDP, begins announce/register loops, then dials DialHosts (LAN-only).
 func (n *Node) Start() error {
 	n.mu.Lock()
-	defer n.mu.Unlock()
 	if n.conn != nil {
+		n.mu.Unlock()
 		return errors.New("discovery: already started")
 	}
 	if n.cfg.PeerID == "" || n.cfg.InstanceID == "" {
+		n.mu.Unlock()
 		return errors.New("discovery: peer_id and instance_id required")
 	}
 
@@ -137,6 +147,7 @@ func (n *Node) Start() error {
 	}
 	tcpLn, err := net.Listen("tcp", tcpBind)
 	if err != nil {
+		n.mu.Unlock()
 		return fmt.Errorf("discovery: tcp listen: %w", err)
 	}
 	tcpAddr := tcpLn.Addr().(*net.TCPAddr)
@@ -150,11 +161,13 @@ func (n *Node) Start() error {
 	conn, err := listenUDP(bind)
 	if err != nil {
 		_ = tcpLn.Close()
+		n.mu.Unlock()
 		return err
 	}
 	if err := setBroadcast(conn); err != nil {
 		_ = conn.Close()
 		_ = tcpLn.Close()
+		n.mu.Unlock()
 		return err
 	}
 
@@ -163,12 +176,35 @@ func (n *Node) Start() error {
 	n.tcpLn = tcpLn
 	n.cancel = cancel
 	n.local = conn.LocalAddr()
+	seeds := append([]string{}, n.cfg.DialHosts...)
 
 	n.wg.Add(3)
 	go n.readLoop(ctx, conn)
 	go n.announceLoop(ctx)
 	go n.acceptLoop(ctx, tcpLn)
+	n.mu.Unlock()
+
+	n.dialConfiguredHosts(seeds)
 	return nil
+}
+
+func (n *Node) dialConfiguredHosts(hosts []string) {
+	n.mu.Lock()
+	port := n.tcpPort
+	if port == 0 {
+		port = n.cfg.TCPPort
+	}
+	n.mu.Unlock()
+	if port <= 0 {
+		port = DefaultUDPPort
+	}
+	for _, host := range hosts {
+		host = strings.TrimSpace(host)
+		if host == "" {
+			continue
+		}
+		_, _ = n.dialRegister(host, port)
+	}
 }
 
 // Stop closes sockets and waits for goroutines.
@@ -332,14 +368,25 @@ func (n *Node) maybeRegister(a Announce, from net.Addr) {
 }
 
 func (n *Node) dialRegister(host string, port int) (*Peer, error) {
+	if err := CheckDialHost(host); err != nil {
+		n.cfg.Logf("%s", FormatWanRefuse(host))
+		return nil, err
+	}
 	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-	conn, err := net.DialTimeout("tcp", addr, n.cfg.DialTimeout)
+	n.mu.Lock()
+	dial := n.cfg.Dialer
+	timeout := n.cfg.DialTimeout
+	n.mu.Unlock()
+	if dial == nil {
+		dial = net.DialTimeout
+	}
+	conn, err := dial("tcp", addr, timeout)
 	if err != nil {
 		n.cfg.Logf("register_dial_err addr=%s err=%v", addr, err)
 		return nil, err
 	}
 	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(n.cfg.DialTimeout))
+	_ = conn.SetDeadline(time.Now().Add(timeout))
 
 	n.mu.Lock()
 	req := Register{
@@ -431,7 +478,18 @@ func (n *Node) destination() (net.Addr, error) {
 	local := n.local
 	n.mu.Unlock()
 	if target != "" {
-		return net.ResolveUDPAddr("udp4", target)
+		ua, err := net.ResolveUDPAddr("udp4", target)
+		if err != nil {
+			return nil, err
+		}
+		// Broadcast/multicast stay allowed; unicast must be LAN (DUD-NET-101).
+		if ua.IP != nil && !ua.IP.IsMulticast() && !ua.IP.Equal(net.IPv4bcast) {
+			if err := CheckDialHost(ua.IP.String()); err != nil {
+				n.cfg.Logf("%s", FormatWanRefuse(ua.IP.String()))
+				return nil, err
+			}
+		}
+		return ua, nil
 	}
 	port := udpPort
 	if port == 0 {

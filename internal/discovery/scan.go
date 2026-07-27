@@ -122,12 +122,13 @@ func isPrivateIPNet(n *net.IPNet) bool {
 	if bits != 32 && bits != 128 {
 		return false
 	}
-	// Require the network IP itself to be private/loopback/link-local.
-	ip := n.IP
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+	if !AllowedDialIP(n.IP) {
+		return false
+	}
+	if n.IP.IsLoopback() || n.IP.IsLinkLocalUnicast() {
 		return true
 	}
-	if ip4 := ip.To4(); ip4 != nil {
+	if ip4 := n.IP.To4(); ip4 != nil {
 		if ip4[0] == 10 {
 			return ones >= 8
 		}
@@ -139,7 +140,8 @@ func isPrivateIPNet(n *net.IPNet) bool {
 		}
 		return false
 	}
-	return len(ip) == net.IPv6len && ip[0] == 0xfd // unique local
+	// Unique Local fc00::/7 — require at least /8 worth of prefix discipline.
+	return ones >= 8
 }
 
 func incIP(ip net.IP) {

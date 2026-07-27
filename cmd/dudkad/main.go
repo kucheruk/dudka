@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"dudka/internal/discovery"
@@ -22,6 +23,7 @@ func main() {
 	announcePort := flag.Int("announce-port", discovery.DefaultUDPPort, "UDP announce listen/broadcast port")
 	announceInterval := flag.Duration("announce-interval", 2*time.Second, "UDP announce period")
 	announceTarget := flag.String("announce-target", "", "optional unicast host:port instead of broadcast (tests)")
+	dialHosts := flag.String("dial-hosts", "", "comma-separated seed IPs to TCP-register (LAN-only; WAN refused)")
 	sessionPort := flag.Int("session-port", discovery.DefaultUDPPort, "TCP register port; 0 = ephemeral")
 	flag.Parse()
 
@@ -50,6 +52,13 @@ func main() {
 	fmt.Printf("instance_id=%s\n", instanceID)
 
 	peers := discovery.NewPeerStore()
+	var seeds []string
+	for _, h := range strings.Split(*dialHosts, ",") {
+		h = strings.TrimSpace(h)
+		if h != "" {
+			seeds = append(seeds, h)
+		}
+	}
 	disc := discovery.NewNode(discovery.Config{
 		PeerID:      peerID,
 		DisplayName: displayName,
@@ -58,6 +67,7 @@ func main() {
 		TCPPort:     *sessionPort,
 		Interval:    *announceInterval,
 		Target:      *announceTarget,
+		DialHosts:   seeds,
 		Peers:       peers,
 		Logf:        func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
