@@ -19,14 +19,15 @@ Operate-UI для Flutter GUI и Linux TUI в грамматике [`DESIGN.md`]
 ### DUD-UI-101
 
 Priority: P0  
-Status: Draft
+Status: Partial
 
 Главный экран после first-run — чат: status strip, индикация online peers, лента, compose. Нет обязательных промежуточных «welcome» с маркетингом.
 
 Проверка:
 
 - cold start со сохранённым ником → чат ≤ заявленного NFR;
-- evidence: скрин + тайминг.
+- status strip + peers + текстовая лента (wireframe); *(P063: Flutter `ChatScreen` ← `/me` `/peers` `/status` `/messages`; compose send — P064; DESIGN step-row — P069)*
+- evidence: `apps/dudka/test/chat_screen_test.dart`, `./scripts/flutter_chat_test.sh` (P063).
 
 Зависимости: DUD-PRD-110  
 ADR: не требуется

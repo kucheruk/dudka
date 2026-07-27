@@ -17,6 +17,7 @@ class DudkaApp extends StatefulWidget {
     this.firstRunStore,
     this.hostnameForFallback,
     this.nickPick,
+    this.chatPollInterval = const Duration(seconds: 1),
   });
 
   final String engineBase;
@@ -24,6 +25,7 @@ class DudkaApp extends StatefulWidget {
   final FirstRunStore? firstRunStore;
   final String Function()? hostnameForFallback;
   final NickPick? nickPick;
+  final Duration chatPollInterval;
 
   @override
   State<DudkaApp> createState() => _DudkaAppState();
@@ -109,6 +111,6 @@ class _DudkaAppState extends State<DudkaApp> {
         },
       );
     }
-    return ChatScreen(client: _client);
+    return ChatScreen(client: _client, pollInterval: widget.chatPollInterval);
   }
 }

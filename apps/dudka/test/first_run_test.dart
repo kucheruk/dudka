@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'chat_mock.dart';
+
 Future<void> pumpFrames(WidgetTester tester) async {
   // Avoid pumpAndSettle — CircularProgressIndicator animates forever.
   await tester.pump();
@@ -36,14 +38,6 @@ void main() {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        if (req.method == 'GET' && req.url.path == '/me') {
-          final name = saved ?? 'MacBook';
-          return http.Response(
-            '{"peer_id":"p1","name":"$name"}',
-            200,
-            headers: {'content-type': 'application/json; charset=utf-8'},
-          );
-        }
         if (req.method == 'POST' && req.url.path == '/nick') {
           saved = 'Vasya';
           return http.Response(
@@ -52,12 +46,18 @@ void main() {
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
         }
-        return http.Response('nope', 404);
+        return chatSnapshotResponse(req, meName: saved ?? 'MacBook') ??
+            http.Response('nope', 404);
       }),
     );
 
     await tester.pumpWidget(
-      DudkaApp(engineBase: 'http://127.0.0.1:9', client: client, firstRunStore: store),
+      DudkaApp(
+        engineBase: 'http://127.0.0.1:9',
+        client: client,
+        firstRunStore: store,
+        chatPollInterval: Duration.zero,
+      ),
     );
     await pumpFrames(tester);
 
@@ -71,9 +71,9 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('nick-field')), 'Vasya');
     await tester.tap(find.byKey(const Key('nick-continue')));
-    await tester.pump(); // start _submit
-    await tester.pump(const Duration(milliseconds: 200)); // setNick + onDone
-    await tester.pump(); // parent setState
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
 
     expect(store.isNickConfirmed(), isTrue);
     expect(find.byType(FirstRunNickScreen), findsNothing);
@@ -86,23 +86,15 @@ void main() {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        if (req.method == 'GET' && req.url.path == '/me') {
-          return http.Response(
-            '{"peer_id":"p1","name":"localhost"}',
-            200,
-            headers: {'content-type': 'application/json; charset=utf-8'},
-          );
-        }
         if (req.method == 'POST' && req.url.path == '/nick') {
           postedBody = req.body;
-          // ASCII body avoids MockClient Latin-1 pitfall; request still carries RU nick.
           return http.Response(
             '{"peer_id":"p1","name":"Sonny"}',
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
         }
-        return http.Response('nope', 404);
+        return chatSnapshotResponse(req, meName: 'localhost') ?? http.Response('nope', 404);
       }),
     );
 
@@ -113,6 +105,7 @@ void main() {
         firstRunStore: store,
         hostnameForFallback: () => 'localhost',
         nickPick: (max) => 0,
+        chatPollInterval: Duration.zero,
       ),
     );
     await pumpFrames(tester);
@@ -132,20 +125,22 @@ void main() {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        return http.Response(
-          '{"peer_id":"p1","name":"Katya"}',
-          200,
-          headers: {'content-type': 'application/json; charset=utf-8'},
-        );
+        return chatSnapshotResponse(req, meName: 'Katya') ?? http.Response('nope', 404);
       }),
     );
     await tester.pumpWidget(
-      DudkaApp(engineBase: 'http://127.0.0.1:9', client: client, firstRunStore: store),
+      DudkaApp(
+        engineBase: 'http://127.0.0.1:9',
+        client: client,
+        firstRunStore: store,
+        chatPollInterval: Duration.zero,
+      ),
     );
     await pumpFrames(tester);
     expect(find.byType(ChatScreen), findsOneWidget);
     expect(find.byType(FirstRunNickScreen), findsNothing);
     expect(find.text('вы: Katya'), findsOneWidget);
+    expect(find.byKey(const Key('chat-status')), findsOneWidget);
     client.close();
   });
 }

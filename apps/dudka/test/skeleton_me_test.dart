@@ -4,9 +4,12 @@ import 'package:dudka/app.dart';
 import 'package:dudka/engine/client.dart';
 import 'package:dudka/screens/chat_screen.dart';
 import 'package:dudka/session/first_run_store.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+import 'chat_mock.dart';
 
 Future<void> pumpFrames(WidgetTester tester) async {
   await tester.pump();
@@ -26,12 +29,7 @@ void main() {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        expect(req.url.path, '/me');
-        return http.Response(
-          '{"peer_id":"peer-skel","name":"Skeleton"}',
-          200,
-          headers: {'content-type': 'application/json; charset=utf-8'},
-        );
+        return chatSnapshotResponse(req, meName: 'Skeleton') ?? http.Response('nope', 404);
       }),
     );
     await tester.pumpWidget(
@@ -39,11 +37,13 @@ void main() {
         engineBase: 'http://127.0.0.1:9',
         client: client,
         firstRunStore: store,
+        chatPollInterval: Duration.zero,
       ),
     );
     await pumpFrames(tester);
     expect(find.byType(ChatScreen), findsOneWidget);
     expect(find.text('вы: Skeleton'), findsOneWidget);
+    expect(find.byKey(const Key('chat-status')), findsOneWidget);
     expect(find.textContaining('spike'), findsNothing);
     client.close();
   });
