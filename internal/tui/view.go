@@ -74,20 +74,22 @@ func Render(s Snapshot) string {
 	b.WriteString("FEED\n")
 	if len(s.Messages) == 0 {
 		b.WriteString("  —\n")
-		return b.String()
-	}
-	for _, m := range s.Messages {
-		name := strings.TrimSpace(m.DisplayName)
-		if name == "" {
-			name = "—"
+	} else {
+		for _, m := range s.Messages {
+			name := strings.TrimSpace(m.DisplayName)
+			if name == "" {
+				name = "—"
+			}
+			text := strings.TrimSpace(m.Text)
+			ts := m.TS
+			if ts.IsZero() {
+				fmt.Fprintf(&b, "  · %s · %s\n", name, text)
+				continue
+			}
+			fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, text)
 		}
-		text := strings.TrimSpace(m.Text)
-		ts := m.TS
-		if ts.IsZero() {
-			fmt.Fprintf(&b, "  · %s · %s\n", name, text)
-			continue
-		}
-		fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, text)
 	}
+	b.WriteString("INPUT\n")
+	b.WriteString("  >  (Enter = send)\n")
 	return b.String()
 }
