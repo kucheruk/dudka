@@ -116,6 +116,12 @@ open dist/dudka.app
 
 Ad-hoc / TestFlight: [`docs/build-ios.md`](docs/build-ios.md). Контракт: `./scripts/build_ios_app_test.sh`.
 
+## Поставить семье за 5 минут (P085)
+
+Короткий гайд без аккаунтов: [`docs/family-install.md`](docs/family-install.md).
+
+Смоук платформ (P086): [`docs/platform-smoke.md`](docs/platform-smoke.md).
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
