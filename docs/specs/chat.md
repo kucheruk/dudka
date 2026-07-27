@@ -82,13 +82,13 @@ ADR: не требуется
 ### DUD-CHAT-121
 
 Priority: P1  
-Status: Draft
+Status: Partial
 
 Алгоритм выбора tail-keeper документирован (например lexicographically minimal `peer_id` среди online) и одинаков на всех клиентах; при равных условиях нет флип-флопа чаще 1 раза / 5 s.
 
 Проверка:
 
-- property/unit тест выбора;
+- property/unit тест выбора; *(P032: `SelectTailKeeper` / `SelectTailKeeperAmong`, table-driven наборы id)*
 - evidence: тест + короткий абзац в overview.
 
 Зависимости: DUD-CHAT-120  
