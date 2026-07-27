@@ -29,8 +29,12 @@ trap 'rm -rf "$tmpdir"' EXIT
 go build -o "$tmpdir/dudkad" ./cmd/dudkad || fail "go build ./cmd/dudkad failed"
 go build -o "$tmpdir/dudka" ./cmd/dudka || fail "go build ./cmd/dudka failed"
 
-out_d="$("$tmpdir/dudkad")"
-out_t="$("$tmpdir/dudka")"
+# Stubs may print extra lines (e.g. peer_id); version contract is the first line.
+# Capture full stdout first so head does not SIGPIPE the binary (exit 141).
+full_d="$("$tmpdir/dudkad" -data-dir "$tmpdir/data")"
+full_t="$("$tmpdir/dudka")"
+out_d="$(printf '%s\n' "$full_d" | head -n 1)"
+out_t="$(printf '%s\n' "$full_t" | head -n 1)"
 
 [[ "$out_d" == dudkad\ * ]] || fail "dudkad stdout want 'dudkad <version>', got: $out_d"
 [[ "$out_t" == dudka\ * ]] || fail "dudka stdout want 'dudka <version>', got: $out_t"

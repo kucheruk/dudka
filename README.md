@@ -15,11 +15,13 @@
 ```bash
 go build -o dist/dudkad ./cmd/dudkad   # engine
 go build -o dist/dudka ./cmd/dudka     # Linux TUI
-./dist/dudkad   # → dudkad 0.0.0-dev
+./dist/dudkad -data-dir /tmp/dudka-demo
+# → dudkad 0.0.0-dev
+# → peer_id=<uuid>   (stable across restarts in that data-dir)
 ./dist/dudka    # → dudka 0.0.0-dev
 ```
 
-Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/version`.
+Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/version`, `internal/identity`.
 
 ## Локальный гейт
 
@@ -29,7 +31,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`.
 
 ## Зачем
 
