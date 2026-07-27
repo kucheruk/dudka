@@ -3,15 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'engine/bundle.dart';
 import 'engine/client.dart';
 import 'engine/host.dart';
 
-/// macOS-first skeleton (P061).
+/// macOS-first shell (P061/P081).
 ///
 /// Engine URL resolution order:
 /// 1. `--dart-define=DUDKA_ENGINE=http://127.0.0.1:PORT` (external dudkad)
-/// 2. spawn `dudkad` via `--dart-define=DUDKAD_BIN=/path/to/dudkad`
-/// 3. default attach `http://127.0.0.1:17880`
+/// 2. `--dart-define=DUDKAD_BIN=/path/to/dudkad`
+/// 3. bundled `dudkad` next to the app executable (`.app/Contents/MacOS/dudkad`)
+/// 4. default attach `http://127.0.0.1:17880`
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -22,12 +24,15 @@ Future<void> main() async {
 
   if (predefined.isNotEmpty) {
     engineBase = predefined;
-  } else if (binDefine.isNotEmpty) {
-    final dataDir = _defaultEngineDataDir();
-    final host = EngineHost(binaryPath: binDefine, dataDir: dataDir.path, name: 'ДУДКА');
-    engineBase = await host.start();
   } else {
-    engineBase = 'http://127.0.0.1:17880';
+    final bin = binDefine.isNotEmpty ? binDefine : resolveBundledDudkadBin();
+    if (bin != null && bin.isNotEmpty) {
+      final dataDir = _defaultEngineDataDir();
+      final host = EngineHost(binaryPath: bin, dataDir: dataDir.path, name: 'ДУДКА');
+      engineBase = await host.start();
+    } else {
+      engineBase = 'http://127.0.0.1:17880';
+    }
   }
 
   runApp(DudkaApp(engineBase: engineBase, client: EngineClient(baseUrl: engineBase)));

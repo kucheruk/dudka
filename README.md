@@ -72,6 +72,18 @@ Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shel
 
 На Linux-машине: запустить `dudkad`, затем `dudka -engine 127.0.0.1:17880`.
 
+## Сборка macOS desktop (P081)
+
+Одна команда → `dist/dudka.app` + zip (engine `dudkad` внутри бандла):
+
+```bash
+./scripts/build_macos_app.sh
+open dist/dudka.app
+# архив: dist/dudka-macos.zip
+```
+
+Контракт: `./scripts/build_macos_app_test.sh`.
+
 ## Локальный гейт
 
 Единая проверка репозитория (локально и в CI):
