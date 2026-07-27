@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-# P060 helper: start dudkad (subprocess) + Flutter spike showing GET /me.
+# P060/P061 helper: Flutter macOS skeleton with dudkad (attach or spawn).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="/opt/homebrew/share/flutter/bin:${PATH:-}"
+
+mode="${1:-attach}" # attach | spawn
+
+go build -o dist/dudkad ./cmd/dudkad
+mkdir -p dist
+
+if [[ "$mode" == "spawn" ]]; then
+  echo "opening Flutter skeleton; app spawns dist/dudkad"
+  cd apps/dudka
+  exec flutter run -d macos --dart-define="DUDKAD_BIN=${ROOT}/dist/dudkad"
+fi
 
 tmpdir="$(mktemp -d)"
 cleanup() {
@@ -13,7 +24,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-go build -o "$tmpdir/dudkad" ./cmd/dudkad
 port="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,7 +33,7 @@ s.close()
 PY
 )"
 log="$tmpdir/e.log"
-"$tmpdir/dudkad" -data-dir "$tmpdir/data" -name "Spike" -listen "127.0.0.1:0" \
+./dist/dudkad -data-dir "$tmpdir/data" -name "ДУДКА" -listen "127.0.0.1:0" \
   -announce-port "$port" -session-port 0 -announce-interval 1h >"$log" 2>&1 &
 pid=$!
 
@@ -38,6 +48,6 @@ done
 [[ -n "$listen" ]]
 
 echo "dudkad listen=$listen (pid=$pid)"
-echo "opening Flutter spike → GET /me"
+echo "opening Flutter skeleton → GET /me"
 cd apps/dudka
 exec flutter run -d macos --dart-define="DUDKA_ENGINE=http://${listen}"

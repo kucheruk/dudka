@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-/// Thin loopback client for dudkad (P060 / docs/design/flutter-bind.md).
+/// Thin loopback client for dudkad (P060/P061 / docs/design/flutter-bind.md).
 class EngineClient {
   EngineClient({
     required this.baseUrl,
@@ -18,7 +18,7 @@ class EngineClient {
     return Uri.parse('$base$path');
   }
 
-  /// GET /me → peer identity shown on the spike screen.
+  /// GET /me → peer identity for the skeleton home screen.
   Future<MeInfo> fetchMe() async {
     final res = await _http.get(_uri('/me'));
     if (res.statusCode != 200) {

@@ -28,10 +28,11 @@ GUI (Flutter) и engine (`dudkad`) должны жить на одном уст�
 
 - Один бинарь engine на платформу + Flutter shell.
 - Spike-доказательство: экран показывает ответ `GET /me` (`peer_id`, `name`).
-- Следующий шаг (P061): полноценный app skeleton на выбранной desktop/mobile цели.
+- **P061 first target: macOS desktop** (дешевле iOS/Android на агентских машинах: уже есть `flutter devices` → macos, без эмулятора/подписи). Skeleton: `apps/dudka` (`DudkaApp` + `MeScreen` + `EngineHost` spawn).
 
 ## Non-goals этого ADR
 
 - Дизайн UI (`DESIGN.md`) и first-run.
 - Автозапуск engine как system service.
 - Удалённый engine за пределами устройства.
+- iOS/Android targets в P061 (добавятся когда macOS skeleton стабилен).

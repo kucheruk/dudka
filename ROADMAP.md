@@ -86,7 +86,7 @@
 ## Фаза 3 — Flutter shell
 
 - [x] P060 Spike: самый дешёвый bind Flutter↔`dudkad` (subprocess+loopback или иное) — 1-page ADR/заметка в `docs/design/flutter-bind.md` + hello `GET /me` на экране
-- [ ] P061 Flutter app skeleton (iOS/Android или desktop — что дешевле первым) запускается и показывает `/me`
+- [x] P061 Flutter app skeleton (iOS/Android или desktop — что дешевле первым) запускается и показывает `/me`
 - [ ] P062 First-run экран ника (RU) → дальше сразу чат
 - [ ] P063 Экран чата: status strip + peers + лента текста (пока без дизайна step-row — wireframe ок)
 - [ ] P064 Compose «ДУНУТЬ» шлёт текст — Flutter↔TUI в одной LAN

@@ -1,5 +1,5 @@
-import 'package:dudka/engine.dart';
-import 'package:dudka/main.dart';
+import 'package:dudka/engine/client.dart';
+import 'package:dudka/screens/me_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -24,7 +24,7 @@ void main() {
     client.close();
   });
 
-  testWidgets('MeHelloScreen shows GET /me fields', (tester) async {
+  testWidgets('MeScreen shows GET /me fields', (tester) async {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
@@ -37,7 +37,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
-        home: MeHelloScreen(engineBase: 'http://127.0.0.1:9', client: client),
+        home: MeScreen(engineBase: 'http://127.0.0.1:9', client: client),
       ),
     );
     await tester.pumpAndSettle();

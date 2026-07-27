@@ -56,7 +56,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 
 Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback,discovery,chat,tui}`, `apps/dudka` (Flutter shell).
 
-Flutter↔engine (P060): subprocess + HTTP loopback — см. [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); spike `GET /me` — `./scripts/flutter_bind_test.sh` / `./scripts/run_flutter_spike.sh`.
+Flutter↔engine (P060/P061): subprocess + HTTP loopback, **macOS-first** skeleton в `apps/dudka` показывает `GET /me` — см. [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); `./scripts/flutter_bind_test.sh`, `./scripts/flutter_skeleton_test.sh`, `./scripts/run_flutter_spike.sh`.
 
 ## Локальный гейт
 

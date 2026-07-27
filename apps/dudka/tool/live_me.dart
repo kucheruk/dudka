@@ -1,4 +1,4 @@
-import 'package:dudka/engine.dart';
+import 'package:dudka/engine/client.dart';
 
 /// Live check: EngineClient.fetchMe against a running dudkad.
 /// Usage: dart run tool/live_me.dart http://127.0.0.1:PORT
