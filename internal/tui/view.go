@@ -4,6 +4,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // EmptyPeersCopy is shown when online peers list is empty (DUD-UI-120 / P040).
@@ -15,18 +16,26 @@ type PeerRow struct {
 	DisplayName string
 }
 
-// Snapshot is one frame of status + peers (P040).
+// MsgRow is one chat line for the feed pane (P041).
+type MsgRow struct {
+	DisplayName string
+	Text        string
+	TS          time.Time
+}
+
+// Snapshot is one frame of status + peers + feed.
 type Snapshot struct {
 	MeName     string
 	PeerID     string
 	Peers      []PeerRow
+	Messages   []MsgRow
 	ProtoMajor int
 	ProtoMinor int
 	EngineOK   bool
 	Err        string
 }
 
-// Render builds a text frame: status strip + peers (or empty copy).
+// Render builds a text frame: status strip + peers + message feed.
 func Render(s Snapshot) string {
 	var b strings.Builder
 	me := strings.TrimSpace(s.MeName)
@@ -53,14 +62,32 @@ func Render(s Snapshot) string {
 	b.WriteString("PEERS\n")
 	if n == 0 {
 		fmt.Fprintf(&b, "  %s\n", EmptyPeersCopy)
+	} else {
+		for _, p := range s.Peers {
+			name := strings.TrimSpace(p.DisplayName)
+			if name == "" {
+				name = p.PeerID
+			}
+			fmt.Fprintf(&b, "  %s\n", name)
+		}
+	}
+	b.WriteString("FEED\n")
+	if len(s.Messages) == 0 {
+		b.WriteString("  —\n")
 		return b.String()
 	}
-	for _, p := range s.Peers {
-		name := strings.TrimSpace(p.DisplayName)
+	for _, m := range s.Messages {
+		name := strings.TrimSpace(m.DisplayName)
 		if name == "" {
-			name = p.PeerID
+			name = "—"
 		}
-		fmt.Fprintf(&b, "  %s\n", name)
+		text := strings.TrimSpace(m.Text)
+		ts := m.TS
+		if ts.IsZero() {
+			fmt.Fprintf(&b, "  · %s · %s\n", name, text)
+			continue
+		}
+		fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, text)
 	}
 	return b.String()
 }

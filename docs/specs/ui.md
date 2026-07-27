@@ -102,6 +102,7 @@ Linux TUI показывает те же сущности: peers, лента, co
 
 - сценарий текст+файл между TUI и Flutter;
 - *(P040: status strip + peers; пусто → «НИКОГО РЯДОМ»; `dudka -engine` / `internal/tui`)*
+- *(P041: FEED из `GET /messages`, строки `время · ник · текст`)*
 - evidence: smoke script.
 
 Зависимости: DUD-PRD-102  

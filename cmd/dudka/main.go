@@ -15,7 +15,7 @@ import (
 
 func main() {
 	engine := flag.String("engine", "127.0.0.1:17880", "dudkad loopback base (host:port or URL)")
-	watch := flag.Bool("watch", false, "refresh status/peers until Ctrl+C (default: one frame)")
+	watch := flag.Bool("watch", false, "refresh status/peers/feed until Ctrl+C (default: one frame)")
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 

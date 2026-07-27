@@ -28,7 +28,7 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
-// Fetch loads /me, /peers, /status into a Snapshot.
+// Fetch loads /me, /peers, /status, /messages into a Snapshot.
 func (c *Client) Fetch() (Snapshot, error) {
 	var snap Snapshot
 	if c.base == "" {
@@ -67,6 +67,25 @@ func (c *Client) Fetch() (Snapshot, error) {
 	}
 	snap.ProtoMajor = st.ProtoMajor
 	snap.ProtoMinor = st.ProtoMinor
+
+	var msgsEnv struct {
+		Messages []struct {
+			DisplayNameAtSend string    `json:"display_name_at_send"`
+			Text              string    `json:"text"`
+			TS                time.Time `json:"ts"`
+		} `json:"messages"`
+	}
+	if err := c.getJSON("/messages", &msgsEnv); err != nil {
+		return Snapshot{EngineOK: false, Err: err.Error()}, err
+	}
+	for _, m := range msgsEnv.Messages {
+		snap.Messages = append(snap.Messages, MsgRow{
+			DisplayName: m.DisplayNameAtSend,
+			Text:        m.Text,
+			TS:          m.TS,
+		})
+	}
+
 	snap.EngineOK = true
 	return snap, nil
 }

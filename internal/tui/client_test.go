@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"dudka/internal/tui"
 )
@@ -26,6 +27,19 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"proto_major": 1, "proto_minor": 0})
 	})
+	mux.HandleFunc("GET /messages", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"messages": []map[string]any{
+				{
+					"msg_id":               "m1",
+					"peer_id":              "p1",
+					"display_name_at_send": "Аня",
+					"ts":                   time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC),
+					"text":                 "из engine",
+				},
+			},
+		})
+	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
@@ -43,8 +57,11 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 	if snap.ProtoMajor != 1 {
 		t.Fatalf("proto=%d", snap.ProtoMajor)
 	}
+	if len(snap.Messages) != 1 || snap.Messages[0].Text != "из engine" {
+		t.Fatalf("messages=%+v", snap.Messages)
+	}
 	frame := tui.Render(snap)
-	for _, part := range []string{"Аня", "Боря", "online 1"} {
+	for _, part := range []string{"Аня", "Боря", "online 1", "FEED", "из engine"} {
 		if !strings.Contains(frame, part) {
 			t.Fatalf("missing %q in:\n%s", part, frame)
 		}
