@@ -40,6 +40,8 @@ type Config struct {
 	OnChatLine func(host string, line []byte)
 	// OnTailRequest handles inbound type "tail_req" (P033); write response on conn.
 	OnTailRequest func(host string, conn net.Conn)
+	// OnFileChunkRequest handles inbound type "file_chunk_req" (P051); write chunks on conn.
+	OnFileChunkRequest func(host string, conn net.Conn, line []byte)
 	// OnPeerUpserted fires after the peer table changes (register / dial).
 	OnPeerUpserted func(Peer, UpsertResult)
 	// OnPeerRemoved fires when a peer is pruned after PeerTTL (P034).
@@ -351,6 +353,14 @@ func (n *Node) handleSessionConn(conn net.Conn) {
 		n.mu.Unlock()
 		if onTail != nil {
 			onTail(host, conn)
+		}
+		return
+	case "file_chunk_req":
+		n.mu.Lock()
+		onFile := n.cfg.OnFileChunkRequest
+		n.mu.Unlock()
+		if onFile != nil {
+			onFile(host, conn, line)
 		}
 		return
 	}

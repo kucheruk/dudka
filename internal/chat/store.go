@@ -48,3 +48,19 @@ func (s *Store) List() []Message {
 	copy(out, s.msgs)
 	return out
 }
+
+// FindFile returns the file_announce message for fileID, if present.
+func (s *Store) FindFile(fileID string) (Message, bool) {
+	if fileID == "" {
+		return Message{}, false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := len(s.msgs) - 1; i >= 0; i-- {
+		m := s.msgs[i]
+		if m.Type == TypeFileAnnounce && m.FileID == fileID {
+			return m, true
+		}
+	}
+	return Message{}, false
+}

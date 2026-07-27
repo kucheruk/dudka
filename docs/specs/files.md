@@ -40,8 +40,9 @@ Status: Draft
 
 Проверка:
 
-- отмена на 50% не оставляет «успешный» файл в UX;
-- evidence: integration + UI.
+- получатель после fetch имеет полный файл на диске, байты совпадают с источником; *(P051: TCP `file_chunk_req`/`file_chunk`, `POST /files/fetch`, inbox path)*
+- отмена на 50% не оставляет «успешный» файл в UX; *(P053)*
+- evidence: integration + UI (`scripts/file_fetch_test.sh`).
 
 Зависимости: DUD-FILE-101  
 ADR: не требуется

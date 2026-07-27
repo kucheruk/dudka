@@ -12,12 +12,13 @@ const (
 )
 
 // FileAnnounce is the metadata published into the chat feed (DUD-FILE-101 / P050).
-// It does not carry file bytes — download is a later step (P051).
+// Optional Content is retained locally for chunk serving (P051); it is never fan-out on announce.
 type FileAnnounce struct {
-	Name string
-	Size int64
-	Mime string
-	Hash string
+	Name    string
+	Size    int64
+	Mime    string
+	Hash    string
+	Content []byte // optional local blob for the source peer
 }
 
 // ValidateFileAnnounce checks required announce fields.

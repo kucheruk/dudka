@@ -8,31 +8,38 @@ import (
 	"time"
 
 	"dudka/internal/discovery"
+	"dudka/internal/files"
 	"dudka/internal/identity"
 )
 
 // Config wires a Hub to identity, peer table and dialer.
 type Config struct {
-	PeerID  string
-	Name    string
-	Store   *Store
-	Peers   *discovery.PeerStore
-	Dialer  discovery.DialFunc
-	Timeout time.Duration
-	Logf    func(format string, args ...any)
+	PeerID    string
+	Name      string
+	Store     *Store
+	Peers     *discovery.PeerStore
+	Dialer    discovery.DialFunc
+	Timeout   time.Duration
+	Logf      func(format string, args ...any)
+	Blobs     *files.Store // local source blobs (P051)
+	InboxDir  string       // where fetched files land (P051)
+	ChunkSize int64        // LAN chunk limit; 0 → files.DefaultChunkSize
 }
 
 // Hub fans out local sends to online peers and ingests inbound chat lines.
 type Hub struct {
-	mu      sync.RWMutex
-	peerID  string
-	name    string
-	store   *Store
-	peers   *discovery.PeerStore
-	dialer  discovery.DialFunc
-	timeout time.Duration
-	logf    func(format string, args ...any)
-	syncing bool
+	mu        sync.RWMutex
+	peerID    string
+	name      string
+	store     *Store
+	peers     *discovery.PeerStore
+	dialer    discovery.DialFunc
+	timeout   time.Duration
+	logf      func(format string, args ...any)
+	blobs     *files.Store
+	inboxDir  string
+	chunkSize int64
+	syncing   bool
 }
 
 // NewHub builds a chat hub. Store/Peers must be non-nil.
@@ -52,14 +59,20 @@ func NewHub(cfg Config) *Hub {
 	if cfg.Logf == nil {
 		cfg.Logf = func(string, ...any) {}
 	}
+	if cfg.ChunkSize <= 0 {
+		cfg.ChunkSize = files.DefaultChunkSize
+	}
 	return &Hub{
-		peerID:  cfg.PeerID,
-		name:    cfg.Name,
-		store:   cfg.Store,
-		peers:   cfg.Peers,
-		dialer:  cfg.Dialer,
-		timeout: cfg.Timeout,
-		logf:    cfg.Logf,
+		peerID:    cfg.PeerID,
+		name:      cfg.Name,
+		store:     cfg.Store,
+		peers:     cfg.Peers,
+		dialer:    cfg.Dialer,
+		timeout:   cfg.Timeout,
+		logf:      cfg.Logf,
+		blobs:     cfg.Blobs,
+		inboxDir:  cfg.InboxDir,
+		chunkSize: cfg.ChunkSize,
 	}
 }
 
@@ -98,10 +111,19 @@ func (h *Hub) Send(text string) (SendResult, error) {
 }
 
 // AnnounceFile publishes file metadata into the feed without transferring bytes (DUD-FILE-101 / P050).
+// When Content is set, bytes are stored locally for later chunk serving (P051) and never placed on the announce wire.
 func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
 	a.Name = strings.TrimSpace(a.Name)
 	a.Mime = strings.TrimSpace(a.Mime)
 	a.Hash = strings.TrimSpace(a.Hash)
+	if len(a.Content) > 0 {
+		if a.Size == 0 {
+			a.Size = int64(len(a.Content))
+		}
+		if a.Size != int64(len(a.Content)) {
+			return SendResult{}, fmt.Errorf("chat: content size mismatch")
+		}
+	}
 	if err := ValidateFileAnnounce(a); err != nil {
 		return SendResult{}, err
 	}
@@ -112,6 +134,14 @@ func (h *Hub) AnnounceFile(a FileAnnounce) (SendResult, error) {
 	fileID, err := identity.NewUUIDv4()
 	if err != nil {
 		return SendResult{}, err
+	}
+	if len(a.Content) > 0 {
+		if h.blobs == nil {
+			return SendResult{}, fmt.Errorf("chat: blob store unavailable")
+		}
+		if err := h.blobs.Put(fileID, a.Content); err != nil {
+			return SendResult{}, err
+		}
 	}
 	h.mu.RLock()
 	msg := Message{

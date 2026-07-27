@@ -12,6 +12,7 @@ import (
 
 	"dudka/internal/chat"
 	"dudka/internal/discovery"
+	"dudka/internal/files"
 	"dudka/internal/identity"
 	"dudka/internal/loopback"
 	"dudka/internal/version"
@@ -54,12 +55,19 @@ func main() {
 
 	peers := discovery.NewPeerStore()
 	msgs := chat.NewStore()
+	blobs, err := files.NewStore(filepath.Join(*dataDir, "blobs"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dudkad: blobs: %v\n", err)
+		os.Exit(1)
+	}
 	hub := chat.NewHub(chat.Config{
-		PeerID: peerID,
-		Name:   displayName,
-		Store:  msgs,
-		Peers:  peers,
-		Logf:   func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		PeerID:   peerID,
+		Name:     displayName,
+		Store:    msgs,
+		Peers:    peers,
+		Blobs:    blobs,
+		InboxDir: filepath.Join(*dataDir, "inbox"),
+		Logf:     func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	var seeds []string
 	for _, h := range strings.Split(*dialHosts, ",") {
@@ -77,12 +85,13 @@ func main() {
 		Interval:    *announceInterval,
 		Target:      *announceTarget,
 		DialHosts:   seeds,
-		Peers:          peers,
-		OnChatLine:     hub.HandleChatLine,
-		OnTailRequest:  hub.HandleTailRequest,
-		OnPeerUpserted: hub.OnPeerUpserted,
-		OnPeerRemoved:  hub.OnPeerRemoved,
-		Logf:           func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		Peers:              peers,
+		OnChatLine:         hub.HandleChatLine,
+		OnTailRequest:      hub.HandleTailRequest,
+		OnFileChunkRequest: hub.HandleFileChunkRequest,
+		OnPeerUpserted:     hub.OnPeerUpserted,
+		OnPeerRemoved:      hub.OnPeerRemoved,
+		Logf:               func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: discovery: %v\n", err)
