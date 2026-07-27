@@ -16,6 +16,7 @@ type Peer struct {
 	ProtoMinor  int       `json:"proto_minor"`
 	Host        string    `json:"host"`
 	TCPPort     int       `json:"tcp_port"`
+	IsAgent     bool      `json:"is_agent,omitempty"`
 	Updated     bool      `json:"updated"`
 	LastSeen    time.Time `json:"last_seen"`
 }

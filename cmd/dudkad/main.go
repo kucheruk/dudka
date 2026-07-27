@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"dudka/internal/agent"
 	"dudka/internal/chat"
 	"dudka/internal/discovery"
 	"dudka/internal/files"
@@ -27,6 +28,7 @@ func main() {
 	announceTarget := flag.String("announce-target", "", "optional unicast host:port instead of broadcast (tests)")
 	dialHosts := flag.String("dial-hosts", "", "comma-separated seed IPs to TCP-register (LAN-only; WAN refused)")
 	sessionPort := flag.Int("session-port", discovery.DefaultUDPPort, "TCP register port; 0 = ephemeral")
+	asAgent := flag.Bool("agent", false, "this process is a home agent (requires triple-prefix nick)")
 	flag.Parse()
 
 	fmt.Printf("dudkad %s\n", version.Version)
@@ -45,6 +47,15 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("display_name=%s\n", displayName)
+	if *asAgent {
+		if err := agent.ValidateAgentNick(displayName); err != nil {
+			fmt.Fprintf(os.Stderr, "dudkad: agent nick: %v (want agent·model·host)\n", err)
+			os.Exit(1)
+		}
+	} else if agent.LooksLikeAgentNick(displayName) {
+		fmt.Fprintf(os.Stderr, "dudkad: human nick must not use agent triple-prefix; pass -agent if this is an agent\n")
+		os.Exit(1)
+	}
 
 	instanceID, err := identity.NewUUIDv4()
 	if err != nil {
@@ -86,6 +97,7 @@ func main() {
 		Interval:    *announceInterval,
 		Target:      *announceTarget,
 		DialHosts:   seeds,
+		IsAgent:     *asAgent,
 		Peers:              peers,
 		OnChatLine:         hub.HandleChatLine,
 		OnTailRequest:      hub.HandleTailRequest,
@@ -114,6 +126,8 @@ func main() {
 	})
 	api.SetPeers(peers)
 	api.SetChat(hub)
+	api.SetIsAgent(*asAgent)
+	api.SetUpdatesDir(filepath.Join(*dataDir, "updates"))
 	api.SetStatusProvider(func() discovery.Status { return disc.Status() })
 	api.SetScanProvider(func(ctx context.Context, req discovery.ScanRequest) (discovery.ScanResult, error) {
 		return disc.Scan(ctx, req)

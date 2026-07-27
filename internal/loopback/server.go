@@ -10,9 +10,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
+	"dudka/internal/agent"
 	"dudka/internal/chat"
 	"dudka/internal/discovery"
 )
@@ -27,7 +30,23 @@ type Server struct {
 	status      func() discovery.Status
 	scan        func(context.Context, discovery.ScanRequest) (discovery.ScanResult, error)
 	chat        *chat.Hub
+	updatesDir  string
+	isAgent     bool
 	mux         *http.ServeMux
+}
+
+// SetIsAgent toggles agent nick rules on POST /nick (P112).
+func (s *Server) SetIsAgent(v bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.isAgent = v
+}
+
+// SetUpdatesDir enables LAN offline update sharing under data-dir (P099).
+func (s *Server) SetUpdatesDir(dir string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.updatesDir = dir
 }
 
 // New returns a Server bound to the given local identity.
@@ -53,6 +72,10 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("POST /files/cancel", s.handleFileCancel)
 	s.mux.HandleFunc("GET /files/transfers", s.handleFileTransfers)
 	s.mux.HandleFunc("GET /messages", s.handleMessages)
+	s.mux.HandleFunc("GET /channels", s.handleChannels)
+	s.mux.HandleFunc("POST /channels", s.handleCreateChannel)
+	s.mux.HandleFunc("GET /updates", s.handleUpdatesList)
+	s.mux.HandleFunc("POST /updates", s.handleUpdatesPut)
 	s.mux.HandleFunc("GET /tail", s.handleTail)
 	return s
 }
@@ -187,6 +210,18 @@ func (s *Server) handleNick(w http.ResponseWriter, r *http.Request) {
 	peerID := s.peerID
 	s.mu.Unlock()
 
+	s.mu.RLock()
+	asAgent := s.isAgent
+	s.mu.RUnlock()
+	if asAgent {
+		if err := agent.ValidateAgentNick(name); err != nil {
+			http.Error(w, "agent nick invalid: "+err.Error()+"\n", http.StatusBadRequest)
+			return
+		}
+	} else if agent.LooksLikeAgentNick(name) {
+		http.Error(w, "human nick must not use agent triple-prefix\n", http.StatusBadRequest)
+		return
+	}
 	if persist != nil {
 		if err := persist(name); err != nil {
 			http.Error(w, "persist failed\n", http.StatusInternalServerError)
@@ -214,13 +249,15 @@ func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Text string `json:"text"`
+		Text    string `json:"text"`
+		Channel string `json:"channel"`
+		WantAck bool   `json:"want_ack"`
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, "invalid json\n", http.StatusBadRequest)
 		return
 	}
-	res, err := hub.Send(req.Text)
+	res, err := hub.SendOpts(req.Text, chat.SendOptions{Channel: req.Channel, WantAck: req.WantAck})
 	if err != nil {
 		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
 		return
@@ -369,19 +406,60 @@ func (s *Server) handleFileCancel(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(tr)
 }
 
-func (s *Server) handleMessages(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	hub := s.chat
 	s.mu.RUnlock()
 	msgs := []chat.Message{}
 	if hub != nil {
-		msgs = hub.Messages()
+		msgs = hub.MessagesInChannel(r.URL.Query().Get("channel"))
 	}
 	if msgs == nil {
 		msgs = []chat.Message{}
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{"messages": msgs})
+}
+
+func (s *Server) handleChannels(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	chs := []string{chat.DefaultChannel}
+	if hub != nil {
+		chs = hub.Channels()
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"channels": chs})
+}
+
+func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	if hub == nil {
+		http.Error(w, "chat unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	if err := hub.EnsureChannel(req.Name); err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"channels": hub.Channels()})
 }
 
 func (s *Server) handleTail(w http.ResponseWriter, _ *http.Request) {
@@ -443,6 +521,79 @@ func (s *Server) Serve(ln net.Listener) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Server) handleUpdatesList(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	dir := s.updatesDir
+	s.mu.RUnlock()
+	type item struct {
+		Name string `json:"name"`
+		Size int64  `json:"size"`
+	}
+	out := []item{}
+	if dir != "" {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				info, err := e.Info()
+				if err != nil {
+					continue
+				}
+				out = append(out, item{Name: e.Name(), Size: info.Size()})
+			}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"updates": out})
+}
+
+func (s *Server) handleUpdatesPut(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	dir := s.updatesDir
+	s.mu.RUnlock()
+	if dir == "" {
+		http.Error(w, "updates unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 64<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Name      string `json:"name"`
+		ContentB64 string `json:"content_b64"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	name := filepath.Base(strings.TrimSpace(req.Name))
+	if name == "" || name == "." || name == ".." {
+		http.Error(w, "bad name\n", http.StatusBadRequest)
+		return
+	}
+	raw, err := base64.StdEncoding.DecodeString(req.ContentB64)
+	if err != nil {
+		http.Error(w, "bad content_b64\n", http.StatusBadRequest)
+		return
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		http.Error(w, "mkdir failed\n", http.StatusInternalServerError)
+		return
+	}
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		http.Error(w, "write failed\n", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"name": name, "size": len(raw)})
 }
 
 // FormatReady builds the P012 stdout readiness line.

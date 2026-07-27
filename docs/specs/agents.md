@@ -1,6 +1,6 @@
 # DUD-AGT — Домашние агенты (MCP на LAN)
 
-Статус документа: Draft  
+Статус документа: Accepted · 2026-07-28  
 Владелец: ДУДКА  
 Последнее смысловое изменение: 2026-07-28
 
@@ -22,7 +22,7 @@
 ### DUD-AGT-101
 
 Priority: P1  
-Status: Draft
+Status: Accepted
 
 Engine/клиент Дудки может выступать MCP-клиентом к агенту, достижимому только в link-local / loopback / RFC1918 (тот же контур, что `DUD-NET-101`). Исходящий WAN к MCP запрещён.
 
@@ -37,7 +37,7 @@ ADR: не требуется (пока)
 ### DUD-AGT-110
 
 Priority: P1  
-Status: Draft
+Status: Accepted
 
 Агент в чате всегда имеет **тройной префикс** в `display_name` / нике. Канонический формат из трёх частей:
 
@@ -64,7 +64,7 @@ ADR: не требуется
 ### DUD-AGT-120
 
 Priority: P1  
-Status: Draft
+Status: Accepted
 
 Агент обнаруживается/анонсируется в той же LAN discovery-грамматике квартиры (не mDNS-as-only). Минимум: peer виден в списке соседей с agent-маркером и префиксным ником.
 
@@ -94,5 +94,5 @@ ADR: не требуется
 
 ## Открытые решения
 
-- Точный transport MCP over LAN (stdio к локальному sidecar vs HTTP на RFC1918) — выбрать при P110/P111 без WAN.
-- Нужен ли отдельный peer capability bit `agent=true` в announce кроме префикса ника — предпочтительно да, для UI-метки.
+- Transport: **stdio MCP** (`cmd/dudka-mcp`) → loopback HTTP dudkad (RFC1918/loopback only).
+- `is_agent` в announce/register/peers — Accepted.

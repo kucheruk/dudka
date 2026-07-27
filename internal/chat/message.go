@@ -22,6 +22,9 @@ type Message struct {
 	Hash              string    `json:"hash,omitempty"`
 	ThumbB64          string    `json:"thumb_b64,omitempty"`  // small JPEG preview on the wire (P056)
 	ThumbPath         string    `json:"thumb_path,omitempty"` // local materialized path; not on wire
+	Channel           string    `json:"channel,omitempty"`    // DUD-ROOM-120; default общий
+	WantAck           bool      `json:"want_ack,omitempty"`   // P098
+	AckFor            string    `json:"ack_for,omitempty"`    // P098
 }
 
 // EncodeMessage serializes a feed line (newline-delimited JSON).
@@ -48,9 +51,16 @@ func EncodeMessage(m Message) ([]byte, error) {
 		}
 		m.Text = ""
 		m.ThumbPath = "" // local only — receivers materialize from thumb_b64
+	case TypeAck:
+		if m.AckFor == "" {
+			return nil, fmt.Errorf("chat: ack_for required")
+		}
+		m.Text = ""
+		m.WantAck = false
 	default:
 		return nil, fmt.Errorf("chat: unexpected type %q", m.Type)
 	}
+	// Empty channel on the wire means DefaultChannel (compat with pre-P097 peers).
 	raw, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -83,8 +93,16 @@ func DecodeMessage(raw []byte) (Message, error) {
 			return Message{}, err
 		}
 		m.Text = ""
+	case TypeAck:
+		if m.MsgID == "" || m.PeerID == "" || m.AckFor == "" {
+			return Message{}, fmt.Errorf("chat: ack missing fields")
+		}
+		m.Text = ""
 	default:
 		return Message{}, fmt.Errorf("chat: unexpected type %q", m.Type)
+	}
+	if m.Channel == "" {
+		m.Channel = DefaultChannel
 	}
 	m.TS = m.TS.UTC()
 	return m, nil

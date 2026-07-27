@@ -24,6 +24,7 @@ type Announce struct {
 	ProtoMinor  int    `json:"proto_minor"`
 	TCPPort     int    `json:"tcp_port"`
 	InstanceID  string `json:"instance_id"`
+	IsAgent     bool   `json:"is_agent,omitempty"` // DUD-AGT-120
 }
 
 // EncodeAnnounce serializes an announce datagram.

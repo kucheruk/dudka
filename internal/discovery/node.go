@@ -36,6 +36,7 @@ type Config struct {
 	DialTimeout time.Duration
 	Dialer      DialFunc // default: net.DialTimeout
 	DialHosts   []string // optional seed hosts from config; dialed after Start (LAN-only)
+	IsAgent     bool     // home-agent marker in announce/register (DUD-AGT-120)
 	// OnChatLine handles inbound NDJSON feed lines: "chat" (P030) and "file_announce" (P050).
 	OnChatLine func(host string, line []byte)
 	// OnTailRequest handles inbound type "tail_req" (P033); write response on conn.
@@ -422,6 +423,7 @@ func (n *Node) handleSessionConn(conn net.Conn) {
 		ProtoMinor:  n.cfg.ProtoMinor,
 		TCPPort:     n.tcpPort,
 		InstanceID:  n.cfg.InstanceID,
+		IsAgent:     n.cfg.IsAgent,
 	}
 	n.mu.Unlock()
 	if oursMajor == 0 {
@@ -548,6 +550,7 @@ func (n *Node) dialRegister(host string, port int) (*Peer, error) {
 		ProtoMinor:  n.cfg.ProtoMinor,
 		TCPPort:     n.tcpPort,
 		InstanceID:  n.cfg.InstanceID,
+		IsAgent:     n.cfg.IsAgent,
 	}
 	n.mu.Unlock()
 
@@ -611,6 +614,7 @@ func (n *Node) sendOnce() {
 		ProtoMinor:  cfg.ProtoMinor,
 		TCPPort:     tcpPort,
 		InstanceID:  cfg.InstanceID,
+		IsAgent:     cfg.IsAgent,
 	})
 	if err != nil {
 		return

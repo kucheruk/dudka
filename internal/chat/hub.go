@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -49,6 +50,7 @@ type Hub struct {
 	fetching      map[string]bool
 	cancels       map[string]context.CancelFunc
 	syncing       bool
+	channels      map[string]struct{}
 }
 
 // NewHub builds a chat hub. Store/Peers must be non-nil.
@@ -78,6 +80,7 @@ func NewHub(cfg Config) *Hub {
 		peers:     cfg.Peers,
 		dialer:    cfg.Dialer,
 		timeout:   cfg.Timeout,
+		channels:  map[string]struct{}{DefaultChannel: {}},
 		logf:      cfg.Logf,
 		blobs:         cfg.Blobs,
 		inboxDir:      cfg.InboxDir,
@@ -107,14 +110,79 @@ func (h *Hub) SetName(name string) {
 	h.name = name
 }
 
-// Messages returns the local log.
-func (h *Hub) Messages() []Message { return h.store.List() }
+// Messages returns the local log (optionally filtered by channel).
+func (h *Hub) Messages() []Message { return h.MessagesInChannel("") }
+
+// MessagesInChannel filters by channel; empty channel returns all.
+func (h *Hub) MessagesInChannel(channel string) []Message {
+	all := h.store.List()
+	channel = strings.TrimSpace(channel)
+	if channel == "" {
+		return all
+	}
+	out := make([]Message, 0, len(all))
+	for _, m := range all {
+		ch := m.Channel
+		if ch == "" {
+			ch = DefaultChannel
+		}
+		if ch == channel {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// Channels returns known channel names (P097).
+func (h *Hub) Channels() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make([]string, 0, len(h.channels))
+	for c := range h.channels {
+		out = append(out, c)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// EnsureChannel registers a channel name (idempotent).
+func (h *Hub) EnsureChannel(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" || len([]rune(name)) > 40 || strings.Contains(name, "/") {
+		return fmt.Errorf("chat: bad channel name")
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.channels == nil {
+		h.channels = map[string]struct{}{DefaultChannel: {}}
+	}
+	h.channels[name] = struct{}{}
+	return nil
+}
+
+// SendOptions controls channel + optional ack (P097/P098).
+type SendOptions struct {
+	Channel string
+	WantAck bool
+}
 
 // Send builds a message, stores it locally, and schedules best-effort fan-out.
 // Status is only accepted/queued — never a delivery claim (DUD-CHAT-130 / P035).
 func (h *Hub) Send(text string) (SendResult, error) {
+	return h.SendOpts(text, SendOptions{})
+}
+
+// SendOpts is Send with channel/ack options.
+func (h *Hub) SendOpts(text string, opts SendOptions) (SendResult, error) {
 	text = strings.TrimSpace(text)
 	if err := ValidateText(text); err != nil {
+		return SendResult{}, err
+	}
+	ch := strings.TrimSpace(opts.Channel)
+	if ch == "" {
+		ch = DefaultChannel
+	}
+	if err := h.EnsureChannel(ch); err != nil {
 		return SendResult{}, err
 	}
 	id, err := identity.NewUUIDv4()
@@ -129,6 +197,8 @@ func (h *Hub) Send(text string) (SendResult, error) {
 		DisplayNameAtSend: h.name,
 		TS:                time.Now().UTC(),
 		Text:              text,
+		Channel:           ch,
+		WantAck:           opts.WantAck,
 	}
 	h.mu.RUnlock()
 	return h.publish(msg)
@@ -260,9 +330,31 @@ func (h *Hub) HandleChatLine(_ string, line []byte) {
 		h.logf("chat_rx_err err=%v", err)
 		return
 	}
+	if msg.Channel != "" {
+		_ = h.EnsureChannel(msg.Channel)
+	}
 	h.materializeThumb(&msg)
 	if h.store.Append(msg) {
 		h.logf("chat_rx msg_id=%s peer_id=%s", msg.MsgID, msg.PeerID)
+	}
+	// Optional ack/retry cue (P098): reply with ack when asked; still not E2E delivery claim.
+	if msg.Type == TypeChat && msg.WantAck && msg.PeerID != h.peerID {
+		ackID, err := identity.NewUUIDv4()
+		if err != nil {
+			return
+		}
+		h.mu.RLock()
+		ack := Message{
+			Type:              TypeAck,
+			MsgID:             ackID,
+			PeerID:            h.peerID,
+			DisplayNameAtSend: h.name,
+			TS:                time.Now().UTC(),
+			Channel:           msg.Channel,
+			AckFor:            msg.MsgID,
+		}
+		h.mu.RUnlock()
+		_, _ = h.publish(ack)
 	}
 }
 

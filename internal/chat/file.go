@@ -9,6 +9,8 @@ import (
 const (
 	TypeChat         = "chat"
 	TypeFileAnnounce = "file_announce"
+	TypeAck          = "ack"
+	DefaultChannel   = "общий"
 )
 
 // FileAnnounce is the metadata published into the chat feed (DUD-FILE-101 / P050).

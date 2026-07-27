@@ -148,10 +148,10 @@
 
 ## Фаза 6 — После MVP
 
-- [ ] P097 Комнаты без кодов: список каналов на той же LAN (спека + минимальный UI)
-- [ ] P098 Опциональный ack/retry текста, если best-effort бесит на практике
-- [ ] P099 Offline-раздача обновлений по LAN (без cloud)
-- [ ] P100 Store-пакеты (если понадобятся) — только после P095 и без runtime-интернета
+- [x] P097 Комнаты без кодов: список каналов на той же LAN (спека + минимальный UI) (`docs/specs/rooms.md`, `/channels`, TUI КАНАЛЫ)
+- [x] P098 Опциональный ack/retry текста, если best-effort бесит на практике (`want_ack` → type `ack`)
+- [x] P099 Offline-раздача обновлений по LAN (без cloud) (`/updates`, `docs/updates-lan.md`)
+- [x] P100 Store-пакеты (если понадобятся) — только после P095 и без runtime-интернета (Withdrawn: Community/no-store после P095; store не нужен)
 
 ---
 
@@ -159,12 +159,12 @@
 
 Контракт: [`docs/specs/agents.md`](docs/specs/agents.md) (`DUD-AGT-*`). Не Диалоги/Доверие; только квартирная сеть.
 
-- [ ] P110 Спека MCP home-agents Accepted: surface tools, no-WAN, тройной префикс ника `{agent}·{model}·{host}` (`DUD-AGT-101/110`)
-- [ ] P111 Advertise/discovery агента в LAN (peer + agent marker; тот же no-WAN контур)
-- [ ] P112 Нормализация/валидация ника агента с обязательным тройным префиксом; человек без такого префикса
-- [ ] P113 MCP tool: agent → чат (send текста в общий feed)
-- [ ] P114 MCP tool: чат → agent (получить входящий текст)
-- [ ] P115 Smoke: два процесса (человек + agent stub) на LAN/loopback обмениваются текстом; тройной префикс виден в ленте
+- [x] P110 Спека MCP home-agents Accepted: surface tools, no-WAN, тройной префикс ника `{agent}·{model}·{host}` (`DUD-AGT-101/110`)
+- [x] P111 Advertise/discovery агента в LAN (peer + agent marker; тот же no-WAN контур) (`is_agent`, `-agent`)
+- [x] P112 Нормализация/валидация ника агента с обязательным тройным префиксом; человек без такого префикса (`internal/agent`)
+- [x] P113 MCP tool: agent → чат (send текста в общий feed) (`dudka_send` in `cmd/dudka-mcp`)
+- [x] P114 MCP tool: чат → agent (получить входящий текст) (`dudka_inbox`)
+- [x] P115 Smoke: два процесса (человек + agent stub) на LAN/loopback обмениваются текстом; тройной префикс виден в ленте (`./scripts/agent_mcp_smoke.sh`)
 
 **Фаза 7 готова:** домашний агент в том же чате квартиры, отличим по нику, без интернета.
 

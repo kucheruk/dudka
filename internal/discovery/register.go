@@ -19,6 +19,7 @@ type Register struct {
 	ProtoMinor  int    `json:"proto_minor"`
 	TCPPort     int    `json:"tcp_port"`
 	InstanceID  string `json:"instance_id"`
+	IsAgent     bool   `json:"is_agent,omitempty"`
 	Reason      string `json:"reason,omitempty"`
 }
 
@@ -83,6 +84,7 @@ func peerFromRegister(r Register, host string) Peer {
 		ProtoMinor:  r.ProtoMinor,
 		Host:        host,
 		TCPPort:     r.TCPPort,
+		IsAgent:     r.IsAgent,
 		LastSeen:    time.Now().UTC(),
 	}
 }

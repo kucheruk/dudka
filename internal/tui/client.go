@@ -85,6 +85,13 @@ func (c *Client) Fetch() (Snapshot, error) {
 		snap.Network = NetworkOK
 	}
 
+	var chEnv struct {
+		Channels []string `json:"channels"`
+	}
+	if err := c.getJSON("/channels", &chEnv); err == nil {
+		snap.Channels = chEnv.Channels
+	}
+
 	var msgsEnv struct {
 		Messages []struct {
 			Type              string    `json:"type"`

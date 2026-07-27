@@ -79,6 +79,7 @@ type Snapshot struct {
 	SessionPort   int
 	PortRelocated bool
 	PortNote      string
+	Channels      []string
 	EngineOK      bool
 	Err           string
 }
@@ -127,6 +128,12 @@ func Render(s Snapshot) string {
 	}
 	if s.Incompatible > 0 {
 		fmt.Fprintf(&b, "  несовместимый сосед — %s\n", ProtoMismatchCopy)
+	}
+	if len(s.Channels) > 0 {
+		b.WriteString("КАНАЛЫ\n")
+		for _, c := range s.Channels {
+			fmt.Fprintf(&b, "  %s\n", c)
+		}
 	}
 	b.WriteString("СОСЕДИ\n")
 	switch {
