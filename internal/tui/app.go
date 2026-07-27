@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -175,19 +176,19 @@ type scanDoneMsg struct {
 	snap Snapshot
 }
 
-// View renders fixed panels.
+// View renders fixed panels on a full charcoal canvas.
 func (m Model) View() string {
 	if m.quitting {
 		return ""
 	}
-	// Handle scanDone in Update — register below via type assert fallthrough.
-	return RenderScreen(ScreenState{
+	content := RenderScreen(ScreenState{
 		Snap:       m.snap,
 		Compose:    m.input.Value(),
 		StatusMsg:  m.statusMsg,
 		FeedScroll: m.feedScroll,
 		CursorOn:   true,
 	}, m.width, m.height)
+	return styleCanvas(m.width, m.height).Render(content)
 }
 
 func maxInt(a, b int) int {
@@ -199,6 +200,13 @@ func maxInt(a, b int) int {
 
 // RunInteractive starts the alt-screen TUI against engineURL (blocks until quit).
 func RunInteractive(engineURL string) error {
+	// Help Terminal.app / weak profiles pick up DESIGN truecolor tokens.
+	if os.Getenv("COLORTERM") == "" {
+		_ = os.Setenv("COLORTERM", "truecolor")
+	}
+	if os.Getenv("TERM") == "dumb" {
+		_ = os.Setenv("TERM", "xterm-256color")
+	}
 	client := NewClient(engineURL)
 	p := tea.NewProgram(NewModel(client), tea.WithAltScreen())
 	_, err := p.Run()

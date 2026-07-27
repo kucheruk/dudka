@@ -3,39 +3,56 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 // ScreenState is pure view input for the interactive TUI (P046).
 type ScreenState struct {
 	Snap       Snapshot
 	Compose    string
-	StatusMsg  string // transient error / hint under compose
-	FeedScroll int    // lines scrolled up from bottom (0 = newest at bottom)
+	StatusMsg  string
+	FeedScroll int
 	CursorOn   bool
 }
 
 // RenderScreen paints fixed panels for width×height (no I/O). DESIGN.md charcoal + RU labels.
 func RenderScreen(st ScreenState, width, height int) string {
 	lay := LayoutFor(width, height)
-	status := clampWidth(styleStatus().Render(truncateRunes(statusText(st.Snap), lay.Width)), lay.Width)
-	peers := renderPeersPane(st.Snap, lay.PeersW, lay.BodyH)
-	feed := renderFeedPane(st.Snap, lay.FeedW, lay.BodyH, st.FeedScroll)
-	sep := styleDim().Render("│")
-	body := lipgloss.JoinHorizontal(lipgloss.Top, peers, sep, feed)
-	compose := renderComposeLine(st.Compose, st.CursorOn, lay.Width)
-	help := clampWidth(styleDim().Render(truncateRunes(helpText(st.Snap, st.StatusMsg), lay.Width)), lay.Width)
+	rows := make([]string, 0, height)
 
-	out := lipgloss.JoinVertical(lipgloss.Left, status, body, compose, help)
-	lines := strings.Split(out, "\n")
-	if len(lines) > height {
-		lines = lines[:height]
+	rows = append(rows, paintStatus(st.Snap, lay.Width))
+
+	peerLines := peerPaneLines(st.Snap, lay.PeersW, lay.BodyH)
+	feedLines := feedPaneLines(st.Snap, lay.FeedW, lay.BodyH, st.FeedScroll)
+	for i := 0; i < lay.BodyH; i++ {
+		p := peerLines[i]
+		f := feedLines[i]
+		sep := styleDim().Background(colorPanel).Render("│")
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, p, sep, f))
 	}
-	for len(lines) < height {
-		lines = append(lines, "")
+
+	rows = append(rows, paintCompose(st.Compose, st.CursorOn, lay.Width))
+	rows = append(rows, paintHelp(st.Snap, st.StatusMsg, lay.Width))
+
+	for len(rows) < height {
+		rows = append(rows, fillBg("", width, colorPanel))
 	}
-	return strings.Join(lines, "\n")
+	if len(rows) > height {
+		rows = rows[:height]
+	}
+	return strings.Join(rows, "\n")
+}
+
+func paintStatus(snap Snapshot, width int) string {
+	text := statusText(snap)
+	st := styleStatus()
+	if !snap.EngineOK {
+		st = styleErr()
+	}
+	return fillBg(st.Render(truncateRunes(text, width)), width, colorPanel)
 }
 
 func statusText(snap Snapshot) string {
@@ -52,6 +69,7 @@ func statusText(snap Snapshot) string {
 	if me == "" {
 		me = "—"
 	}
+	// Segment-style brand + online count (DESIGN status strip).
 	text := fmt.Sprintf("ДУДКА · %s · онлайн %d · %s", me, n, state)
 	if snap.ProtoMajor > 0 {
 		text += fmt.Sprintf(" · прото %d.%d", snap.ProtoMajor, snap.ProtoMinor)
@@ -69,22 +87,22 @@ func onlinePercent(n int) int {
 	return n * 25
 }
 
-func renderPeersPane(snap Snapshot, width, height int) string {
+func peerPaneLines(snap Snapshot, width, height int) []string {
 	if width < 8 {
 		width = 8
 	}
-	rows := make([]string, 0, height)
-	rows = append(rows, clampWidth(styleLabel().Render(truncateRunes("СОСЕДИ", width)), width))
+	lines := make([]string, 0, height)
+	lines = append(lines, fillBg(styleLabel().Render(silkLabel("СОСЕДИ")), width, colorPanelDeep))
 	inner := height - 1
 	switch {
 	case !snap.EngineOK:
-		rows = append(rows, fillRow(styleDim().Render("—"), width))
+		lines = append(lines, fillBg(styleDim().Render("—"), width, colorPanelDeep))
 	case snap.Network == NetworkNoNetwork:
-		rows = append(rows, fillRow(styleDim().Render(NoNetworkCopy), width))
+		lines = append(lines, fillBg(styleDim().Render(NoNetworkCopy), width, colorPanelDeep))
 	case len(snap.Peers) == 0:
-		rows = append(rows, fillRow(styleDim().Render(EmptyPeersCopy), width))
+		lines = append(lines, fillBg(styleDim().Render(EmptyPeersCopy), width, colorPanelDeep))
 		if inner > 1 {
-			rows = append(rows, fillRow(styleAction().Render(" S · ИСКАТЬ "), width))
+			lines = append(lines, fillBg(styleAction().Render(" S · ИСКАТЬ "), width, colorPanelDeep))
 		}
 	default:
 		for i, p := range snap.Peers {
@@ -96,41 +114,36 @@ func renderPeersPane(snap Snapshot, width, height int) string {
 				name = p.PeerID
 			}
 			row := stylePeerActive().Render("●") + styleBody().Render(" "+truncateRunes(name, width-2))
-			rows = append(rows, fillRow(row, width))
+			lines = append(lines, fillBg(row, width, colorPanelDeep))
 		}
 	}
-	for len(rows) < height {
-		rows = append(rows, fillRow("", width))
+	for len(lines) < height {
+		lines = append(lines, fillBg("", width, colorPanelDeep))
 	}
-	if len(rows) > height {
-		rows = rows[:height]
-	}
-	return lipgloss.NewStyle().Width(width).Background(colorPanelDeep).Render(
-		lipgloss.JoinVertical(lipgloss.Left, rows...),
-	)
+	return lines[:height]
 }
 
-func renderFeedPane(snap Snapshot, width, height, scroll int) string {
+func feedPaneLines(snap Snapshot, width, height, scroll int) []string {
 	if width < 12 {
 		width = 12
 	}
-	rows := make([]string, 0, height)
-	rows = append(rows, clampWidth(styleLabel().Render(truncateRunes("ЛЕНТА", width)), width))
+	lines := make([]string, 0, height)
+	lines = append(lines, fillBg(styleLabel().Render(silkLabel("ЛЕНТА")), width, colorPanelDeep))
 	inner := height - 1
 	if inner < 1 {
 		inner = 1
 	}
 	switch {
 	case !snap.EngineOK:
-		rows = append(rows, fillRow(styleDim().Render("нет данных"), width))
+		lines = append(lines, fillBg(styleDim().Render("нет данных"), width, colorPanelDeep))
 	case len(snap.Messages) == 0:
-		rows = append(rows, fillRow(styleDim().Render("— пусто —"), width))
+		lines = append(lines, fillBg(styleDim().Render("— пусто —"), width, colorPanelDeep))
 	default:
 		progress := map[string]TransferRow{}
 		for _, tr := range snap.Transfers {
 			progress[tr.FileID] = tr
 		}
-		lines := make([]string, 0, len(snap.Messages))
+		raw := make([]string, 0, len(snap.Messages))
 		for _, m := range snap.Messages {
 			name := strings.TrimSpace(m.DisplayName)
 			if name == "" {
@@ -141,42 +154,43 @@ func renderFeedPane(snap Snapshot, width, height, scroll int) string {
 			if m.TS.IsZero() {
 				line = fmt.Sprintf("· %s · %s", name, body)
 			} else {
-				line = fmt.Sprintf("%s · %s · %s", m.TS.UTC().Format("15:04"), name, body)
+				ts := styleDim().Render(m.TS.UTC().Format("15:04"))
+				rest := styleBody().Render(fmt.Sprintf(" · %s · %s", name, body))
+				line = ts + rest
 			}
-			lines = append(lines, line)
+			raw = append(raw, line)
 		}
-		start := len(lines) - inner - scroll
+		start := len(raw) - inner - scroll
 		if start < 0 {
 			start = 0
 		}
 		end := start + inner
-		if end > len(lines) {
-			end = len(lines)
+		if end > len(raw) {
+			end = len(raw)
 		}
-		for _, line := range lines[start:end] {
-			rows = append(rows, fillRow(styleBody().Render(truncateRunes(line, width)), width))
+		for _, line := range raw[start:end] {
+			lines = append(lines, fillBg(line, width, colorPanelDeep))
 		}
 	}
-	for len(rows) < height {
-		rows = append(rows, fillRow("", width))
+	for len(lines) < height {
+		lines = append(lines, fillBg("", width, colorPanelDeep))
 	}
-	if len(rows) > height {
-		rows = rows[:height]
-	}
-	return lipgloss.NewStyle().Width(width).Background(colorPanelDeep).Render(
-		lipgloss.JoinVertical(lipgloss.Left, rows...),
-	)
+	return lines[:height]
 }
 
-func renderComposeLine(compose string, cursor bool, width int) string {
+func paintCompose(compose string, cursor bool, width int) string {
 	cur := " "
 	if cursor {
-		cur = "▌"
+		cur = styleAction().Render("▌")
 	}
-	left := styleAction().Render(" ДУНУТЬ ")
-	right := styleCompose().Render("› " + compose + cur)
-	joined := lipgloss.JoinHorizontal(lipgloss.Center, left, right)
-	return lipgloss.NewStyle().Width(width).Background(colorPanel).Render(joined)
+	left := styleAction().Render(" ОТПРАВИТЬ ")
+	right := styleCompose().Render("› " + compose)
+	joined := lipgloss.JoinHorizontal(lipgloss.Center, left, right, cur)
+	return fillBg(joined, width, colorPanelDeep)
+}
+
+func paintHelp(snap Snapshot, statusMsg string, width int) string {
+	return fillBg(styleDim().Render(truncateRunes(helpText(snap, statusMsg), width)), width, colorPanel)
 }
 
 func helpText(snap Snapshot, statusMsg string) string {
@@ -190,24 +204,87 @@ func helpText(snap Snapshot, statusMsg string) string {
 	return base
 }
 
-func fillRow(content string, width int) string {
-	return lipgloss.NewStyle().Width(width).Background(colorPanelDeep).Render(content)
+func silkLabel(s string) string {
+	// Light silkscreen tracking without CRT noise: thin gaps between letters.
+	r := []rune(strings.TrimSpace(s))
+	if len(r) == 0 {
+		return s
+	}
+	var b strings.Builder
+	for i, ch := range r {
+		if i > 0 {
+			b.WriteByte(' ')
+		}
+		b.WriteRune(ch)
+	}
+	return b.String()
 }
 
-func clampWidth(s string, width int) string {
-	return lipgloss.NewStyle().Width(width).MaxWidth(width).Background(colorPanel).Render(s)
+func fillBg(content string, width int, bg lipgloss.Color) string {
+	if width < 1 {
+		width = 1
+	}
+	plain := stripANSI(content)
+	w := runewidth.StringWidth(plain)
+	pad := width - w
+	if pad < 0 {
+		// Truncate styled content roughly by plain width.
+		content = styleBody().Background(bg).Foreground(colorSilk).Render(truncateRunes(plain, width))
+		plain = stripANSI(content)
+		w = runewidth.StringWidth(plain)
+		pad = width - w
+	}
+	if pad < 0 {
+		pad = 0
+	}
+	padStr := lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", pad))
+	base := lipgloss.NewStyle().Background(bg).Render("")
+	_ = base
+	if content == "" {
+		return lipgloss.NewStyle().Width(width).Background(bg).Render(strings.Repeat(" ", width))
+	}
+	return content + padStr
+}
+
+func stripANSI(s string) string {
+	var b strings.Builder
+	inEsc := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == 0x1b {
+			inEsc = true
+			continue
+		}
+		if inEsc {
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+				inEsc = false
+			}
+			continue
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
 }
 
 func truncateRunes(s string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	r := []rune(s)
-	if len(r) <= width {
+	if runewidth.StringWidth(s) <= width {
 		return s
 	}
-	if width <= 1 {
-		return string(r[:width])
+	var b strings.Builder
+	w := 0
+	for _, r := range s {
+		rw := runewidth.RuneWidth(r)
+		if w+rw >= width {
+			break
+		}
+		b.WriteRune(r)
+		w += rw
 	}
-	return string(r[:width-1]) + "…"
+	if width > 1 && utf8.RuneCountInString(b.String()) > 0 {
+		return b.String() + "…"
+	}
+	return b.String()
 }

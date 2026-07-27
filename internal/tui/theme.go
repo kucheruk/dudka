@@ -1,20 +1,35 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"os"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+)
+
+func init() {
+	// Force truecolor DESIGN tokens even when Terminal.app reports a light
+	// background or a weak color profile (otherwise charcoal styles wash out).
+	if os.Getenv("DUDKA_COLOR_PROFILE") == "ascii" {
+		lipgloss.SetColorProfile(termenv.Ascii)
+		return
+	}
+	lipgloss.SetColorProfile(termenv.TrueColor)
+}
 
 // DESIGN.md charcoal / silkscreen / LED tokens for truecolor terminals (P046).
 var (
-	colorPanel     = lipgloss.Color("#1A1A1A")
-	colorPanelDeep = lipgloss.Color("#0E0E0E")
-	colorSilk      = lipgloss.Color("#F2F2F2")
-	colorSilkDim   = lipgloss.Color("#8A8A8A")
-	colorLED       = lipgloss.Color("#FF4500")
-	colorSegment   = lipgloss.Color("#FF3B30")
-	colorStepRed   = lipgloss.Color("#FF3B30")
+	colorPanel      = lipgloss.Color("#1A1A1A")
+	colorPanelDeep  = lipgloss.Color("#0E0E0E")
+	colorSilk       = lipgloss.Color("#F2F2F2")
+	colorSilkDim    = lipgloss.Color("#8A8A8A")
+	colorLED        = lipgloss.Color("#FF4500")
+	colorSegment    = lipgloss.Color("#FF3B30")
+	colorStepRed    = lipgloss.Color("#FF3B30")
 	colorStepOrange = lipgloss.Color("#FF9A00")
 	colorStepYellow = lipgloss.Color("#FFD600")
-	colorOK        = lipgloss.Color("#FFD600")
-	colorDanger    = lipgloss.Color("#FF3B30")
+	colorOK         = lipgloss.Color("#FFD600")
+	colorDanger     = lipgloss.Color("#FF3B30")
 )
 
 func styleStatus() lipgloss.Style {
@@ -28,7 +43,7 @@ func styleStatus() lipgloss.Style {
 func styleLabel() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(colorSilkDim).
-		Background(colorPanel).
+		Background(colorPanelDeep).
 		Bold(true)
 }
 
@@ -72,12 +87,12 @@ func styleErr() lipgloss.Style {
 		Background(colorPanel)
 }
 
-func stylePanel() lipgloss.Style {
+func styleCanvas(width, height int) lipgloss.Style {
 	return lipgloss.NewStyle().
+		Width(width).
+		Height(height).
 		Background(colorPanel).
-		Foreground(colorSilk).
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(colorSilkDim)
+		Foreground(colorSilk)
 }
 
 // StepPads returns a 4-pad progress strip for percent 0..100 (DESIGN step-row).
@@ -107,7 +122,6 @@ func StepPads(percent int) string {
 	return b.String()
 }
 
-// tiny strings.Builder stand-in to keep theme.go free of fmt for pads.
 type stringsBuilder struct{ b []byte }
 
 func (s *stringsBuilder) WriteString(v string) { s.b = append(s.b, v...) }

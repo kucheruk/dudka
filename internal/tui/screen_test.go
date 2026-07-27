@@ -27,15 +27,19 @@ func TestRenderScreenHasRussianPanels(t *testing.T) {
 		Compose:  "черновик",
 		CursorOn: true,
 	}, 80, 24)
-	for _, want := range []string{"СОСЕДИ", "ЛЕНТА", "ДУНУТЬ", "онлайн 1", "Боря", "привет", "черновик"} {
+	for _, want := range []string{"С О С Е Д И", "Л Е Н Т А", "ОТПРАВИТЬ", "онлайн 1", "Боря", "привет", "черновик"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
 		}
 	}
-	for _, ban := range []string{"\nPEERS\n", "\nFEED\n", "online 1", "ENGINE OFFLINE"} {
+	for _, ban := range []string{"\nPEERS\n", "\nFEED\n", "online 1", "ENGINE OFFLINE", "ДУНУТЬ", "дунуть"} {
 		if strings.Contains(out, ban) {
 			t.Fatalf("banned %q in:\n%s", ban, out)
 		}
+	}
+	// Truecolor charcoal background sequences must be present (not plain B&W dump).
+	if !strings.Contains(out, "\x1b[") {
+		t.Fatalf("expected ANSI color escapes in screen render")
 	}
 }
 
@@ -60,7 +64,7 @@ func TestNewModelInitAndViewSmoke(t *testing.T) {
 		t.Fatal("Init must return cmds")
 	}
 	view := m.View()
-	if !strings.Contains(view, "ДУДКА") || !strings.Contains(view, "СОСЕДИ") {
+	if !strings.Contains(view, "ДУДКА") || !strings.Contains(view, "С О С Е Д И") {
 		t.Fatalf("view missing panels:\n%s", view)
 	}
 }
