@@ -59,6 +59,7 @@ Engine слушает только loopback (или UDS на desktop/Linux). GUI
 
 ## Open decisions
 
-- Forgejo remote / доска в «Делах» — завести при старте реализации.
-- Лицензирование через Дьяк vs полностью free local tool — DUD-PRD-140.
-- Точный bind Flutter (subprocess vs gomobile) — выбрать на первом вертикальном срезе, критерий: дешевизна.
+- Лицензирование через Дьяк vs полностью free local tool — DUD-PRD-140 / ROADMAP P095.
+- Точный bind Flutter (subprocess vs иное) — ROADMAP P060, критерий: дешевизна.
+
+Бэклог поставки — только [`ROADMAP.md`](../../ROADMAP.md); доски в «Делах» нет.

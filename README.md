@@ -36,7 +36,7 @@
 | [`AGENTS.md`](AGENTS.md) | конституция репо для агентов |
 | [`docs/design/overview.md`](docs/design/overview.md) | архитектура MVP |
 | [`docs/specs/`](docs/specs/) | адресуемые требования `DUD-*` |
-| [`ROADMAP.md`](ROADMAP.md) | высокоуровневый план фаз |
+| [`ROADMAP.md`](ROADMAP.md) | **единственный бэклог** — чеклист `P001`…`P100` (без доски в Делах) |
 
 ## Non-goals MVP
 
