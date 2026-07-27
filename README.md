@@ -39,6 +39,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # файл >100 MiB: WARN в ленте; /fetch просит /fetch!; -fetch пишет warning и всё равно стартует (P054)
 # после полной загрузки сверяется hash; mismatch → «файл повреждён», не success (P055)
 # image/jpeg|png|webp: thumb_b64 в announce, файл в data-dir/thumbs, TUI «THUMB <path>» (P056)
+# image/heic|heif: превью на darwin+cgo (ImageIO); иначе TUI «HEIC» без фейкового THUMB (P057)
 # /cancel <file_id> в TUI compose
 # curl -s http://127.0.0.1:17880/messages → лента у всех online
 # текст > 4000 code points → 4xx + понятная ошибка (P031)

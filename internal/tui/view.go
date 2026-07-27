@@ -157,6 +157,9 @@ func feedLine(m MsgRow, tr TransferRow) string {
 		line := fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
 		if p := strings.TrimSpace(m.ThumbPath); p != "" {
 			line = fmt.Sprintf("%s THUMB %s", line, p)
+		} else if isHEICMIME(m.Mime) {
+			// Honest fallback when decode/thumb missing (P057) — never invent THUMB.
+			line = fmt.Sprintf("%s HEIC", line)
 		}
 		switch tr.Status {
 		case TransferCancelled:
@@ -177,4 +180,13 @@ func feedLine(m MsgRow, tr TransferRow) string {
 		return line
 	}
 	return strings.TrimSpace(m.Text)
+}
+
+func isHEICMIME(mime string) bool {
+	switch strings.ToLower(strings.TrimSpace(mime)) {
+	case "image/heic", "image/heif":
+		return true
+	default:
+		return false
+	}
 }

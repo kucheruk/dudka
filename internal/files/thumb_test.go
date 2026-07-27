@@ -82,23 +82,16 @@ func TestMakeThumbNonImageNoFake(t *testing.T) {
 	if ok || thumb != nil {
 		t.Fatalf("non-image must not invent thumb: ok=%v len=%d", ok, len(thumb))
 	}
-	_, ok, err = files.MakeThumb([]byte("heic-bytes"), "image/heic")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ok {
-		t.Fatal("HEIC is P057 — P056 must not claim a thumb")
-	}
 }
 
 func TestIsThumbMIME(t *testing.T) {
 	t.Parallel()
-	for _, mime := range []string{"image/jpeg", "image/png", "image/webp", "IMAGE/JPEG"} {
+	for _, mime := range []string{"image/jpeg", "image/png", "image/webp", "IMAGE/JPEG", "image/heic", "image/heif"} {
 		if !files.IsThumbMIME(mime) {
 			t.Fatalf("want thumb mime %q", mime)
 		}
 	}
-	for _, mime := range []string{"image/heic", "text/plain", "application/octet-stream"} {
+	for _, mime := range []string{"text/plain", "application/octet-stream"} {
 		if files.IsThumbMIME(mime) {
 			t.Fatalf("must not be thumb mime %q", mime)
 		}

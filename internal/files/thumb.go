@@ -20,25 +20,38 @@ const ThumbMaxEdge = 96
 // MaxThumbBytes caps on-wire thumb_b64 payload after JPEG encode.
 const MaxThumbBytes = 48 << 10
 
-// IsThumbMIME reports jpeg/png/webp (HEIC is P057).
+// IsThumbMIME reports jpeg/png/webp/heic/heif candidates (P056/P057).
 func IsThumbMIME(mime string) bool {
 	switch strings.ToLower(strings.TrimSpace(mime)) {
 	case "image/jpeg", "image/jpg", "image/png", "image/webp":
 		return true
 	default:
-		return false
+		return IsHEICMIME(mime)
 	}
 }
 
 // MakeThumb builds a small JPEG preview for supported image bytes.
-// ok=false means "no thumb" (non-image / unsupported) without failing announce.
+// ok=false means "no thumb" (non-image / unsupported / HEIC without decoder) without failing announce.
 func MakeThumb(data []byte, mime string) (thumbJPEG []byte, ok bool, err error) {
 	if !IsThumbMIME(mime) || len(data) == 0 {
 		return nil, false, nil
 	}
-	src, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		return nil, false, fmt.Errorf("files: decode image: %w", err)
+	var src image.Image
+	if IsHEICMIME(mime) {
+		if !HEICAvailable() {
+			return nil, false, nil // honest fallback — no fake preview
+		}
+		img, derr := decodeHEIC(data)
+		if derr != nil {
+			return nil, false, nil // corrupt / undecodable HEIC → no thumb, no error on announce
+		}
+		src = img
+	} else {
+		img, _, derr := image.Decode(bytes.NewReader(data))
+		if derr != nil {
+			return nil, false, fmt.Errorf("files: decode image: %w", derr)
+		}
+		src = img
 	}
 	b := src.Bounds()
 	w, h := b.Dx(), b.Dy()
