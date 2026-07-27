@@ -21,6 +21,7 @@ Cold start: first-run nick (RU) → chat (status/peers/feed) → compose «ДУ�
 ## Checks
 
 ```bash
+./scripts/flutter_settings_test.sh   # P066 mini-settings nick
 ./scripts/flutter_seek_test.sh       # P065 alone/no_network + ИСКАТЬ
 ./scripts/flutter_send_test.sh       # P064 Flutter↔TUI text
 ./scripts/flutter_chat_test.sh       # P063

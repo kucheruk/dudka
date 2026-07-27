@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../engine/client.dart';
+import 'settings_nick_screen.dart';
 
-/// Chat wireframe: status/peers/feed/compose + alone «ИСКАТЬ» (P063–P065).
+/// Chat wireframe: status/peers/feed/compose + alone «ИСКАТЬ» + nick settings (P063–P066).
 /// DESIGN step-row lands in P069.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
@@ -102,10 +103,36 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _openSettings() async {
+    final current = _snap?.me.name ?? '';
+    final updated = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => SettingsNickScreen(
+          client: widget.client,
+          initialNick: current,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (updated != null) {
+      await _refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Чат')),
+      appBar: AppBar(
+        title: const Text('Чат'),
+        actions: [
+          IconButton(
+            key: const Key('chat-settings'),
+            tooltip: 'Настройки',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: _openSettings,
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: _body(),

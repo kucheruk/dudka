@@ -73,9 +73,9 @@ Status: Draft
 
 Проверка:
 
-- дерево экранов MVP содержит только first-run ник, чат, мини-настройки;
+- дерево экранов MVP содержит только first-run ник, чат, мини-настройки; *(P062/P063/P066)*
 - review UI против этого списка;
-- evidence: скриншоты + ссылка на DESIGN.md.
+- evidence: `SettingsNickScreen` nick-only + `./scripts/flutter_settings_test.sh` (P066); DESIGN.md.
 
 Зависимости: DUD-UI-101  
 ADR: не требуется

@@ -49,6 +49,21 @@ First-run: единственное обязательное действие �
 Зависимости: DUD-CHAT-110  
 ADR: не требуется
 
+### DUD-UI-115
+
+Priority: P0  
+Status: Accepted
+
+Мини-настройки GUI содержат только смену ника. Нет аватара, email, телефона, пароля и прочих полей.
+
+Проверка:
+
+- вход в настройки с чата; сохранение → `POST /nick`; чат показывает новый ник; *(P066: `SettingsNickScreen`)*
+- evidence: `apps/dudka/test/settings_nick_test.dart`, `./scripts/flutter_settings_test.sh` (P066).
+
+Зависимости: DUD-CHAT-111  
+ADR: не требуется
+
 ### DUD-UI-120
 
 Priority: P0  

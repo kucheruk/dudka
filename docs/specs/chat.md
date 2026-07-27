@@ -57,8 +57,8 @@ Status: Partial
 
 Проверка:
 
-- после смены ника старые строки в ленте не переписываются; *(P043: TUI `/nick` / `-nick` → `POST /nick`; `display_name_at_send` на новых msg)*
-- evidence: UI test / protocol fixture.
+- после смены ника старые строки в ленте не переписываются; *(P043: TUI `/nick` / `-nick` → `POST /nick`; `display_name_at_send` на новых msg; P066: Flutter мини-настройки)*
+- evidence: UI test / protocol fixture; `./scripts/flutter_settings_test.sh` (P066).
 
 Зависимости: DUD-CHAT-110  
 ADR: не требуется

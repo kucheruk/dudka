@@ -91,7 +91,7 @@
 - [x] P063 Экран чата: status strip + peers + лента текста (пока без дизайна step-row — wireframe ок)
 - [x] P064 Compose «ДУНУТЬ» шлёт текст — Flutter↔TUI в одной LAN
 - [x] P065 Состояния `alone` / `no_network` + кнопка «ИСКАТЬ»
-- [ ] P066 Мини-настройки: только ник
+- [x] P066 Мини-настройки: только ник
 - [ ] P067 Отправка/приём файла из Flutter с прогрессом и отменой
 - [ ] P068 Превью картинок в ленте Flutter
 - [ ] P069 Визуал `DESIGN.md`: charcoal panel, silkscreen labels, mono, step-progress (без CRT-фанатизма)
