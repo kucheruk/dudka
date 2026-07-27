@@ -62,10 +62,9 @@
 - [x] P043 TUI: смена ника из меню/команды — видно в следующих сообщениях
 - [x] P044 Состояние `no_network` vs `alone` различаются в TUI copy
 - [x] P045 `./scripts/check.sh` гоняет protocol tests (2+ peer) — зелёный на CI/локально
-- [ ] P046 Интерактивный TUI (bubbletea/lipgloss): фиксированные панели status|peers|feed|compose, redraw, DESIGN.md charcoal/silkscreen, дефолт без флагов = TUI (не CLI-дамп); one-shot флаги для скриптов сохранить
+- [x] P046 Интерактивный TUI (bubbletea/lipgloss): фиксированные панели status|peers|feed|compose, redraw, DESIGN.md charcoal/silkscreen, дефолт без флагов = TUI (не CLI-дамп); one-shot флаги для скриптов сохранить
 
-**Фаза 1 готова:** два TUI на Wi‑Fi шлют текст и подтягивают хвост; WAN-тест зелёный.  
-*(P046 — долг по качеству TUI после отвергнутого CLI-дампа; закрыть до/рядом с упаковкой.)*
+**Фаза 1 готова:** два TUI на Wi‑Fi шлют текст и подтягивают хвост; WAN-тест зелёный.
 
 ---
 

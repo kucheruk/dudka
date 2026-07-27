@@ -202,6 +202,33 @@ func (c *Client) CancelFetch(fileID string) (TransferRow, error) {
 	}, nil
 }
 
+// Scan triggers POST /scan (subnet search) and returns how many peers were found.
+func (c *Client) Scan() (found int, err error) {
+	if c.base == "" {
+		return 0, fmt.Errorf("tui: engine URL empty")
+	}
+	resp, err := c.client.Post(c.base+"/scan", "application/json", bytes.NewReader([]byte("{}")))
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		msg := strings.TrimSpace(string(raw))
+		if msg == "" {
+			msg = resp.Status
+		}
+		return 0, fmt.Errorf("tui: scan → %s", msg)
+	}
+	var wire struct {
+		Found int `json:"found"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return 0, err
+	}
+	return wire.Found, nil
+}
+
 func (c *Client) getJSON(path string, dst any) error {
 	resp, err := c.client.Get(c.base + path)
 	if err != nil {

@@ -47,11 +47,14 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # текст > 4000 code points → 4xx + понятная ошибка (P031)
 # curl -s http://127.0.0.1:17880/tail → хвост ≤200 + keeper_id (после join синхронизируется с keeper)
 # уход keeper → peer_gone / перевыбор; новый peer всё ещё получает хвост (P034)
+# Нормальный TUI (по умолчанию в Terminal):
 ./dist/dudka -engine 127.0.0.1:17880
-# → dudka <ver> + status + peers + FEED + INPUT
-# ./dist/dudka -engine 127.0.0.1:17880 -send "привет"   # одна отправка
-# ./dist/dudka -engine 127.0.0.1:17880 -nick "Вася"     # смена ника
-# ./dist/dudka -watch -engine 127.0.0.1:17880           # Enter = send · /nick Имя
+# или: DUDKA_ENGINE=127.0.0.1:51315 go run ./cmd/dudka
+# → alt-screen: status | соседи | лента | compose (Enter = отправить)
+# ./dist/dudka -engine … -once          # один plain-кадр (скрипты)
+# ./dist/dudka -engine … -send "привет" # one-shot
+# ./dist/dudka -engine … -nick "Вася"
+# ./dist/dudka -watch -engine …         # legacy line-mode для тестов
 ```
 
 Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/{version,identity,loopback,discovery,chat,tui}`, `apps/dudka` (Flutter shell).
@@ -94,6 +97,7 @@ open dist/dudka.app
 
 Гейт запускает `go test ./...`, затем multi-peer **protocol tests** (`./scripts/protocol_tests.sh`: announce/peers/send/tail/WAN/TUI exchange и др., 2+ peer).  
 Мета-контракт P045: `./scripts/protocol_gate_test.sh`.  
+Interactive TUI (P046): `./scripts/tui_interactive_test.sh`.  
 Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `./scripts/build_linux_tui_test.sh`.  
 Прочие контракты по задачам: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`, `./scripts/peerid_test.sh`, `./scripts/displayname_test.sh`, `./scripts/health_test.sh`, `./scripts/me_test.sh`, `./scripts/nick_test.sh`, `./scripts/send_length_test.sh`, `./scripts/file_announce_test.sh`, `./scripts/file_fetch_test.sh`, `./scripts/file_progress_test.sh`, `./scripts/file_cancel_test.sh`, `./scripts/largefile_warn_test.sh`, `./scripts/file_thumb_test.sh`, `./scripts/file_heic_test.sh`, `./scripts/tui_files_e2e_test.sh`, `./scripts/tui_peers_test.sh`, `./scripts/tui_feed_test.sh`, `./scripts/tui_nick_test.sh`.
 
