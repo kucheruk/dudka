@@ -17,7 +17,7 @@
 - [x] P002 Forgejo `vetinary/dudka` + push `master` (результат: клон по SSH)
 - [x] P003 `scripts/check.sh` — `go test ./...` (или no-op success, пока нет кода) + запись в README как локальный гейт
 - [x] P004 Корневой `go.mod` модуля `dudka` / `github.com/…` или studio path — `go list ./...` не пустой после P010
-- [ ] P005 Каркас каталогов `cmd/dudkad`, `internal/…`, `cmd/dudka` (TUI) — дерево видно в репо, сборка stub `main` печатает версию
+- [x] P005 Каркас каталогов `cmd/dudkad`, `internal/…`, `cmd/dudka` (TUI) — дерево видно в репо, сборка stub `main` печатает версию
 
 **Фаза 0 готова:** агент клонирует, `./scripts/check.sh` зелёный на stub.
 

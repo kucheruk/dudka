@@ -4,11 +4,22 @@
 
 ## Статус
 
-Проектирование / заготовка. Корневой Go-модуль есть; каркас `cmd/` ещё впереди. Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
+Фаза 0 (контур): модуль и stub-бинарники на месте. Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
 
 - Forgejo: <http://winebottle.local:3030/vetinary/dudka>
 - Remote: `ssh://git@winebottle.local:2222/vetinary/dudka.git`
 - Go module: `dudka` (`go.mod`)
+
+## Сборка stub
+
+```bash
+go build -o dist/dudkad ./cmd/dudkad   # engine
+go build -o dist/dudka ./cmd/dudka     # Linux TUI
+./dist/dudkad   # → dudkad 0.0.0-dev
+./dist/dudka    # → dudka 0.0.0-dev
+```
+
+Каркас: `cmd/dudkad`, `cmd/dudka`, `internal/version`.
 
 ## Локальный гейт
 
@@ -18,7 +29,7 @@
 ./scripts/check.sh
 ```
 
-Гейт запускает `go test ./...`. Контракт модуля: `./scripts/gomod_test.sh`; контракт гейта: `./scripts/check_test.sh`.
+Гейт запускает `go test ./...`. Контракты: `./scripts/check_test.sh`, `./scripts/gomod_test.sh`, `./scripts/skeleton_test.sh`.
 
 ## Зачем
 
