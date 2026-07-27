@@ -12,10 +12,11 @@ import (
 	"strings"
 	"sync"
 
+	"dudka/internal/chat"
 	"dudka/internal/discovery"
 )
 
-// Server is the loopback HTTP surface (health/me/nick/peers/status/scan).
+// Server is the loopback HTTP surface (health/me/nick/peers/status/scan/send/messages).
 type Server struct {
 	mu          sync.RWMutex
 	peerID      string
@@ -24,6 +25,7 @@ type Server struct {
 	peers       *discovery.PeerStore
 	status      func() discovery.Status
 	scan        func(context.Context, discovery.ScanRequest) (discovery.ScanResult, error)
+	chat        *chat.Hub
 	mux         *http.ServeMux
 }
 
@@ -44,6 +46,8 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("GET /peers", s.handlePeers)
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	s.mux.HandleFunc("POST /scan", s.handleScan)
+	s.mux.HandleFunc("POST /send", s.handleSend)
+	s.mux.HandleFunc("GET /messages", s.handleMessages)
 	return s
 }
 
@@ -73,6 +77,13 @@ func (s *Server) SetScanProvider(fn func(context.Context, discovery.ScanRequest)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.scan = fn
+}
+
+// SetChat wires the chat hub into POST /send and GET /messages (P030).
+func (s *Server) SetChat(hub *chat.Hub) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.chat = hub
 }
 
 func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +176,7 @@ func (s *Server) handleNick(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	persist := s.persistName
+	hub := s.chat
 	s.name = name
 	peerID := s.peerID
 	s.mu.Unlock()
@@ -175,7 +187,58 @@ func (s *Server) handleNick(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if hub != nil {
+		hub.SetName(name)
+	}
 	writeMeJSON(w, peerID, name)
+}
+
+func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	if hub == nil {
+		http.Error(w, "chat unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "bad request\n", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid json\n", http.StatusBadRequest)
+		return
+	}
+	msg, err := hub.Send(req.Text)
+	if err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status":  "accepted",
+		"message": msg,
+	})
+}
+
+func (s *Server) handleMessages(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	hub := s.chat
+	s.mu.RUnlock()
+	msgs := []chat.Message{}
+	if hub != nil {
+		msgs = hub.Messages()
+	}
+	if msgs == nil {
+		msgs = []chat.Message{}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"messages": msgs})
 }
 
 func writeMeJSON(w http.ResponseWriter, peerID, name string) {

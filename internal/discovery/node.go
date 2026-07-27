@@ -3,8 +3,10 @@ package discovery
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -33,6 +35,8 @@ type Config struct {
 	DialTimeout time.Duration
 	Dialer      DialFunc // default: net.DialTimeout
 	DialHosts   []string // optional seed hosts from config; dialed after Start (LAN-only)
+	// OnChatLine handles inbound NDJSON lines with type "chat" (P030); host is remote IP.
+	OnChatLine func(host string, line []byte)
 }
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
@@ -248,15 +252,31 @@ func (n *Node) acceptLoop(ctx context.Context, ln net.Listener) {
 			}
 			continue
 		}
-		go n.handleRegisterConn(conn)
+		go n.handleSessionConn(conn)
 	}
 }
 
-func (n *Node) handleRegisterConn(conn net.Conn) {
+func (n *Node) handleSessionConn(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(n.cfg.DialTimeout))
 	br := bufio.NewReader(conn)
-	req, err := readRegister(br)
+	line, err := br.ReadBytes('\n')
+	if err != nil && !(err == io.EOF && len(line) > 0) {
+		return
+	}
+	typ := peekJSONType(line)
+	host := hostFromAddr(conn.RemoteAddr())
+	if typ == "chat" {
+		n.mu.Lock()
+		onChat := n.cfg.OnChatLine
+		n.mu.Unlock()
+		if onChat != nil {
+			onChat(host, line)
+		}
+		return
+	}
+
+	req, err := DecodeRegister(line)
 	if err != nil {
 		return
 	}
@@ -291,7 +311,6 @@ func (n *Node) handleRegisterConn(conn net.Conn) {
 		return
 	}
 
-	host := hostFromAddr(conn.RemoteAddr())
 	n.rememberPeer(peerFromRegister(req, host))
 	n.cfg.Logf("register_rx peer_id=%s name=%s from=%s", req.PeerID, req.DisplayName, conn.RemoteAddr().String())
 	_ = writeRegister(conn, self)
@@ -469,6 +488,16 @@ func (n *Node) sendOnce() {
 		return
 	}
 	_, _ = conn.WriteTo(raw, dst)
+}
+
+func peekJSONType(line []byte) string {
+	var head struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(line, &head); err != nil {
+		return ""
+	}
+	return head.Type
 }
 
 func (n *Node) destination() (net.Addr, error) {

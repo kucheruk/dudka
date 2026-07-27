@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"dudka/internal/chat"
 	"dudka/internal/discovery"
 	"dudka/internal/identity"
 	"dudka/internal/loopback"
@@ -52,6 +53,14 @@ func main() {
 	fmt.Printf("instance_id=%s\n", instanceID)
 
 	peers := discovery.NewPeerStore()
+	msgs := chat.NewStore()
+	hub := chat.NewHub(chat.Config{
+		PeerID: peerID,
+		Name:   displayName,
+		Store:  msgs,
+		Peers:  peers,
+		Logf:   func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+	})
 	var seeds []string
 	for _, h := range strings.Split(*dialHosts, ",") {
 		h = strings.TrimSpace(h)
@@ -69,6 +78,7 @@ func main() {
 		Target:      *announceTarget,
 		DialHosts:   seeds,
 		Peers:       peers,
+		OnChatLine:  hub.HandleChatLine,
 		Logf:        func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {
@@ -86,6 +96,7 @@ func main() {
 		return identity.SaveDisplayName(*dataDir, name)
 	})
 	api.SetPeers(peers)
+	api.SetChat(hub)
 	api.SetStatusProvider(func() discovery.Status { return disc.Status() })
 	api.SetScanProvider(func(ctx context.Context, req discovery.ScanRequest) (discovery.ScanResult, error) {
 		return disc.Scan(ctx, req)

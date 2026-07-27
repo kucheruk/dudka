@@ -47,7 +47,7 @@
 
 ### 1.4 Текст и хвост
 
-- [ ] P030 `POST /send` текста → fan-out всем online — второй peer видит сообщение в `GET /messages` ≤ 2 s локально
+- [x] P030 `POST /send` текста → fan-out всем online — второй peer видит сообщение в `GET /messages` ≤ 2 s локально
 - [ ] P031 Валидация длины текста (≤ 4000) — oversized → 4xx и понятная ошибка
 - [ ] P032 Выбор tail-keeper (min peer_id) — unit-тест на наборах id
 - [ ] P033 Хвост 200 на keeper: третий peer после register получает `GET /tail` согласованный с keeper

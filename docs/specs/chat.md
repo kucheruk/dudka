@@ -19,14 +19,14 @@
 ### DUD-CHAT-101
 
 Priority: P0  
-Status: Draft
+Status: Partial
 
 Текстовое сообщение имеет: `msg_id`, `peer_id`, `display_name_at_send`, `ts` (UTC), `text` (≤ 4000 UTF-8 code points). Отправитель доставляет его всем известным online peers по TCP session.
 
 Проверка:
 
-- три online peer: все трое видят сообщение;
-- oversized text отвергается с понятной ошибкой UI;
+- три online peer: все трое видят сообщение; *(P030: два peer через `POST /send` → `GET /messages` ≤ 2 s; третий — позже)*
+- oversized text отвергается с понятной ошибкой UI; *(P031)*
 - evidence: protocol tests.
 
 Зависимости: DUD-NET-111  
