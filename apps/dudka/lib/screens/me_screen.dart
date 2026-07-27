@@ -46,7 +46,7 @@ class _MeScreenState extends State<MeScreen> {
             }
             if (snap.hasError) {
               return Text(
-                'engine offline /me\n${snap.error}',
+                'движок недоступен /me\n${snap.error}',
                 key: const Key('me-error'),
               );
             }

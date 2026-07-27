@@ -134,14 +134,14 @@ class _ChatScreenState extends State<ChatScreen> {
         title: const Text('Файл'),
         content: TextField(
           controller: ctrl,
-          decoration: const InputDecoration(hintText: '/path/to/file'),
+          decoration: const InputDecoration(hintText: '/путь/к/файлу'),
           autofocus: true,
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('OK'),
+            child: const Text('ОК'),
           ),
         ],
       ),
@@ -229,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return const Center(child: CircularProgressIndicator(key: Key('chat-loading')));
     }
     if (_error != null && _snap == null) {
-      return Text('engine offline\n$_error', key: const Key('chat-error'));
+      return Text('движок недоступен\n$_error', key: const Key('chat-error'));
     }
     final snap = _snap!;
     final state = chatNetworkState(network: snap.network, peerCount: snap.peers.length);
@@ -273,7 +273,7 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('PEERS', style: DudkaType.label()),
+              Text('СОСЕДИ', style: DudkaType.label()),
               const SizedBox(height: 4),
               Expanded(
                 child: Container(
@@ -306,7 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
       key: const Key('chat-layout-narrow'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('PEERS', style: DudkaType.label()),
+        Text('СОСЕДИ', style: DudkaType.label()),
         const SizedBox(height: 4),
         SizedBox(
           height: state == 'alone' || state == 'no_network' ? 88 : 40,

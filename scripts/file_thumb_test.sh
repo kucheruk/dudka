@@ -109,10 +109,10 @@ print("bob ok", m["thumb_path"])
 PY
 
 frame="$("$tui" -engine "$listen_b" 2>/dev/null || true)"
-printf '%s\n' "$frame" | grep -q 'THUMB' || fail "TUI missing THUMB mark:\n$frame"
+printf '%s\n' "$frame" | grep -q 'ПРЕВЬЮ' || fail "TUI missing ПРЕВЬЮ mark:\n$frame"
 printf '%s\n' "$frame" | grep -q 'sky.jpg' || fail "TUI missing name:\n$frame"
 
-# Non-image must not invent THUMB.
+# Non-image must not invent ПРЕВЬЮ.
 ann2="$(python3 - <<'PY'
 import base64, hashlib, json
 payload = b"p056-not-image"
@@ -140,12 +140,12 @@ for _ in $(seq 1 40); do
   sleep 0.05
 done
 frame2="$("$tui" -engine "$listen_b" 2>/dev/null || true)"
-# FEED may still show THUMB for the jpeg row — ensure notes.txt line has no THUMB after the name.
-python3 - "$frame2" <<'PY' || fail "notes.txt must not show THUMB"
+# FEED may still show ПРЕВЬЮ for the jpeg row — ensure notes.txt line has no ПРЕВЬЮ after the name.
+python3 - "$frame2" <<'PY' || fail "notes.txt must not show ПРЕВЬЮ"
 import sys
 frame = sys.argv[1]
 for line in frame.splitlines():
-    if "notes.txt" in line and "THUMB" in line:
+    if "notes.txt" in line and "ПРЕВЬЮ" in line:
         raise SystemExit(f"false thumb on text: {line}")
 print("ok")
 PY

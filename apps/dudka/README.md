@@ -23,6 +23,7 @@ Layout: wide (≥700 dp) dual-pane peers|feed; narrow — horizontal peer strip.
 ## Checks
 
 ```bash
+./scripts/ru_ui_test.sh              # P072 Russian user-facing GUI/TUI strings
 ./scripts/flutter_ff_test.sh         # P071 Flutter↔Flutter text+file (two peers)
 ./scripts/flutter_layout_test.sh     # P070 wide dual-pane / narrow peer strip
 ./scripts/flutter_theme_test.sh      # P069 DESIGN.md theme + step-progress

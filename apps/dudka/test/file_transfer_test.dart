@@ -201,7 +201,7 @@ void main() {
     );
     await pumpFrames(tester);
 
-    expect(find.textContaining('FILE doc.bin'), findsOneWidget);
+    expect(find.textContaining('ФАЙЛ doc.bin'), findsOneWidget);
     expect(find.byKey(const Key('file-fetch-f1')), findsOneWidget);
     expect(find.text('СКАЧАТЬ'), findsOneWidget);
 
@@ -310,7 +310,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await pumpFrames(tester);
 
-    expect(find.textContaining('FILE hi.txt'), findsOneWidget);
+    expect(find.textContaining('ФАЙЛ hi.txt'), findsOneWidget);
     client.close();
   });
 }

@@ -29,8 +29,8 @@ func TestRenderHEICFallbackWithoutFakeThumb(t *testing.T) {
 	if !strings.Contains(out, "HEIC") {
 		t.Fatalf("want honest HEIC mark:\n%s", out)
 	}
-	if strings.Contains(out, "THUMB") {
-		t.Fatalf("must not invent THUMB without path:\n%s", out)
+	if strings.Contains(out, "ПРЕВЬЮ") {
+		t.Fatalf("must not invent ПРЕВЬЮ without path:\n%s", out)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestRenderHEICWithThumbShowsThumb(t *testing.T) {
 			ThumbPath:   "/tmp/thumbs/fid-heic2.jpg",
 		}},
 	})
-	if !strings.Contains(out, "THUMB /tmp/thumbs/fid-heic2.jpg") {
-		t.Fatalf("want THUMB path when present:\n%s", out)
+	if !strings.Contains(out, "ПРЕВЬЮ /tmp/thumbs/fid-heic2.jpg") {
+		t.Fatalf("want ПРЕВЬЮ path when present:\n%s", out)
 	}
 }

@@ -82,7 +82,7 @@ for _ in $(seq 1 40); do
 done
 
 frame="$("$tmpdir/dudka" -engine "$listen_b" 2>/dev/null || true)"
-printf '%s\n' "$frame" | grep -q 'WARN>100MiB' || fail "TUI missing large-file warn:\n$frame"
+printf '%s\n' "$frame" | grep -q 'ВНИМАНИЕ>100МиБ' || fail "TUI missing large-file ВНИМАНИЕ:\n$frame"
 printf '%s\n' "$frame" | grep -q 'huge.bin' || fail "missing file name:\n$frame"
 
 # -fetch prints warning to stderr then still attempts start (not a hard block).

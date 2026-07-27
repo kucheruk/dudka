@@ -37,7 +37,7 @@ frame="$("$tmpdir/dudka" -engine "$listen")"
 printf '%s\n' "$frame" | head -n 1 | grep -q '^dudka ' || fail "missing version line: $frame"
 printf '%s\n' "$frame" | grep -q 'ДУДКА' || fail "missing brand: $frame"
 printf '%s\n' "$frame" | grep -q 'Аня' || fail "missing me: $frame"
-printf '%s\n' "$frame" | grep -q 'online 0' || fail "missing online 0: $frame"
+printf '%s\n' "$frame" | grep -q 'онлайн 0' || fail "missing онлайн 0: $frame"
 printf '%s\n' "$frame" | grep -q 'НИКОГО РЯДОМ' || fail "missing empty copy: $frame"
 
 # Second peer → TUI lists them.

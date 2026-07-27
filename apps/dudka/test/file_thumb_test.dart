@@ -191,7 +191,7 @@ void main() {
     await pumpFrames(tester);
     expect(find.byType(Image), findsNothing);
     expect(find.text('HEIC'), findsNothing);
-    expect(find.textContaining('FILE doc.bin'), findsOneWidget);
+    expect(find.textContaining('ФАЙЛ doc.bin'), findsOneWidget);
     client.close();
   });
 }

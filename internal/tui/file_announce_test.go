@@ -25,12 +25,12 @@ func TestRenderFileAnnounceInFeed(t *testing.T) {
 			Hash:        "sha256:aa",
 		}},
 	})
-	for _, part := range []string{"FEED", "Аня", "photo.jpg", "1024", "image/jpeg", "fid-1"} {
+	for _, part := range []string{"ЛЕНТА", "Аня", "photo.jpg", "1024", "image/jpeg", "fid-1"} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("missing %q in:\n%s", part, out)
 		}
 	}
-	if strings.Contains(out, "FILE BODY") {
+	if strings.Contains(out, "ФАЙЛ BODY") {
 		t.Fatalf("must not invent file body:\n%s", out)
 	}
 }

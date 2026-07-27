@@ -80,7 +80,7 @@ func TestHandleComposeLineSends(t *testing.T) {
 func TestRenderShowsInputHint(t *testing.T) {
 	t.Parallel()
 	out := tui.Render(tui.Snapshot{MeName: "A", EngineOK: true})
-	if !strings.Contains(out, "INPUT") {
-		t.Fatalf("missing INPUT:\n%s", out)
+	if !strings.Contains(out, "ВВОД") {
+		t.Fatalf("missing ВВОД:\n%s", out)
 	}
 }

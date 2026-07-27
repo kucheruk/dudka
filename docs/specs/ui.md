@@ -70,7 +70,7 @@ ADR: не требуется
 Priority: P0  
 Status: Accepted
 
-Состояния `alone` и `no_network` показываются разным copy на русском: «НИКОГО РЯДОМ» vs «НЕТ СЕТИ». В `alone` доступна команда «ИСКАТЬ» (subnet scan).
+Состояния `alone` и `no_network` показываются разным copy на русском: «НИКОГО РЯДОМ» vs «НЕТ СЕТИ»; в status strip — «один» / «нет сети». В `alone` доступна команда «ИСКАТЬ» (скан подсети).
 
 Проверка:
 
@@ -117,16 +117,17 @@ ADR: не требуется
 Priority: P0  
 Status: Partial
 
-Linux TUI показывает те же сущности: peers, лента, compose, статусы `alone`/`no_network`, прогресс файла (текстом). Не требует GUI.
+Linux TUI показывает те же сущности: соседи, лента, compose, статусы `alone`/`no_network`, прогресс файла (текстом). Не требует GUI. User-facing строки — русский (`DUD-PRD-103`).
 
 Проверка:
 
 - сценарий текст+файл между TUI и Flutter;
 - *(P040: status strip + peers; пусто → «НИКОГО РЯДОМ»; `dudka -engine` / `internal/tui`)*
-- *(P041: FEED из `GET /messages`, строки `время · ник · текст`)*
+- *(P041: ЛЕНТА из `GET /messages`, строки `время · ник · текст`)*
 - *(P042: compose Enter/`-send` → `POST /send`; два peer обмениваются текстом)*
 - *(P043: `/nick Имя` / `-nick` → смена ника; видно в следующих сообщениях)*
-- evidence: smoke script.
+- *(P072: заголовки СОСЕДИ/ЛЕНТА/ВВОД, «онлайн N», «ФАЙЛ …»)*
+- evidence: smoke script; `./scripts/ru_ui_test.sh` (P072).
 
 Зависимости: DUD-PRD-102  
 ADR: не требуется

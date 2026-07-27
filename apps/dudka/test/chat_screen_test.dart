@@ -89,8 +89,8 @@ void main() {
 
     expect(find.byKey(const Key('chat-status')), findsOneWidget);
     expect(find.textContaining('Anya'), findsWidgets);
-    expect(find.textContaining('online 2'), findsOneWidget);
-    expect(find.textContaining('ok'), findsWidgets);
+    expect(find.textContaining('онлайн 2'), findsOneWidget);
+    expect(find.textContaining('ок'), findsWidgets);
 
     expect(find.byKey(const Key('chat-peers')), findsOneWidget);
     expect(find.text('Boris'), findsWidgets);
@@ -106,15 +106,15 @@ void main() {
     client.close();
   });
 
-  testWidgets('empty peers shows НИКОГО РЯДОМ and alone in status', (tester) async {
+  testWidgets('empty peers shows НИКОГО РЯДОМ and один in status', (tester) async {
     final client = mockChatClient(meName: 'Katya', peers: const []);
     await tester.pumpWidget(
       MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
-    expect(find.textContaining('alone'), findsOneWidget);
-    expect(find.textContaining('online 0'), findsOneWidget);
+    expect(find.textContaining('один'), findsOneWidget);
+    expect(find.textContaining('онлайн 0'), findsOneWidget);
     expect(find.text('НИКОГО РЯДОМ'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsOneWidget);
     expect(find.byKey(const Key('chat-feed-empty')), findsOneWidget);
@@ -128,7 +128,7 @@ void main() {
     );
     await pumpFrames(tester);
 
-    expect(find.textContaining('no_network'), findsOneWidget);
+    expect(find.textContaining('нет сети'), findsOneWidget);
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();

@@ -20,8 +20,8 @@ func TestRenderShowsMessageFeed(t *testing.T) {
 			{DisplayName: "Боря", Text: "отвечаю", TS: ts.Add(time.Minute)},
 		},
 	})
-	if !strings.Contains(out, "FEED") {
-		t.Fatalf("missing FEED:\n%s", out)
+	if !strings.Contains(out, "ЛЕНТА") {
+		t.Fatalf("missing ЛЕНТА:\n%s", out)
 	}
 	if !strings.Contains(out, tui.EmptyPeersCopy) {
 		t.Fatalf("alone should still show empty peers copy:\n%s", out)
@@ -45,7 +45,7 @@ func TestRenderEmptyFeedSection(t *testing.T) {
 		EngineOK: true,
 		Messages: nil,
 	})
-	if !strings.Contains(out, "FEED") {
-		t.Fatalf("missing FEED header:\n%s", out)
+	if !strings.Contains(out, "ЛЕНТА") {
+		t.Fatalf("missing ЛЕНТА header:\n%s", out)
 	}
 }

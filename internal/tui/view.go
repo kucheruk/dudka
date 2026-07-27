@@ -78,6 +78,18 @@ type Snapshot struct {
 	Err        string
 }
 
+// DisplayNetworkState maps engine network+peers to a Russian status token (P072 / DUD-PRD-103).
+func DisplayNetworkState(network string, peerCount int) string {
+	switch {
+	case network == NetworkNoNetwork:
+		return "нет сети"
+	case peerCount == 0:
+		return "один"
+	default:
+		return "ок"
+	}
+}
+
 // Render builds a text frame: status strip + peers + message feed.
 func Render(s Snapshot) string {
 	var b strings.Builder
@@ -86,32 +98,26 @@ func Render(s Snapshot) string {
 		me = "—"
 	}
 	if !s.EngineOK {
-		fmt.Fprintf(&b, "ДУДКА · ENGINE OFFLINE\n")
+		fmt.Fprintf(&b, "ДУДКА · ДВИЖОК НЕДОСТУПЕН\n")
 		if s.Err != "" {
 			fmt.Fprintf(&b, "  %s\n", s.Err)
 		}
 		return b.String()
 	}
 	n := len(s.Peers)
-	state := "ok"
-	switch {
-	case s.Network == NetworkNoNetwork:
-		state = "no_network"
-	case n == 0:
-		state = "alone"
-	}
-	fmt.Fprintf(&b, "ДУДКА · %s · online %d · %s", me, n, state)
+	state := DisplayNetworkState(s.Network, n)
+	fmt.Fprintf(&b, "ДУДКА · %s · онлайн %d · %s", me, n, state)
 	if s.ProtoMajor > 0 {
-		fmt.Fprintf(&b, " · proto %d.%d", s.ProtoMajor, s.ProtoMinor)
+		fmt.Fprintf(&b, " · прото %d.%d", s.ProtoMajor, s.ProtoMinor)
 	}
 	b.WriteByte('\n')
-	b.WriteString("PEERS\n")
-	switch state {
-	case "no_network":
+	b.WriteString("СОСЕДИ\n")
+	switch {
+	case s.Network == NetworkNoNetwork:
 		fmt.Fprintf(&b, "  %s\n", NoNetworkCopy)
-	case "alone":
+	case n == 0:
 		fmt.Fprintf(&b, "  %s\n", EmptyPeersCopy)
-		fmt.Fprintf(&b, "  (%s — subnet scan)\n", AloneHint)
+		fmt.Fprintf(&b, "  (%s — скан подсети)\n", AloneHint)
 	default:
 		for _, p := range s.Peers {
 			name := strings.TrimSpace(p.DisplayName)
@@ -121,7 +127,7 @@ func Render(s Snapshot) string {
 			fmt.Fprintf(&b, "  %s\n", name)
 		}
 	}
-	b.WriteString("FEED\n")
+	b.WriteString("ЛЕНТА\n")
 	if len(s.Messages) == 0 {
 		b.WriteString("  —\n")
 	} else {
@@ -143,8 +149,8 @@ func Render(s Snapshot) string {
 			fmt.Fprintf(&b, "  %s · %s · %s\n", ts.UTC().Format("15:04"), name, line)
 		}
 	}
-	b.WriteString("INPUT\n")
-	b.WriteString("  >  (Enter = send · /nick Имя · /announce <path> · /fetch <file_id> · /fetch! <file_id> · /cancel <file_id>)\n")
+	b.WriteString("ВВОД\n")
+	b.WriteString("  >  (Enter = отправить · /nick Имя · /announce <path> · /fetch <file_id> · /fetch! <file_id> · /cancel <file_id>)\n")
 	return b.String()
 }
 
@@ -152,20 +158,21 @@ func feedLine(m MsgRow, tr TransferRow) string {
 	if m.Type == MsgTypeFileAnnounce || (m.FileID != "" && m.FileName != "") {
 		name := strings.TrimSpace(m.FileName)
 		if name == "" {
-			name = "file"
+			name = "файл"
 		}
-		line := fmt.Sprintf("FILE %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
+		line := fmt.Sprintf("ФАЙЛ %s %d %s %s", name, m.Size, strings.TrimSpace(m.Mime), m.FileID)
 		if p := strings.TrimSpace(m.ThumbPath); p != "" {
-			line = fmt.Sprintf("%s THUMB %s", line, p)
+			line = fmt.Sprintf("%s ПРЕВЬЮ %s", line, p)
 		} else if isHEICMIME(m.Mime) {
-			// Honest fallback when decode/thumb missing (P057) — never invent THUMB.
+			// Honest fallback when decode/thumb missing (P057) — never invent preview.
+			// HEIC is a MIME/format token (allowed by DUD-PRD-103).
 			line = fmt.Sprintf("%s HEIC", line)
 		}
 		switch tr.Status {
 		case TransferCancelled:
-			line = fmt.Sprintf("%s CANCELLED discarded", line)
+			line = fmt.Sprintf("%s ОТМЕНЕНО сброшено", line)
 		case TransferError:
-			line = fmt.Sprintf("%s ERROR", line)
+			line = fmt.Sprintf("%s ОШИБКА", line)
 		case TransferDownloading, TransferDone:
 			if tr.FileID != "" {
 				line = fmt.Sprintf("%s %d%%", line, tr.Percent)
@@ -174,7 +181,7 @@ func feedLine(m MsgRow, tr TransferRow) string {
 			if tr.FileID != "" {
 				line = fmt.Sprintf("%s %d%%", line, tr.Percent)
 			} else if IsLargeFile(m.Size) {
-				line = fmt.Sprintf("%s WARN>100MiB", line)
+				line = fmt.Sprintf("%s ВНИМАНИЕ>100МиБ", line)
 			}
 		}
 		return line

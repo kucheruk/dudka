@@ -33,7 +33,7 @@ class EngineClient {
   Future<MeInfo> setNick(String name) async {
     final n = name.trim();
     if (n.isEmpty) {
-      throw EngineException('nick is required');
+      throw EngineException('ник обязателен');
     }
     final res = await _http.post(
       _uri('/nick'),
@@ -50,7 +50,7 @@ class EngineClient {
   Future<SendResult> sendText(String text) async {
     final t = text.trim();
     if (t.isEmpty) {
-      throw EngineException('text is required');
+      throw EngineException('текст обязателен');
     }
     final res = await _http.post(
       _uri('/send'),
@@ -117,8 +117,8 @@ class EngineClient {
   }) async {
     final n = name.trim();
     final m = mime.trim();
-    if (n.isEmpty) throw EngineException('file name required');
-    if (m.isEmpty) throw EngineException('file mime required');
+    if (n.isEmpty) throw EngineException('имя файла обязательно');
+    if (m.isEmpty) throw EngineException('MIME файла обязателен');
     final digest = hash?.trim().isNotEmpty == true
         ? hash!.trim()
         : 'sha256:${sha256.convert(content)}';
@@ -147,7 +147,7 @@ class EngineClient {
   /// POST /files/fetch with wait:false — start async download (P067 / P052).
   Future<TransferInfo> startFetch(String fileId) async {
     final id = fileId.trim();
-    if (id.isEmpty) throw EngineException('file_id required');
+    if (id.isEmpty) throw EngineException('нужен file_id');
     final res = await _http.post(
       _uri('/files/fetch'),
       headers: {'content-type': 'application/json; charset=utf-8'},
@@ -162,7 +162,7 @@ class EngineClient {
   /// POST /files/cancel (P067 / P053).
   Future<TransferInfo> cancelFetch(String fileId) async {
     final id = fileId.trim();
-    if (id.isEmpty) throw EngineException('file_id required');
+    if (id.isEmpty) throw EngineException('нужен file_id');
     final res = await _http.post(
       _uri('/files/cancel'),
       headers: {'content-type': 'application/json; charset=utf-8'},
@@ -461,13 +461,27 @@ String chatNetworkState({required String network, required int peerCount}) {
   return 'ok';
 }
 
+/// Russian display label for [chatNetworkState] (P072 / DUD-PRD-103).
+String displayNetworkState({required String network, required int peerCount}) {
+  switch (chatNetworkState(network: network, peerCount: peerCount)) {
+    case 'no_network':
+      return 'нет сети';
+    case 'alone':
+      return 'один';
+    case 'ok':
+      return 'ок';
+    default:
+      return 'ок';
+  }
+}
+
 String formatStatusStrip(ChatSnapshot snap) {
   final me = snap.me.name.trim().isEmpty ? '—' : snap.me.name.trim();
   final n = snap.peers.length;
-  final state = chatNetworkState(network: snap.network, peerCount: n);
-  final buf = StringBuffer('ДУДКА · $me · online $n · $state');
+  final state = displayNetworkState(network: snap.network, peerCount: n);
+  final buf = StringBuffer('ДУДКА · $me · онлайн $n · $state');
   if (snap.protoMajor > 0) {
-    buf.write(' · proto ${snap.protoMajor}.${snap.protoMinor}');
+    buf.write(' · прото ${snap.protoMajor}.${snap.protoMinor}');
   }
   return buf.toString();
 }
@@ -476,8 +490,8 @@ String formatFeedLine(ChatMessage m) {
   final name = m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
   String body;
   if (m.isFileAnnounce) {
-    final fn = m.fileName.trim().isEmpty ? 'file' : m.fileName.trim();
-    body = 'FILE $fn';
+    final fn = m.fileName.trim().isEmpty ? 'файл' : m.fileName.trim();
+    body = 'ФАЙЛ $fn';
     if (m.size > 0) body = '$body ${m.size}';
   } else {
     body = m.text.trim();

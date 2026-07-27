@@ -25,8 +25,8 @@ func TestRenderAloneCopyDistinctFromNoNetwork(t *testing.T) {
 	if !strings.Contains(alone, tui.EmptyPeersCopy) {
 		t.Fatalf("alone missing %q:\n%s", tui.EmptyPeersCopy, alone)
 	}
-	if !strings.Contains(alone, "alone") {
-		t.Fatalf("alone missing state token:\n%s", alone)
+	if !strings.Contains(alone, "один") {
+		t.Fatalf("один missing state token:\n%s", alone)
 	}
 	if !strings.Contains(alone, tui.AloneHint) {
 		t.Fatalf("alone missing %q hint:\n%s", tui.AloneHint, alone)
@@ -38,14 +38,14 @@ func TestRenderAloneCopyDistinctFromNoNetwork(t *testing.T) {
 	if !strings.Contains(noNet, tui.NoNetworkCopy) {
 		t.Fatalf("no_network missing %q:\n%s", tui.NoNetworkCopy, noNet)
 	}
-	if !strings.Contains(noNet, "no_network") {
-		t.Fatalf("no_network missing state token:\n%s", noNet)
+	if !strings.Contains(noNet, "нет сети") {
+		t.Fatalf("нет сети missing state token:\n%s", noNet)
 	}
 	if strings.Contains(noNet, tui.EmptyPeersCopy) {
 		t.Fatalf("no_network must not show alone empty copy:\n%s", noNet)
 	}
-	if strings.Contains(noNet, "alone") {
-		t.Fatalf("no_network must not use alone state:\n%s", noNet)
+	if strings.Contains(noNet, "один") {
+		t.Fatalf("no_network must not use один state:\n%s", noNet)
 	}
 	if strings.Contains(noNet, tui.AloneHint) {
 		t.Fatalf("no_network must not advertise ИСКАТЬ:\n%s", noNet)
@@ -64,7 +64,7 @@ func TestRenderNoNetworkOverridesPeersListCopy(t *testing.T) {
 		Network:  tui.NetworkNoNetwork,
 		Peers:    nil,
 	})
-	if strings.Contains(out, "online 0") && !strings.Contains(out, "no_network") {
-		t.Fatalf("want no_network state with online 0:\n%s", out)
+	if strings.Contains(out, "онлайн 0") && !strings.Contains(out, "нет сети") {
+		t.Fatalf("want нет сети state with онлайн 0:\n%s", out)
 	}
 }

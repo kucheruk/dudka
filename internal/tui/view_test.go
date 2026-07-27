@@ -24,8 +24,8 @@ func TestRenderEmptyPeersShowsNikogoRyadom(t *testing.T) {
 	if !strings.Contains(out, "Вася") {
 		t.Fatalf("missing me name:\n%s", out)
 	}
-	if !strings.Contains(out, "online 0") {
-		t.Fatalf("missing online count:\n%s", out)
+	if !strings.Contains(out, "онлайн 0") {
+		t.Fatalf("missing онлайн count:\n%s", out)
 	}
 }
 
@@ -42,8 +42,8 @@ func TestRenderListsPeers(t *testing.T) {
 	if strings.Contains(out, tui.EmptyPeersCopy) {
 		t.Fatalf("must not show empty copy when peers present:\n%s", out)
 	}
-	if !strings.Contains(out, "online 2") {
-		t.Fatalf("missing online 2:\n%s", out)
+	if !strings.Contains(out, "онлайн 2") {
+		t.Fatalf("missing онлайн 2:\n%s", out)
 	}
 	if !strings.Contains(out, "Боб") || !strings.Contains(out, "Катя") {
 		t.Fatalf("missing peer names:\n%s", out)
@@ -53,7 +53,10 @@ func TestRenderListsPeers(t *testing.T) {
 func TestRenderEngineDown(t *testing.T) {
 	t.Parallel()
 	out := tui.Render(tui.Snapshot{EngineOK: false, Err: "connection refused"})
-	if !strings.Contains(out, "engine") && !strings.Contains(out, "ENGINE") {
-		t.Fatalf("want engine error hint:\n%s", out)
+	if !strings.Contains(out, "ДВИЖОК НЕДОСТУПЕН") {
+		t.Fatalf("want Russian engine-offline hint:\n%s", out)
+	}
+	if !strings.Contains(out, "connection refused") {
+		t.Fatalf("want error detail:\n%s", out)
 	}
 }

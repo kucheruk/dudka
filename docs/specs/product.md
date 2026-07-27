@@ -53,14 +53,15 @@ ADR: не требуется
 ### DUD-PRD-103
 
 Priority: P0  
-Status: Draft
+Status: Accepted
 
 UI и пользовательские строки MVP — только на русском языке.
 
 Проверка:
 
-- в GUI/TUI нет обязательных английских user-facing строк вне имён файлов/MIME;
-- evidence: checklist локализации в CI или ручной проход.
+- в GUI/TUI нет обязательных английских user-facing строк вне имён файлов/MIME и slash-команд TUI (`/nick`, `/announce`, …); *(P072)*
+- status strip: «онлайн N», состояния «ок» / «один» / «нет сети»; лейблы «СОСЕДИ» / «ЛЕНТА» / «ВВОД»; файл в ленте — «ФАЙЛ …»; *(P072)*
+- evidence: `apps/dudka/test/ru_ui_test.dart`, `internal/tui/ru_ui_test.go`, `./scripts/ru_ui_test.sh` (P072).
 
 Зависимости: нет  
 ADR: не требуется

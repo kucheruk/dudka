@@ -145,7 +145,7 @@ func TestRenderLargeFileShowsWarn(t *testing.T) {
 			Size: tui.LargeFileBytes + 1, Mime: "application/octet-stream",
 		}},
 	})
-	if !strings.Contains(out, "WARN") || !strings.Contains(out, "100") {
-		t.Fatalf("want WARN>100MiB marker:\n%s", out)
+	if !strings.Contains(out, "ВНИМАНИЕ") || !strings.Contains(out, "100") {
+		t.Fatalf("want ВНИМАНИЕ>100МиБ marker:\n%s", out)
 	}
 }

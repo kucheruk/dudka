@@ -38,7 +38,7 @@ curl -sS --max-time 2 -X POST "http://${listen}/send" \
   -d '{"text":"лента из engine"}' >/dev/null || fail "POST /send failed"
 
 frame="$("$tmpdir/dudka" -engine "$listen")"
-printf '%s\n' "$frame" | grep -q 'FEED' || fail "missing FEED:\n$frame"
+printf '%s\n' "$frame" | grep -q 'ЛЕНТА' || fail "missing ЛЕНТА:\n$frame"
 printf '%s\n' "$frame" | grep -q 'лента из engine' || fail "missing message text:\n$frame"
 printf '%s\n' "$frame" | grep -q 'Аня' || fail "missing nick in feed:\n$frame"
 printf '%s\n' "$frame" | grep -q '·' || fail "missing · separators:\n$frame"

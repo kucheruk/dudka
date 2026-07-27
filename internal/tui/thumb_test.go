@@ -26,8 +26,8 @@ func TestRenderShowsThumbMarkAndPathForImage(t *testing.T) {
 			ThumbPath:   "/tmp/thumbs/fid-img.jpg",
 		}},
 	})
-	if !strings.Contains(out, "THUMB") {
-		t.Fatalf("want ASCII THUMB mark:\n%s", out)
+	if !strings.Contains(out, "ПРЕВЬЮ") {
+		t.Fatalf("want ASCII ПРЕВЬЮ mark:\n%s", out)
 	}
 	if !strings.Contains(out, "/tmp/thumbs/fid-img.jpg") {
 		t.Fatalf("want thumb path in feed:\n%s", out)
@@ -51,7 +51,7 @@ func TestRenderNoThumbForNonImage(t *testing.T) {
 			Hash:        "sha256:x",
 		}},
 	})
-	if strings.Contains(out, "THUMB") {
-		t.Fatalf("non-image must not show THUMB:\n%s", out)
+	if strings.Contains(out, "ПРЕВЬЮ") {
+		t.Fatalf("non-image must not show ПРЕВЬЮ:\n%s", out)
 	}
 }

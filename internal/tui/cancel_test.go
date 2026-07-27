@@ -19,8 +19,8 @@ func TestRenderCancelledTransferNotSuccess(t *testing.T) {
 			FileID: "f1", Percent: 50, Status: tui.TransferCancelled,
 		}},
 	})
-	if !strings.Contains(out, "CANCELLED") && !strings.Contains(out, "discarded") {
-		t.Fatalf("want cancelled/discarded marker:\n%s", out)
+	if !strings.Contains(out, "ОТМЕНЕНО") && !strings.Contains(out, "сброшено") {
+		t.Fatalf("want ОТМЕНЕНО/сброшено marker:\n%s", out)
 	}
 	if strings.Contains(out, "100%") {
 		t.Fatalf("cancelled must not show 100%% success:\n%s", out)

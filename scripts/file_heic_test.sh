@@ -99,11 +99,11 @@ done
 
 frame="$("$tui" -engine "$listen_b" 2>/dev/null || true)"
 printf '%s\n' "$frame" | grep -q 'img.heic' || fail "TUI missing heic name:\n$frame"
-# Either real THUMB path or honest HEIC mark — never silent pretend.
-if printf '%s\n' "$frame" | grep -q 'THUMB '; then
-  printf '%s\n' "$frame" | grep -q 'THUMB ' || fail "broken THUMB"
+# Either real ПРЕВЬЮ path or honest HEIC mark — never silent pretend.
+if printf '%s\n' "$frame" | grep -q 'ПРЕВЬЮ '; then
+  printf '%s\n' "$frame" | grep -q 'ПРЕВЬЮ ' || fail "broken ПРЕВЬЮ"
 else
-  printf '%s\n' "$frame" | grep -qE ' HEIC( |$)' || fail "want honest HEIC mark without THUMB:\n$frame"
+  printf '%s\n' "$frame" | grep -qE ' HEIC( |$)' || fail "want honest HEIC mark without ПРЕВЬЮ:\n$frame"
 fi
 
 # Garbage HEIC-labelled bytes must not invent thumb.

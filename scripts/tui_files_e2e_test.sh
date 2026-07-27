@@ -63,23 +63,23 @@ for _ in $(seq 1 60); do
   sleep 0.1
 done
 
-# --- Image with preview: Alice TUI announces → Bob TUI sees THUMB → Bob TUI fetches ---
+# --- Image with preview: Alice TUI announces → Bob TUI sees ПРЕВЬЮ → Bob TUI fetches ---
 ann_out="$("$tmpdir/dudka" -engine "$listen_a" -announce "$tmpdir/pic.jpg" 2>"$tmpdir/ann_img.err")"
 file_img="$(grep -E 'announced file_id=' "$tmpdir/ann_img.err" | sed -E 's/.*file_id=([^ ]+).*/\1/')"
 [[ -n "$file_img" ]] || fail "missing image file_id: $(cat "$tmpdir/ann_img.err")"
 printf '%s\n' "$ann_out" | grep -q 'pic.jpg' || fail "Alice frame missing pic.jpg:\n$ann_out"
-printf '%s\n' "$ann_out" | grep -q 'THUMB' || fail "Alice frame missing THUMB:\n$ann_out"
+printf '%s\n' "$ann_out" | grep -q 'ПРЕВЬЮ' || fail "Alice frame missing ПРЕВЬЮ:\n$ann_out"
 
 seen=0
 for _ in $(seq 1 40); do
   frame_b="$("$tmpdir/dudka" -engine "$listen_b")"
-  if printf '%s\n' "$frame_b" | grep -q "$file_img" && printf '%s\n' "$frame_b" | grep -q 'THUMB'; then
+  if printf '%s\n' "$frame_b" | grep -q "$file_img" && printf '%s\n' "$frame_b" | grep -q 'ПРЕВЬЮ'; then
     seen=1
     break
   fi
   sleep 0.1
 done
-[[ "$seen" -eq 1 ]] || fail "Bob TUI missing image THUMB: $($tmpdir/dudka -engine "$listen_b")"
+[[ "$seen" -eq 1 ]] || fail "Bob TUI missing image ПРЕВЬЮ: $($tmpdir/dudka -engine "$listen_b")"
 
 "$tmpdir/dudka" -engine "$listen_b" -fetch "$file_img" >/dev/null 2>"$tmpdir/fetch_img.err" \
   || fail "Bob image fetch failed: $(cat "$tmpdir/fetch_img.err")"
@@ -103,7 +103,7 @@ assert hashlib.sha256(got).hexdigest() == hashlib.sha256(want).hexdigest()
 print("image ok", path)
 PY
 
-# --- Arbitrary binary: Alice TUI announces → Bob sees FILE without THUMB → fetch ---
+# --- Arbitrary binary: Alice TUI announces → Bob sees ФАЙЛ without ПРЕВЬЮ → fetch ---
 "$tmpdir/dudka" -engine "$listen_a" -announce "$tmpdir/payload.bin" >/dev/null 2>"$tmpdir/ann_bin.err" \
   || fail "binary announce failed: $(cat "$tmpdir/ann_bin.err")"
 file_bin="$(grep -E 'announced file_id=' "$tmpdir/ann_bin.err" | sed -E 's/.*file_id=([^ ]+).*/\1/')"
@@ -113,13 +113,13 @@ seen=0
 for _ in $(seq 1 40); do
   frame_b="$("$tmpdir/dudka" -engine "$listen_b")"
   if printf '%s\n' "$frame_b" | grep -q 'payload.bin' && printf '%s\n' "$frame_b" | grep -q "$file_bin"; then
-    # The FILE line for payload.bin must not carry THUMB.
+    # The ФАЙЛ line for payload.bin must not carry ПРЕВЬЮ.
     if python3 - "$frame_b" "$file_bin" <<'PY'
 import sys
 frame, fid = sys.argv[1], sys.argv[2]
 for line in frame.splitlines():
     if fid in line and "payload.bin" in line:
-        if "THUMB" in line:
+        if "ПРЕВЬЮ" in line:
             raise SystemExit(1)
         raise SystemExit(0)
 raise SystemExit(2)
@@ -131,7 +131,7 @@ PY
   fi
   sleep 0.1
 done
-[[ "$seen" -eq 1 ]] || fail "Bob TUI binary announce missing or false THUMB"
+[[ "$seen" -eq 1 ]] || fail "Bob TUI binary announce missing or false ПРЕВЬЮ"
 
 # Fetch via compose /fetch (TUI path), not only -fetch flag.
 printf '/fetch %s\n' "$file_bin" | "$tmpdir/dudka" -engine "$listen_b" -watch -interval 10s >/dev/null 2>&1 || true
@@ -168,7 +168,7 @@ assert got == want, (got, want)
 print("binary ok", hit[0]["path"])
 PY
 
-# Final Bob TUI frame shows both names and image still has THUMB mark in feed.
+# Final Bob TUI frame shows both names and image still has ПРЕВЬЮ mark in feed.
 frame_final="$("$tmpdir/dudka" -engine "$listen_b")"
 printf '%s\n' "$frame_final" | grep -q 'pic.jpg' || fail "final missing pic.jpg"
 printf '%s\n' "$frame_final" | grep -q 'payload.bin' || fail "final missing payload.bin"

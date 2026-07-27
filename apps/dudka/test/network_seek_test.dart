@@ -106,7 +106,7 @@ void main() {
     );
     await pumpFrames(tester);
 
-    expect(find.textContaining('alone'), findsOneWidget);
+    expect(find.textContaining('один'), findsOneWidget);
     expect(find.text('НИКОГО РЯДОМ'), findsOneWidget);
     expect(find.byKey(const Key('chat-seek')), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsOneWidget);
@@ -118,7 +118,7 @@ void main() {
 
     expect(scanned, isTrue);
     expect(find.text('Boris'), findsOneWidget);
-    expect(find.textContaining('online 1'), findsOneWidget);
+    expect(find.textContaining('онлайн 1'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();
   });
