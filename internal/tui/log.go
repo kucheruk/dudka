@@ -7,16 +7,23 @@ import (
 	"time"
 )
 
+func tuiLogPath() string {
+	cache, err := os.UserCacheDir()
+	if err != nil || cache == "" {
+		return ""
+	}
+	return filepath.Join(cache, "dudka", "tui.log")
+}
+
 func logTUIError(scope string, err error) {
-	cache, cacheErr := os.UserCacheDir()
-	if cacheErr != nil || cache == "" {
+	path := tuiLogPath()
+	if path == "" {
 		return
 	}
-	dir := filepath.Join(cache, "dudka")
-	if mkdirErr := os.MkdirAll(dir, 0o700); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(filepath.Dir(path), 0o700); mkdirErr != nil {
 		return
 	}
-	f, openErr := os.OpenFile(filepath.Join(dir, "tui.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	f, openErr := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if openErr != nil {
 		return
 	}

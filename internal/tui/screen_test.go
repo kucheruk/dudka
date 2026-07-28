@@ -67,7 +67,7 @@ func TestRenderScreenErrorShowsCopyAction(t *testing.T) {
 		StatusError:  true,
 		CanCopyError: true,
 	}, 100, 20)
-	if !strings.Contains(out, "F5 · КОПИРОВАТЬ ОШИБКУ") {
+	if !strings.Contains(out, "F5 · КОПИРОВАТЬ ДИАГНОСТИКУ") {
 		t.Fatalf("missing copy-error action:\n%s", out)
 	}
 }

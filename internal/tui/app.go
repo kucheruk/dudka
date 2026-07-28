@@ -28,17 +28,18 @@ type clipboardPulseDoneMsg struct{}
 
 // Model is the interactive bubbletea TUI (P046).
 type Model struct {
-	client     *Client
-	input      textinput.Model
-	snap       Snapshot
-	statusMsg  string
-	statusErr  bool
-	lastError  string
-	clipboard  string
-	feedScroll int
-	width      int
-	height     int
-	quitting   bool
+	client      *Client
+	input       textinput.Model
+	snap        Snapshot
+	statusMsg   string
+	statusErr   bool
+	lastError   string
+	lastErrorAt time.Time
+	clipboard   string
+	feedScroll  int
+	width       int
+	height      int
+	quitting    bool
 }
 
 // NewModel builds an interactive TUI model bound to engine client.
@@ -91,12 +92,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.snap = msg.snap
 		if msg.err != nil {
 			m.lastError = technicalError("обновление", msg.err)
+			m.lastErrorAt = time.Now()
 		}
 		return m, nil
 	case statusErrMsg:
 		m.statusMsg = msg.display
 		m.statusErr = true
 		m.lastError = msg.detail
+		m.lastErrorAt = time.Now()
 		return m, nil
 	case clipboardPulseDoneMsg:
 		m.clipboard = ""
@@ -106,6 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusMsg = fmt.Sprintf("ПОИСК ЗАВЕРШЁН · найдено: %d", msg.n)
 		m.statusErr = false
 		m.lastError = ""
+		m.lastErrorAt = time.Time{}
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -125,8 +129,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.lastError == "" {
 				return m, nil
 			}
-			m.clipboard = osc52Sequence(m.lastError)
-			m.statusMsg = "ОШИБКА СКОПИРОВАНА"
+			report := diagnosticBundle(
+				m.snap,
+				m.client.base,
+				m.lastError,
+				m.lastErrorAt,
+				time.Now(),
+				readTUILogTail(),
+			)
+			m.clipboard = osc52Sequence(report)
+			m.statusMsg = "ДИАГНОСТИКА СКОПИРОВАНА"
 			m.statusErr = false
 			return m, tea.Tick(80*time.Millisecond, func(time.Time) tea.Msg {
 				return clipboardPulseDoneMsg{}
@@ -162,6 +174,7 @@ func (m Model) submitCompose() (tea.Model, tea.Cmd) {
 	m.statusMsg = ""
 	m.statusErr = false
 	m.lastError = ""
+	m.lastErrorAt = time.Time{}
 	if strings.TrimSpace(line) == "" {
 		return m, nil
 	}

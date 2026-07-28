@@ -227,7 +227,7 @@ func paintNotice(statusMsg string, isError bool, width int) string {
 func helpText(snap Snapshot, canCopyError bool) string {
 	base := "ENTER отправить  ↑↓ лента  /nick Имя  /announce путь  ESC выход"
 	if canCopyError {
-		base = "F5 · КОПИРОВАТЬ ОШИБКУ  " + base
+		base = "F5 · КОПИРОВАТЬ ДИАГНОСТИКУ  " + base
 	}
 	if snap.EngineOK && snap.Network != NetworkNoNetwork && len(snap.Peers) == 0 {
 		base = "/search найти  " + base
