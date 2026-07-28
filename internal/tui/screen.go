@@ -47,12 +47,12 @@ func RenderScreen(st ScreenState, width, height int) string {
 }
 
 func paintStatus(snap Snapshot, width int) string {
-	text := statusText(snap)
-	st := styleStatus()
 	if !snap.EngineOK {
-		st = styleErr()
+		return fillBg(styleErr().Render(truncateRunes(statusText(snap), width)), width, colorPanel)
 	}
-	return fillBg(st.Render(truncateRunes(text, width)), width, colorPanel)
+	brand := styleBrand().Render(" ◆ ДУДКА ")
+	status := styleStatus().Render(truncateRunes(strings.TrimPrefix(statusText(snap), "ДУДКА · "), width-10))
+	return fillBg(brand+status, width, colorPanel)
 }
 
 func statusText(snap Snapshot) string {
@@ -168,8 +168,9 @@ func feedPaneLines(snap Snapshot, width, height, scroll int) []string {
 				line = fmt.Sprintf("· %s · %s", name, body)
 			} else {
 				ts := styleDim().Render(m.TS.UTC().Format("15:04"))
-				rest := styleBody().Render(fmt.Sprintf(" · %s · %s", name, body))
-				line = ts + rest
+				sender := styleSender().Render(" " + name)
+				rest := styleBody().Render("  " + body)
+				line = ts + sender + rest
 			}
 			raw = append(raw, line)
 		}
@@ -196,7 +197,7 @@ func paintCompose(compose string, cursor bool, width int) string {
 	if cursor {
 		cur = styleAction().Render("▌")
 	}
-	left := styleAction().Render(" ОТПРАВИТЬ ")
+	left := styleAction().Render("  ↗ ОТПРАВИТЬ  ")
 	right := styleCompose().Render("› " + compose)
 	joined := lipgloss.JoinHorizontal(lipgloss.Center, left, right, cur)
 	return fillBg(joined, width, colorPanelDeep)
@@ -207,7 +208,7 @@ func paintHelp(snap Snapshot, statusMsg string, width int) string {
 }
 
 func helpText(snap Snapshot, statusMsg string) string {
-	base := "Enter отправить · ↑↓ лента · /nick Имя · /announce путь · Ctrl+C выход"
+	base := "ENTER отправить  ↑↓ лента  /nick Имя  /announce путь  ESC выход"
 	if snap.EngineOK && snap.Network != NetworkNoNetwork && len(snap.Peers) == 0 {
 		base = "S искать · " + base
 	}

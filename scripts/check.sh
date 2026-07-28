@@ -13,5 +13,5 @@ go test ./...
 ./scripts/release_contract_test.sh
 ./scripts/app_icon_test.sh
 ./scripts/build_windows_app_test.sh
-./scripts/build_linux_app_test.sh
+./scripts/build_linux_tui_test.sh
 ./scripts/protocol_tests.sh

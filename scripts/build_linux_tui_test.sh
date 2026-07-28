@@ -23,10 +23,28 @@ DIST="$tmpdir/dist" ./scripts/build_linux_tui.sh || fail "build_linux_tui.sh fai
 arch="${GOARCH:-amd64}"
 bin="$tmpdir/dist/dudka-linux-${arch}"
 eng="$tmpdir/dist/dudkad-linux-${arch}"
+archive="$tmpdir/dist/dudka-linux-${arch}.tar.gz"
 [[ -f "$bin" ]] || fail "missing TUI artifact $bin"
 [[ -f "$eng" ]] || fail "missing engine artifact $eng"
 [[ -s "$bin" ]] || fail "empty TUI binary"
 [[ -s "$eng" ]] || fail "empty engine binary"
+[[ -s "$archive" ]] || fail "missing terminal archive"
+tar -tzf "$archive" | grep -qx "dudka-linux-${arch}/dudka" || fail "archive misses dudka"
+tar -tzf "$archive" | grep -qx "dudka-linux-${arch}/dudkad" || fail "archive misses dudkad"
+
+if [[ "$arch" == "amd64" ]]; then
+  [[ -x "$tmpdir/dist/install.sh" ]] || fail "missing installer"
+  ! grep -Eq 'apt-get|dpkg|sudo|\.deb' "$tmpdir/dist/install.sh" ||
+    fail "installer must not use system package management"
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    install_root="$tmpdir/home/.local/bin"
+    HOME="$tmpdir/home" DUDKA_INSTALL_DIR="$install_root" \
+      DUDKA_ARCHIVE_URL="file://$archive" "$tmpdir/dist/install.sh" ||
+      fail "installer smoke failed"
+    [[ -x "$install_root/dudka" && -x "$install_root/dudkad" ]] ||
+      fail "installer did not install both terminal binaries"
+  fi
+fi
 
 # Cross-built Linux ELF (or native ELF when already on Linux).
 if command -v file >/dev/null 2>&1; then

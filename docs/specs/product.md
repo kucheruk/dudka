@@ -38,17 +38,16 @@ ADR: не требуется
 Priority: P0  
 Status: Draft
 
-Платформы MVP: iOS и Android (GUI), macOS, Windows и Linux (полноценное
-desktop GUI). Текстовый TUI для Linux и Windows остаётся дополнительным
-инструментом, но не является пользовательским desktop-дистрибутивом. Поведение
-чата и discovery совпадает по wire-протоколу.
+Платформы MVP: iOS и Android (GUI), macOS и Windows (desktop GUI), Linux
+(полноценный терминальный TUI). Windows TUI остаётся дополнительным
+инструментом. Поведение чата и discovery совпадает по wire-протоколу.
 
 Проверка:
 
 - одна версия major протокола на всех клиентах одной поставки;
 - Windows запускается из одного переносимого GUI-архива без установщика и не
   требует запуска терминального клиента или отдельного engine-файла;
-- Linux имеет устанавливаемый GUI-пакет, TUI доступен отдельно;
+- Linux устанавливает TUI и engine без системных GUI-зависимостей;
 - TUI может обменяться текстом с Flutter-клиентом в одной LAN; *(P064)*
 - два Flutter-клиента обмениваются текстом и файлом (два peer/устройства); *(P071: `./scripts/flutter_ff_test.sh`)*
 - evidence: matrix smoke на поддерживаемых платформах или документированный пробел с карточкой; `./scripts/flutter_send_test.sh`, `./scripts/flutter_ff_test.sh`.

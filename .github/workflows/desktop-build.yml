@@ -50,35 +50,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Install Linux desktop dependencies
+      - name: Build terminal Linux package
+        run: ./scripts/build_linux_tui.sh
+      - name: Install without system packages
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev xvfb
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.44.8
-          cache: true
-      - name: Test Flutter
-        working-directory: apps/dudka
-        run: flutter test
-      - name: Build Linux GUI packages
-        run: ./scripts/build_linux_app.sh
-      - name: Install and start the Ubuntu package
-        run: |
-          sudo apt-get install -y ./dist/dudka-linux-amd64.deb
-          test -x /opt/dudka/dudka
-          test -x /opt/dudka/dudkad
-          set +e
-          timeout 8s xvfb-run -a /opt/dudka/dudka
-          status=$?
-          set -e
-          test "$status" -eq 124
+          before="$(dpkg-query -W -f='${binary:Package}\n' | sort | sha256sum)"
+          DUDKA_INSTALL_DIR="$RUNNER_TEMP/bin" \
+            DUDKA_ARCHIVE_URL="file://$GITHUB_WORKSPACE/dist/dudka-linux-amd64.tar.gz" \
+            ./dist/install.sh
+          test -x "$RUNNER_TEMP/bin/dudka"
+          test -x "$RUNNER_TEMP/bin/dudkad"
+          test "$before" = "$(dpkg-query -W -f='${binary:Package}\n' | sort | sha256sum)"
       - uses: actions/upload-artifact@v4
         with:
           name: dudka-linux-amd64
           if-no-files-found: error
           path: |
-            dist/dudka-linux-amd64.deb
             dist/dudka-linux-amd64.tar.gz
             dist/install.sh

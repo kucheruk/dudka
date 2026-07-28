@@ -34,10 +34,25 @@ var (
 
 func styleStatus() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(colorSegment).
-		Background(colorPanel).
+		Foreground(colorPanelDeep).
+		Background(colorSegment).
 		Bold(true).
 		Padding(0, 1)
+}
+
+func styleBrand() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(colorPanelDeep).
+		Background(colorSilk).
+		Bold(true).
+		Padding(0, 1)
+}
+
+func styleSender() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(colorStepOrange).
+		Background(colorPanelDeep).
+		Bold(true)
 }
 
 func styleLabel() lipgloss.Style {

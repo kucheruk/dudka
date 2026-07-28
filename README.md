@@ -6,8 +6,8 @@
 
 ## Статус
 
-**Desktop GUI работает на macOS, Windows и Linux;** TUI остаётся
-дополнительным инструментом. `./scripts/check.sh` гоняет unit +
+**Desktop GUI работает на macOS и Windows; Linux получает основной TUI.**
+`./scripts/check.sh` гоняет unit +
 multi-peer protocol tests.
 Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
 
@@ -68,30 +68,16 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 
 Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shell в `apps/dudka` — DESIGN.md charcoal UI + adaptive dual-pane/peer strip + чат/файлы/превью; Flutter↔Flutter text+file (`./scripts/flutter_ff_test.sh`); RU UI (`./scripts/ru_ui_test.sh`); bind ADR [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); `./scripts/flutter_*_test.sh`, `./scripts/run_flutter_spike.sh`.
 
-## Сборка Linux GUI (P150)
+## Linux TUI (P157)
 
-Полноценное графическое приложение собирается на Linux или готовится
-автоматически desktop-build workflow:
-
-```bash
-./scripts/build_linux_app.sh
-# → dist/dudka-linux-amd64.deb
-# → dist/dudka-linux-amd64.tar.gz
-```
-
-Для обычной установки используйте `dudka-linux-amd64.deb`. Терминал не
-открывается, `dudkad` уже находится внутри пакета.
-
-Готовая версия устанавливается одной строкой:
+Готовая терминальная версия устанавливается одной строкой:
 
 ```bash
 curl -fsSL https://zamoo.team/dudka/install.sh | sh
 ```
 
-Скрипт скачивает точный версионный DEB, сверяет SHA-256 и запускает системный
-`apt`. DEB и переносной архив остаются доступны отдельно.
-
-## Дополнительный Linux TUI (P080)
+Скрипт скачивает точный архив, сверяет SHA-256 и кладёт `dudka` с `dudkad`
+в `~/.local/bin`. Он не вызывает `apt`, `sudo` и не ставит GUI-зависимости.
 
 Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):
 
@@ -99,12 +85,14 @@ curl -fsSL https://zamoo.team/dudka/install.sh | sh
 ./scripts/build_linux_tui.sh
 # → dist/dudka-linux-amd64  (TUI)
 # → dist/dudkad-linux-amd64 (engine)
+# → dist/dudka-linux-amd64.tar.gz
+# → dist/install.sh
 # → dist/dudka, dist/dudkad (symlink на текущий GOARCH)
 # GOARCH=arm64 ./scripts/build_linux_tui.sh
 ```
 
-TUI нужен только для диагностики или терминальных машин. Обычным пользователям
-он не предлагается.
+После установки достаточно команды `dudka`: локальный engine запускается
+автоматически и хранит имя, историю и файлы в пользовательском каталоге.
 
 ## Сборка macOS desktop (P081)
 

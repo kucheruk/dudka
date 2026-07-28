@@ -99,9 +99,9 @@ Dark — единственная схема MVP (панель всегда тё
 
 - **Phone:** сверху status strip (ДУДКА · онлайн N · Wi‑Fi), затем горизонтальный/сворачиваемый peer strip, основная колонка — лента, снизу compose + attach.
 - **Tablet/desktop:** dual-pane Terminate-lite — слева peers (узкая колонка), справа лента+compose.
-- **Linux desktop:** тот же адаптивный Flutter GUI, что на macOS/Windows.
-- **Linux/Windows TUI:** дополнительная текстовая топология
-  (peers | feed | input), не основной пользовательский пакет.
+- **Linux:** основной клиент — выразительная текстовая rhythm-machine топология
+  (peers | feed | input), полноценная без GUI.
+- **Windows TUI:** дополнительный инструмент диагностики.
 - Safe areas / system bars / IME insets обязательны; кастомный tab bar на 5 разделов — anti-goal для MVP (один главный экран).
 
 ## Elevation & Depth

@@ -28,6 +28,17 @@ func main() {
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 
+	explicitEngine := strings.TrimSpace(os.Getenv("DUDKA_ENGINE")) != ""
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "engine" {
+			explicitEngine = true
+		}
+	})
+	if err := ensureLocalEngine(*engine, explicitEngine); err != nil {
+		fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
+		os.Exit(1)
+	}
+
 	client := tui.NewClient(*engine)
 	printFrame := func() tui.Snapshot {
 		snap, err := client.Fetch()

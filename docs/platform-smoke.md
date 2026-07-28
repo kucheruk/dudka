@@ -5,8 +5,7 @@
 
 | Платформа | Артефакт | Сборка | Установка | Текст 2 peer | Файл 2 peer | Дата / SHA | Кто |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Linux GUI | `dudka-linux-amd64.deb` / `.tar.gz` | ✅ native CI build | ✅ DEB artifact | ⚠️ CI widget/protocol | ⚠️ live LAN | 2026-07-28 / Actions 30388151796 | agent |
-| Linux TUI | `dudka-linux-*` + `dudkad-linux-*` | ✅ `build_linux_tui_test.sh` | ✅ copy+run | ✅ protocol_tests | ✅ protocol/files | 2026-07-28 / см. master | agent |
+| Linux TUI | `dudka-linux-amd64.tar.gz` + `install.sh` | ✅ `build_linux_tui_test.sh` | ✅ user install, no apt | ✅ protocol_tests | ✅ protocol/files | 2026-07-28 / v0.5.2 | agent |
 | macOS GUI | `dudka.app` / `dudka-macos-universal.zip` / DMG | ✅ `build_macos_app_test.sh` | ✅ open .app | ✅ flutter_ff / LAN | ✅ flutter_ff | 2026-07-28 | agent |
 | Windows GUI | portable `dudka-windows-amd64.zip` | ✅ native CI build | ✅ распаковка + запуск GUI | ✅ Flutter tests | ⚠️ live LAN | 2026-07-28 / P156 release CI | agent |
 | Android | `dudka-android.apk` | ✅ `build_android_apk_test.sh` | ⚠️ sideload APK; engine embed TBD | ❌ на телефоне | ❌ | 2026-07-28 / P083 | agent |
@@ -20,7 +19,7 @@
 
 - iOS physical install: нужен Apple Team (см. `docs/build-ios.md`).
 - Android/iOS: subprocess `dudkad` sidecar ещё не упакован в mobile bundle.
-- Windows и Linux GUI проходят нативную сборку в GitHub Actions; живой
+- Windows GUI и Linux TUI проходят нативную сборку в GitHub Actions; живой
   двухмашинный smoke после установки всё ещё нужен.
 - Auto-update: macOS package/helper covered by build + unit tests; live
   N→N+1 smoke needs the next published version.
