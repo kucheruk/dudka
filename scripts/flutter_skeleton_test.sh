@@ -20,6 +20,8 @@ command -v dart >/dev/null 2>&1 || fail "dart not on PATH"
 [[ -f apps/dudka/lib/screens/chat_screen.dart ]] || fail "ChatScreen missing"
 [[ -f apps/dudka/lib/engine/host.dart ]] || fail "EngineHost missing"
 [[ -f apps/dudka/macos/Runner.xcodeproj/project.pbxproj ]] || fail "macOS target missing"
+[[ "$(grep -c 'alwaysOutOfDate = 1;' apps/dudka/macos/Runner.xcodeproj/project.pbxproj)" -ge 2 ]] ||
+  fail "macOS Flutter shell phases must explicitly run every build without dependency-analysis warnings"
 grep -qE 'ChatScreen|FirstRunNickScreen' apps/dudka/lib/app.dart \
   || fail "DudkaApp must host first-run/chat shell"
 grep -q 'EngineHost' apps/dudka/lib/main.dart || fail "main must wire EngineHost spawn path"
