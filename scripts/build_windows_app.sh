@@ -59,11 +59,12 @@ powershell.exe -NoProfile -Command \
 
 ISCC="${ISCC:-/c/Program Files (x86)/Inno Setup 6/ISCC.exe}"
 [[ -x "$ISCC" ]] || fail "Inno Setup 6 compiler missing: $ISCC"
-"$ISCC" \
-  "/DAppVersion=$VERSION" \
-  "/DBundleDir=$BUNDLE_WIN" \
-  "/DOutputDir=$(cygpath -w "$OUT")" \
-  packaging/windows/dudka.iss >/dev/null
+ISCC_WIN="$(cygpath -w "$ISCC")"
+OUT_WIN="$(cygpath -w "$OUT")"
+ISS_WIN="$(cygpath -w packaging/windows/dudka.iss)"
+powershell.exe -NoProfile -Command \
+  "& '$ISCC_WIN' '/DAppVersion=$VERSION' '/DBundleDir=$BUNDLE_WIN' '/DOutputDir=$OUT_WIN' '$ISS_WIN'" \
+  >/dev/null
 
 SETUP="$OUT/dudka-windows-${ARCH}-setup.exe"
 [[ -s "$SETUP" ]] || fail "installer missing: $SETUP"
