@@ -44,7 +44,8 @@ void main() {
     client.close();
   });
 
-  testWidgets('alone shows ИСКАТЬ; tap triggers scan and refreshes peers', (tester) async {
+  testWidgets('alone shows ИСКАТЬ; tap triggers scan and refreshes peers',
+      (tester) async {
     var peers = <Map<String, String>>[];
     var scanned = false;
     final client = EngineClient(
@@ -102,7 +103,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
@@ -164,7 +166,8 @@ void main() {
       }),
     );
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);

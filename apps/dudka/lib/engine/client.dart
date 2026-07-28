@@ -16,7 +16,9 @@ class EngineClient {
   final http.Client _http;
 
   Uri _uri(String path) {
-    final base = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final base = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
     return Uri.parse('$base$path');
   }
 
@@ -134,7 +136,8 @@ class EngineClient {
       }),
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
-      throw EngineException('POST /files/announce → ${res.statusCode}: ${res.body}');
+      throw EngineException(
+          'POST /files/announce → ${res.statusCode}: ${res.body}');
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     final msgRaw = map['message'];
@@ -154,7 +157,8 @@ class EngineClient {
       body: jsonEncode({'file_id': id, 'wait': false}),
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
-      throw EngineException('POST /files/fetch → ${res.statusCode}: ${res.body}');
+      throw EngineException(
+          'POST /files/fetch → ${res.statusCode}: ${res.body}');
     }
     return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -169,7 +173,8 @@ class EngineClient {
       body: jsonEncode({'file_id': id}),
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
-      throw EngineException('POST /files/cancel → ${res.statusCode}: ${res.body}');
+      throw EngineException(
+          'POST /files/cancel → ${res.statusCode}: ${res.body}');
     }
     return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -178,7 +183,8 @@ class EngineClient {
   Future<List<TransferInfo>> fetchTransfers() async {
     final res = await _http.get(_uri('/files/transfers'));
     if (res.statusCode != 200) {
-      throw EngineException('GET /files/transfers → ${res.statusCode}: ${res.body}');
+      throw EngineException(
+          'GET /files/transfers → ${res.statusCode}: ${res.body}');
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     final raw = map['transfers'];
@@ -198,7 +204,8 @@ class EngineClient {
 
     final peersRes = await _http.get(_uri('/peers'));
     if (peersRes.statusCode != 200) {
-      throw EngineException('GET /peers → ${peersRes.statusCode}: ${peersRes.body}');
+      throw EngineException(
+          'GET /peers → ${peersRes.statusCode}: ${peersRes.body}');
     }
     final peersMap = jsonDecode(peersRes.body) as Map<String, dynamic>;
     final peersRaw = peersMap['peers'];
@@ -216,7 +223,8 @@ class EngineClient {
 
     final statusRes = await _http.get(_uri('/status'));
     if (statusRes.statusCode != 200) {
-      throw EngineException('GET /status → ${statusRes.statusCode}: ${statusRes.body}');
+      throw EngineException(
+          'GET /status → ${statusRes.statusCode}: ${statusRes.body}');
     }
     final st = jsonDecode(statusRes.body) as Map<String, dynamic>;
     final network = (st['network'] as String?)?.trim();
@@ -232,7 +240,8 @@ class EngineClient {
 
     final msgsRes = await _http.get(_uri('/messages'));
     if (msgsRes.statusCode != 200) {
-      throw EngineException('GET /messages → ${msgsRes.statusCode}: ${msgsRes.body}');
+      throw EngineException(
+          'GET /messages → ${msgsRes.statusCode}: ${msgsRes.body}');
     }
     final msgsMap = jsonDecode(msgsRes.body) as Map<String, dynamic>;
     final msgsRaw = msgsMap['messages'];
@@ -329,7 +338,8 @@ class ChatMessage {
     final tsRaw = m['ts'];
     DateTime ts;
     if (tsRaw is String && tsRaw.isNotEmpty) {
-      ts = DateTime.tryParse(tsRaw)?.toUtc() ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      ts = DateTime.tryParse(tsRaw)?.toUtc() ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     } else {
       ts = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     }
@@ -356,6 +366,7 @@ enum FeedThumbKind { none, image, heicMark }
 
 bool isImageMime(String mime) {
   switch (mime.trim().toLowerCase()) {
+    case 'image/gif':
     case 'image/jpeg':
     case 'image/jpg':
     case 'image/png':
@@ -437,7 +448,7 @@ class LocalFileBytes {
   final List<int> bytes;
 }
 
-typedef LocalFilePicker = Future<LocalFileBytes?> Function();
+typedef LocalFilesPicker = Future<List<LocalFileBytes>> Function();
 
 class ChatSnapshot {
   const ChatSnapshot({
@@ -521,7 +532,8 @@ String formatStatusStrip(ChatSnapshot snap) {
 }
 
 String formatFeedLine(ChatMessage m) {
-  final name = m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
+  final name =
+      m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
   String body;
   if (m.isFileAnnounce) {
     final fn = m.fileName.trim().isEmpty ? 'файл' : m.fileName.trim();

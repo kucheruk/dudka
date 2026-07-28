@@ -19,8 +19,16 @@ trap 'rm -rf "$tmpdir"; [[ -n "${pid_a:-}" ]] && kill "$pid_a" 2>/dev/null || tr
 bin="$tmpdir/dudkad"
 go build -o "$bin" ./cmd/dudkad || fail "go build failed"
 
-# Ephemeral announce port avoids clashing with a real LAN :41777.
-port="$(python3 - <<'PY'
+# Separate ephemeral ports make same-host delivery deterministic on macOS.
+port_a="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_b="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("127.0.0.1", 0))
@@ -32,10 +40,12 @@ PY
 log_a="$tmpdir/a.log"
 log_b="$tmpdir/b.log"
 "$bin" -data-dir "$tmpdir/a" -name "Alice" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 200ms >"$log_a" 2>&1 &
+  -announce-port "$port_a" -announce-target "127.0.0.1:${port_b}" \
+  -session-port 0 -announce-interval 200ms >"$log_a" 2>&1 &
 pid_a=$!
 "$bin" -data-dir "$tmpdir/b" -name "Bob" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 200ms >"$log_b" 2>&1 &
+  -announce-port "$port_b" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 200ms >"$log_b" 2>&1 &
 pid_b=$!
 
 peer_a=""

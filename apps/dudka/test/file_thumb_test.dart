@@ -80,6 +80,7 @@ void main() {
     expect(decodeThumbBytes(m)!.length, greaterThan(10));
     expect(isImageMime('image/png'), isTrue);
     expect(isImageMime('image/webp'), isTrue);
+    expect(isImageMime('image/gif'), isTrue);
     expect(isHeicMime('image/heic'), isTrue);
     expect(isImageMime('application/pdf'), isFalse);
     expect(feedThumbKind(m), FeedThumbKind.image);
@@ -136,7 +137,8 @@ void main() {
       },
     ]);
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
     expect(find.byKey(const Key('file-thumb-f1')), findsOneWidget);
@@ -161,7 +163,8 @@ void main() {
       },
     ]);
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
     expect(find.byKey(const Key('file-thumb-f2')), findsNothing);
@@ -186,7 +189,8 @@ void main() {
       },
     ]);
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
     expect(find.byType(Image), findsNothing);

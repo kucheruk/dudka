@@ -24,7 +24,23 @@ printf 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\n' >"$tmpdir/a/peer_id"
 printf 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\n' >"$tmpdir/b/peer_id"
 printf 'cccccccc-cccc-4ccc-8ccc-cccccccccccc\n' >"$tmpdir/c/peer_id"
 
-port="$(python3 - <<'PY'
+port_a="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_b="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_c="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("127.0.0.1", 0))
@@ -35,10 +51,12 @@ PY
 
 log_a="$tmpdir/a.log"; log_b="$tmpdir/b.log"; log_c="$tmpdir/c.log"
 "$bin" -data-dir "$tmpdir/a" -name "Alice" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
+  -announce-port "$port_a" -announce-target "127.0.0.1:${port_b}" \
+  -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
 pid_a=$!
 "$bin" -data-dir "$tmpdir/b" -name "Bob" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
+  -announce-port "$port_b" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
 pid_b=$!
 
 listen_a=""; listen_b=""
@@ -73,7 +91,8 @@ done
 
 # Join Carol (third peer).
 "$bin" -data-dir "$tmpdir/c" -name "Carol" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_c" 2>&1 &
+  -announce-port "$port_c" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 150ms >"$log_c" 2>&1 &
 pid_c=$!
 
 listen_c=""

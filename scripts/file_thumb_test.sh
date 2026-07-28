@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Task-level contract for P056 / DUD-FILE-120: jpeg/png/webp thumb in announce + TUI mark; no fake thumb for non-image.
+# Task-level contract for DUD-FILE-120: gif/jpeg/png/webp thumb in announce + TUI mark; no fake thumb for non-image.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -9,6 +9,17 @@ export DUDKA_NO_PROMPT=1
 fail() {
   echo "file_thumb_test FAIL: $*" >&2
   exit 1
+}
+
+has_peer() {
+  python3 - "$1" <<'PY'
+import json, sys
+try:
+    peers = json.loads(sys.argv[1]).get("peers") or []
+except (json.JSONDecodeError, AttributeError):
+    raise SystemExit(1)
+raise SystemExit(0 if peers else 1)
+PY
 }
 
 go test ./internal/files/ ./internal/chat/ ./internal/tui/ -run 'Thumb|IsThumb|AnnounceImage|PeerReceives|AnnounceNonImage|RenderShows|RenderNoThumb' -count=1 >/dev/null \
@@ -39,23 +50,37 @@ pid_a=$!
   -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
 pid_b=$!
 
-listen_a=""; listen_b=""
+listen_a=""; listen_b=""; session_a=""; session_b=""
 for _ in $(seq 1 50); do
   if grep -q '^ready ' "$log_a" 2>/dev/null && grep -q '^ready ' "$log_b" 2>/dev/null; then
     listen_a="$(grep '^listen=' "$log_a" | head -n 1 | sed 's/^listen=//')"
     listen_b="$(grep '^listen=' "$log_b" | head -n 1 | sed 's/^listen=//')"
+    session_a="$(grep '^session_tcp=' "$log_a" | head -n 1 | sed 's/^session_tcp=//')"
+    session_b="$(grep '^session_tcp=' "$log_b" | head -n 1 | sed 's/^session_tcp=//')"
     break
   fi
   sleep 0.1
 done
-[[ -n "$listen_a" && -n "$listen_b" ]] || fail "not ready"
+[[ -n "$listen_a" && -n "$listen_b" && -n "$session_a" && -n "$session_b" ]] || fail "not ready"
+
+# Same-host UDP broadcast fan-out is not deterministic on macOS. Register both
+# processes explicitly so this gate tests file/thumb delivery, not SO_REUSEPORT.
+curl -fsS --max-time 5 -X POST "http://${listen_a}/scan" \
+  -H 'Content-Type: application/json' \
+  -d "{\"hosts\":[\"127.0.0.1\"],\"port\":${session_b}}" >/dev/null \
+  || fail "Alice could not register Bob"
+curl -fsS --max-time 5 -X POST "http://${listen_b}/scan" \
+  -H 'Content-Type: application/json' \
+  -d "{\"hosts\":[\"127.0.0.1\"],\"port\":${session_a}}" >/dev/null \
+  || fail "Bob could not register Alice"
 
 for _ in $(seq 1 60); do
   pa="$(curl -sS --max-time 1 "http://${listen_a}/peers" || true)"
   pb="$(curl -sS --max-time 1 "http://${listen_b}/peers" || true)"
-  echo "$pa" | grep -q peer && echo "$pb" | grep -q peer && break
+  has_peer "$pa" && has_peer "$pb" && break
   sleep 0.1
 done
+has_peer "$pa" && has_peer "$pb" || fail "peers did not discover each other"
 
 ann="$(python3 - <<'PY'
 import base64, hashlib, json

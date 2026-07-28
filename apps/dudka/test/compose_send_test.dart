@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dudka/engine/client.dart';
 import 'package:dudka/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -37,7 +38,7 @@ void main() {
     client.close();
   });
 
-  testWidgets('ОТПРАВИТЬ sends text and shows it in feed', (tester) async {
+  testWidgets('send icon sends text and shows it in feed', (tester) async {
     final messages = <Map<String, Object?>>[];
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
@@ -104,15 +105,17 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
     expect(find.byKey(const Key('chat-compose')), findsOneWidget);
     expect(find.byKey(const Key('chat-blow')), findsOneWidget);
-    expect(find.text('ОТПРАВИТЬ'), findsOneWidget);
+    expect(find.byIcon(Icons.send), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('chat-compose')), 'hello from flutter');
+    await tester.enterText(
+        find.byKey(const Key('chat-compose')), 'hello from flutter');
     await tester.tap(find.byKey(const Key('chat-blow')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -120,6 +123,71 @@ void main() {
 
     expect(find.textContaining('hello from flutter'), findsOneWidget);
     expect(find.textContaining('Anya'), findsWidgets);
+    client.close();
+  });
+
+  testWidgets('Enter is newline; Cmd+Enter sends', (tester) async {
+    var sent = '';
+    final client = EngineClient(
+      baseUrl: 'http://127.0.0.1:9',
+      httpClient: MockClient((req) async {
+        switch (req.url.path) {
+          case '/me':
+            return http.Response('{"peer_id":"me1","name":"Anya"}', 200);
+          case '/peers':
+            return http.Response('{"peers":[]}', 200);
+          case '/status':
+            return http.Response(
+              '{"proto_major":1,"proto_minor":0,"network":"ok"}',
+              200,
+            );
+          case '/messages':
+            return http.Response('{"messages":[]}', 200);
+          case '/files/transfers':
+            return http.Response('{"transfers":[]}', 200);
+          case '/send':
+            sent = (jsonDecode(req.body) as Map<String, dynamic>)['text']
+                as String;
+            return http.Response(
+              jsonEncode({
+                'status': 'accepted',
+                'queued': 0,
+                'message': {
+                  'type': 'chat',
+                  'msg_id': 'm1',
+                  'peer_id': 'me1',
+                  'display_name_at_send': 'Anya',
+                  'ts': '2026-07-28T10:00:00Z',
+                  'text': sent,
+                },
+              }),
+              200,
+            );
+          default:
+            return http.Response('nope', 404);
+        }
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+    );
+    await pumpFrames(tester);
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('chat-compose')),
+    );
+    expect(field.textInputAction, TextInputAction.newline);
+    expect(field.maxLines, 5);
+
+    await tester.tap(find.byKey(const Key('chat-compose')));
+    await tester.enterText(find.byKey(const Key('chat-compose')), 'строка');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(sent, 'строка');
     client.close();
   });
 }

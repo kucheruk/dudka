@@ -20,6 +20,7 @@ import (
 func TestDetectMIME(t *testing.T) {
 	t.Parallel()
 	cases := map[string]string{
+		"a.gif":  "image/gif",
 		"a.jpg":  "image/jpeg",
 		"a.JPEG": "image/jpeg",
 		"a.png":  "image/png",

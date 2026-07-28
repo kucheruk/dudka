@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"testing"
@@ -11,12 +12,15 @@ import (
 	"dudka/internal/files"
 )
 
-func TestMakeThumbJPEGAndPNG(t *testing.T) {
+func TestMakeThumbGIFJPEGAndPNG(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		mime string
 		enc  func(*bytes.Buffer, image.Image) error
 	}{
+		{"image/gif", func(b *bytes.Buffer, img image.Image) error {
+			return gif.Encode(b, img, nil)
+		}},
 		{"image/jpeg", func(b *bytes.Buffer, img image.Image) error {
 			return jpeg.Encode(b, img, &jpeg.Options{Quality: 90})
 		}},
@@ -86,7 +90,7 @@ func TestMakeThumbNonImageNoFake(t *testing.T) {
 
 func TestIsThumbMIME(t *testing.T) {
 	t.Parallel()
-	for _, mime := range []string{"image/jpeg", "image/png", "image/webp", "IMAGE/JPEG", "image/heic", "image/heif"} {
+	for _, mime := range []string{"image/gif", "image/jpeg", "image/png", "image/webp", "IMAGE/JPEG", "image/heic", "image/heif"} {
 		if !files.IsThumbMIME(mime) {
 			t.Fatalf("want thumb mime %q", mime)
 		}

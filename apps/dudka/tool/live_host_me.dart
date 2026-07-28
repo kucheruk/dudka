@@ -9,8 +9,9 @@ Future<void> main(List<String> args) async {
   if (args.isEmpty) {
     throw StateError('usage: dart run tool/live_host_me.dart <dudkad-bin>');
   }
-  final dataDir = Directory('${Directory.systemTemp.path}/dudka-host-me-${pid}');
-  final host = EngineHost(binaryPath: args.first, dataDir: dataDir.path, name: 'Skeleton');
+  final dataDir = Directory('${Directory.systemTemp.path}/dudka-host-me-$pid');
+  final host = EngineHost(
+      binaryPath: args.first, dataDir: dataDir.path, name: 'Skeleton');
   try {
     final base = await host.start();
     final client = EngineClient(baseUrl: base);

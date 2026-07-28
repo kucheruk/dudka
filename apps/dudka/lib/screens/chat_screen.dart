@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../engine/client.dart';
+import '../files/local_file_actions.dart';
 import '../layout/chat_layout.dart';
 import '../theme/dudka_theme.dart';
 import '../widgets/step_progress.dart';
@@ -15,12 +17,14 @@ class ChatScreen extends StatefulWidget {
     super.key,
     required this.client,
     this.pollInterval = const Duration(seconds: 1),
-    this.pickLocalFile,
+    this.pickFiles,
+    this.revealFile,
   });
 
   final EngineClient client;
   final Duration pollInterval;
-  final LocalFilePicker? pickLocalFile;
+  final LocalFilesPicker? pickFiles;
+  final DownloadedFileRevealer? revealFile;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -28,6 +32,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _compose = TextEditingController();
+  final List<LocalFileBytes> _pendingFiles = [];
   ChatSnapshot? _snap;
   Object? _error;
   String? _sendError;
@@ -36,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loading = true;
   bool _sending = false;
   bool _seeking = false;
-  bool _announcing = false;
+  bool _picking = false;
   Timer? _timer;
 
   @override
@@ -76,14 +81,28 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _blow() async {
     if (_sending) return;
     final text = _compose.text.trim();
-    if (text.isEmpty) return;
+    final files = List<LocalFileBytes>.of(_pendingFiles);
+    if (text.isEmpty && files.isEmpty) return;
     setState(() {
       _sending = true;
       _sendError = null;
+      _fileError = null;
     });
     try {
-      await widget.client.sendText(text);
-      _compose.clear();
+      if (text.isNotEmpty) {
+        await widget.client.sendText(text);
+        _compose.clear();
+      }
+      for (final file in files) {
+        await widget.client.announceFile(
+          name: file.name,
+          mime: file.mime,
+          content: file.bytes,
+        );
+        if (mounted) {
+          setState(() => _pendingFiles.remove(file));
+        }
+      }
       await _refresh();
     } catch (e) {
       if (!mounted) return;
@@ -126,58 +145,32 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<LocalFileBytes?> _defaultPickPath() async {
-    final ctrl = TextEditingController();
-    final path = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Файл'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(hintText: '/путь/к/файлу'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('ОК'),
-          ),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (path == null || path.isEmpty) return null;
-    final f = File(path);
-    if (!f.existsSync()) {
-      throw EngineException('файл не найден: $path');
-    }
-    final name = path.split(Platform.pathSeparator).last;
-    final mime = name.endsWith('.txt') ? 'text/plain' : 'application/octet-stream';
-    return LocalFileBytes(name: name, mime: mime, bytes: await f.readAsBytes());
-  }
-
-  Future<void> _announcePicked() async {
-    if (_announcing) return;
+  Future<void> _pickFiles() async {
+    if (_picking) return;
     setState(() {
-      _announcing = true;
+      _picking = true;
       _fileError = null;
     });
     try {
-      final picker = widget.pickLocalFile ?? _defaultPickPath;
+      final picker = widget.pickFiles ?? pickLocalFiles;
       final picked = await picker();
-      if (picked == null) return;
-      await widget.client.announceFile(
-        name: picked.name,
-        mime: picked.mime,
-        content: picked.bytes,
-      );
-      await _refresh();
+      if (picked.isEmpty || !mounted) return;
+      setState(() => _pendingFiles.addAll(picked));
     } catch (e) {
       if (!mounted) return;
       setState(() => _fileError = e.toString());
     } finally {
-      if (mounted) setState(() => _announcing = false);
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  Future<void> _revealFile(String path) async {
+    setState(() => _fileError = null);
+    try {
+      await (widget.revealFile ?? revealDownloadedFile)(path);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _fileError = e.toString());
     }
   }
 
@@ -206,48 +199,55 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Чат'),
-        actions: [
-          IconButton(
-            key: const Key('chat-settings'),
-            tooltip: 'Настройки',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _openSettings,
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _body(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: SelectionArea(child: _body()),
+        ),
       ),
     );
   }
 
   Widget _body() {
     if (_loading && _snap == null) {
-      return const Center(child: CircularProgressIndicator(key: Key('chat-loading')));
+      return const Center(
+          child: CircularProgressIndicator(key: Key('chat-loading')));
     }
     if (_error != null && _snap == null) {
       return Text('движок недоступен\n$_error', key: const Key('chat-error'));
     }
     final snap = _snap!;
-    final state = chatNetworkState(network: snap.network, peerCount: snap.peers.length);
+    final state =
+        chatNetworkState(network: snap.network, peerCount: snap.peers.length);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          formatStatusStrip(snap),
-          key: const Key('chat-status'),
-          style: DudkaType.mono(size: 13, weight: FontWeight.w700, letterSpacing: 1.2),
+        Row(
+          key: const Key('chat-header'),
+          children: [
+            Expanded(
+              child: Text(
+                formatStatusStrip(snap),
+                key: const Key('chat-status'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: DudkaType.mono(
+                  size: 13,
+                  weight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            IconButton(
+              key: const Key('chat-settings'),
+              tooltip: 'Настройки',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: _openSettings,
+            ),
+          ],
         ),
-        Text(
-          'вы: ${snap.me.name}',
-          key: const Key('chat-nick'),
-          style: DudkaType.mono(size: 12, color: DudkaColors.silkscreenDim),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -281,8 +281,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   alignment: Alignment.topLeft,
                   decoration: const BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
-                      right: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
+                      top: BorderSide(
+                          color: DudkaColors.silkscreenDim, width: 1),
+                      right: BorderSide(
+                          color: DudkaColors.silkscreenDim, width: 1),
                     ),
                   ),
                   padding: const EdgeInsets.fromLTRB(0, 8, 12, 0),
@@ -314,7 +316,8 @@ class _ChatScreenState extends State<ChatScreen> {
             key: const Key('chat-peers'),
             alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+              border: Border(
+                  top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
             ),
             padding: const EdgeInsets.only(top: 8),
             child: KeyedSubtree(
@@ -341,16 +344,19 @@ class _ChatScreenState extends State<ChatScreen> {
             alignment: Alignment.topLeft,
             decoration: const BoxDecoration(
               color: DudkaColors.panelDeep,
-              border: Border(top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+              border: Border(
+                  top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
             ),
             padding: const EdgeInsets.only(top: 8),
             child: _feedPane(snap),
           ),
         ),
         if (_sendError != null)
-          Text(_sendError!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+          Text(_sendError!,
+              style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
         if (_fileError != null)
-          Text(_fileError!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+          Text(_fileError!,
+              style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
         const SizedBox(height: 8),
         _composeRow(),
       ],
@@ -358,35 +364,128 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _composeRow() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: TextField(
-            key: const Key('chat-compose'),
-            controller: _compose,
-            enabled: !_sending,
-            decoration: const InputDecoration(
-              hintText: 'текст…',
-              border: OutlineInputBorder(),
-              isDense: true,
+        if (_pendingFiles.isNotEmpty) ...[
+          SizedBox(
+            key: const Key('chat-pending-files'),
+            height: 84,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _pendingFiles.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) =>
+                  _pendingFile(_pendingFiles[index], index),
             ),
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _blow(),
           ),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton(
-          key: const Key('chat-file'),
-          onPressed: _announcing ? null : _announcePicked,
-          child: Text(_announcing ? '…' : 'ФАЙЛ'),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          key: const Key('chat-blow'),
-          onPressed: _sending ? null : _blow,
-          child: const Text('ОТПРАВИТЬ'),
+          const SizedBox(height: 8),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    meta: true,
+                  ): _blow,
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    control: true,
+                  ): _blow,
+                },
+                child: TextField(
+                  key: const Key('chat-compose'),
+                  controller: _compose,
+                  enabled: !_sending,
+                  minLines: 1,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    hintText: 'текст или комментарий…',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  textInputAction: TextInputAction.newline,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const Key('chat-file'),
+              tooltip: 'Прикрепить файлы',
+              onPressed: _picking ? null : _pickFiles,
+              icon: _picking
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.attach_file),
+            ),
+            const SizedBox(width: 2),
+            IconButton.filled(
+              key: const Key('chat-blow'),
+              tooltip: 'Отправить · ⌘/Ctrl+Enter',
+              onPressed: _sending ? null : _blow,
+              icon: _sending
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _pendingFile(LocalFileBytes file, int index) {
+    return Container(
+      key: Key('pending-file-$index'),
+      width: 148,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: DudkaColors.panelDeep,
+        border: Border.all(color: DudkaColors.silkscreenDim),
+      ),
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: 54,
+            child: isImageMime(file.mime)
+                ? Image.memory(
+                    Uint8List.fromList(file.bytes),
+                    key: Key('pending-thumb-$index'),
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.insert_drive_file_outlined),
+                  )
+                : const Icon(Icons.insert_drive_file_outlined),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              file.name,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: DudkaType.mono(size: 11),
+            ),
+          ),
+          IconButton(
+            key: Key('pending-remove-$index'),
+            tooltip: 'Убрать',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 24, height: 24),
+            onPressed: _sending
+                ? null
+                : () => setState(() => _pendingFiles.remove(file)),
+            icon: const Icon(Icons.close, size: 16),
+          ),
+        ],
+      ),
     );
   }
 
@@ -408,7 +507,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (_seekError != null) ...[
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(_seekError!, style: const TextStyle(color: Colors.red)),
+                    child: Text(_seekError!,
+                        style: const TextStyle(color: Colors.red)),
                   ),
                 ],
               ],
@@ -546,7 +646,25 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
     if (status == 'done') {
-      return Text('готово', key: Key('file-done-$fileId'));
+      final path = tr?.path.trim() ?? '';
+      return Column(
+        key: Key('file-done-$fileId'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            path.isEmpty ? 'скачано · путь не получен' : 'скачано · $path',
+          ),
+          if (path.isNotEmpty)
+            TextButton.icon(
+              key: Key('file-reveal-$fileId'),
+              onPressed: () => _revealFile(path),
+              icon: const Icon(Icons.folder_open_outlined),
+              label: Text(
+                Platform.isMacOS ? 'ПОКАЗАТЬ В FINDER' : 'ПОКАЗАТЬ ФАЙЛ',
+              ),
+            ),
+        ],
+      );
     }
     if (status == 'cancelled') {
       return Text('отменено', key: Key('file-cancelled-$fileId'));

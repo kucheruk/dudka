@@ -29,6 +29,8 @@ type AnnounceResult struct {
 func DetectMIME(name string) string {
 	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(name)))
 	switch ext {
+	case ".gif":
+		return "image/gif"
 	case ".jpg", ".jpeg":
 		return "image/jpeg"
 	case ".png":

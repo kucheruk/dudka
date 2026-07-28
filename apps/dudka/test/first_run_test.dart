@@ -94,7 +94,8 @@ void main() {
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
         }
-        return chatSnapshotResponse(req, meName: 'localhost') ?? http.Response('nope', 404);
+        return chatSnapshotResponse(req, meName: 'localhost') ??
+            http.Response('nope', 404);
       }),
     );
 
@@ -120,12 +121,14 @@ void main() {
     client.close();
   });
 
-  testWidgets('confirmed nick skips first-run straight to chat', (tester) async {
+  testWidgets('confirmed nick skips first-run straight to chat',
+      (tester) async {
     await store.markNickConfirmed();
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        return chatSnapshotResponse(req, meName: 'Katya') ?? http.Response('nope', 404);
+        return chatSnapshotResponse(req, meName: 'Katya') ??
+            http.Response('nope', 404);
       }),
     );
     await tester.pumpWidget(
@@ -139,7 +142,7 @@ void main() {
     await pumpFrames(tester);
     expect(find.byType(ChatScreen), findsOneWidget);
     expect(find.byType(FirstRunNickScreen), findsNothing);
-    expect(find.text('вы: Katya'), findsOneWidget);
+    expect(find.textContaining('ДУДКА · Katya'), findsOneWidget);
     expect(find.byKey(const Key('chat-status')), findsOneWidget);
     client.close();
   });

@@ -1,4 +1,4 @@
-/// Nick fallbacks for first-run (DUD-CHAT-110 / P062).
+// Nick fallbacks for first-run (DUD-CHAT-110 / P062).
 
 const adjectives = <String>[
   'Сонный',

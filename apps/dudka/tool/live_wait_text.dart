@@ -1,7 +1,7 @@
 import 'package:dudka/engine/client.dart';
 
 /// Poll EngineClient.fetchSnapshot until [needle] appears in feed (P071).
-/// Usage: dart run tool/live_wait_text.dart <engine-base-url> <needle...> [--timeout-ms N]
+/// Usage: `dart run tool/live_wait_text.dart <engine-base-url> <needle...> [--timeout-ms N]`
 Future<void> main(List<String> args) async {
   if (args.length < 2) {
     throw StateError(

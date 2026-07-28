@@ -19,7 +19,15 @@ trap 'rm -rf "$tmpdir"; for p in ${pid_a:-} ${pid_b:-}; do [[ -n "$p" ]] && kill
 go build -o "$tmpdir/dudkad" ./cmd/dudkad || fail "build dudkad"
 go build -o "$tmpdir/dudka" ./cmd/dudka || fail "build dudka"
 
-port="$(python3 - <<'PY'
+port_a="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_b="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("127.0.0.1", 0))
@@ -30,10 +38,12 @@ PY
 
 log_a="$tmpdir/a.log"; log_b="$tmpdir/b.log"
 "$tmpdir/dudkad" -data-dir "$tmpdir/a" -name "Аня" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
+  -announce-port "$port_a" -announce-target "127.0.0.1:${port_b}" \
+  -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
 pid_a=$!
 "$tmpdir/dudkad" -data-dir "$tmpdir/b" -name "Боря" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
+  -announce-port "$port_b" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
 pid_b=$!
 
 listen_a=""; listen_b=""

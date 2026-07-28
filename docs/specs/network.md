@@ -110,3 +110,24 @@ Status: Draft
 
 Зависимости: DUD-UI-120  
 ADR: не требуется
+
+### DUD-NET-150
+
+Priority: P0
+Status: Accepted
+
+Пользовательская команда «ИСКАТЬ» не требует ручной передачи hosts/CIDR.
+При пустом `POST /scan` engine выбирает наиболее вероятный активный RFC1918
+интерфейс, ограничивает диапазон максимум одним `/24` вокруг локального адреса
+и пробует адреса параллельно в пределах общего timeout. Явные `hosts`/`cidr`
+для диагностики сохраняются.
+
+Проверка:
+
+- пустой request не отвечает `scan requires hosts or private cidr`;
+- network/broadcast/self адреса не пробуются;
+- public CIDR по-прежнему отвергается;
+- evidence: `internal/discovery/scan_test.go`, `scripts/scan_test.sh`.
+
+Зависимости: DUD-NET-101, DUD-NET-110
+ADR: не требуется

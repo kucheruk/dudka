@@ -18,7 +18,8 @@ Future<void> pumpFrames(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('skeleton opens chat with /me nick after first-run done', (tester) async {
+  testWidgets('skeleton opens chat with /me nick after first-run done',
+      (tester) async {
     final tmp = Directory.systemTemp.createTempSync('dudka-skel-');
     addTearDown(() {
       if (tmp.existsSync()) tmp.deleteSync(recursive: true);
@@ -29,7 +30,8 @@ void main() {
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
       httpClient: MockClient((req) async {
-        return chatSnapshotResponse(req, meName: 'Skeleton') ?? http.Response('nope', 404);
+        return chatSnapshotResponse(req, meName: 'Skeleton') ??
+            http.Response('nope', 404);
       }),
     );
     await tester.pumpWidget(
@@ -42,7 +44,7 @@ void main() {
     );
     await pumpFrames(tester);
     expect(find.byType(ChatScreen), findsOneWidget);
-    expect(find.text('вы: Skeleton'), findsOneWidget);
+    expect(find.textContaining('ДУДКА · Skeleton'), findsOneWidget);
     expect(find.byKey(const Key('chat-status')), findsOneWidget);
     expect(find.textContaining('spike'), findsNothing);
     client.close();

@@ -1,10 +1,11 @@
 import 'package:dudka/engine/client.dart';
 
 /// Live: EngineClient.startScan against a running dudkad.
-/// Usage: dart run tool/live_scan.dart <engine-base-url> [host] [port]
+/// Usage: `dart run tool/live_scan.dart <engine-base-url> [host] [port]`
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
-    throw StateError('usage: dart run tool/live_scan.dart <engine-base-url> [host] [port]');
+    throw StateError(
+        'usage: dart run tool/live_scan.dart <engine-base-url> [host] [port]');
   }
   final c = EngineClient(baseUrl: args.first);
   List<String>? hosts;

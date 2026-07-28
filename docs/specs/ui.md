@@ -147,3 +147,64 @@ Status: Accepted
 
 Зависимости: нет  
 ADR: не требуется
+
+### DUD-UI-170
+
+Priority: P0
+Status: Accepted
+
+Attach открывает нативный системный выбор файлов. Один или несколько выбранных
+файлов добавляются в черновик compose и не публикуются до явной отправки.
+Черновик показывает thumbnail для изображения или файловую метку, имя и
+действие удаления. Текст compose отправляется как комментарий перед
+file-announce; разрешена отправка только файлов.
+
+Проверка:
+
+- attach не требует ручного ввода пути и поддерживает multi-select;
+- после выбора `POST /files/announce` ещё не вызван;
+- send публикует текст и все оставшиеся вложения, затем очищает их;
+- evidence: `apps/dudka/test/file_transfer_test.dart`, macOS build.
+
+Зависимости: DUD-FILE-101
+ADR: не требуется
+
+### DUD-UI-171
+
+Priority: P0
+Status: Accepted
+
+Главный экран использует один компактный хедер со status и настройками.
+Текст ленты выделяется и копируется системными средствами. Enter вставляет
+перенос строки; Cmd+Enter на macOS и Ctrl+Enter на Windows/Linux отправляют.
+Attach и send показаны иконками скрепки и самолётика с русскими tooltip.
+
+Проверка:
+
+- нет отдельного AppBar «Чат» над status strip;
+- лента находится внутри selection-контейнера;
+- compose многострочный и имеет оба keyboard shortcut;
+- evidence: `apps/dudka/test/chat_screen_test.dart`,
+  `apps/dudka/test/compose_send_test.dart`.
+
+Зависимости: DUD-UI-101
+ADR: не требуется
+
+### DUD-UI-172
+
+Priority: P1
+Status: Accepted
+
+Иконка приложения следует миру rhythm-machine panel: charcoal‑панель,
+силуэт раструба и четыре step-индикатора red/orange/yellow/white. Один мастер
+порождает нативные размеры macOS, iOS, Android и Windows; дефолтный Flutter
+знак не используется.
+
+Проверка:
+
+- asset catalogs/resources всех четырёх GUI-платформ содержат новый знак;
+- мастер: `apps/dudka/assets/branding/app_icon_master.png`;
+- evidence: platform builds и визуальная проверка 1024/16 px.
+
+Зависимости: DUD-UI-160
+ADR: не требуется

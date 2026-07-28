@@ -26,7 +26,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
@@ -51,7 +52,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
@@ -75,7 +77,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
@@ -88,13 +91,23 @@ void main() {
     await tester.pump();
     await pumpFrames(tester);
     expect(find.byKey(const Key('chat-layout-wide')), findsOneWidget);
-    expect(tester.widget<TextField>(find.byKey(const Key('chat-compose'))).controller!.text, draft);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('chat-compose')))
+            .controller!
+            .text,
+        draft);
 
     await tester.binding.setSurfaceSize(const Size(360, 640));
     await tester.pump();
     await pumpFrames(tester);
     expect(find.byKey(const Key('chat-layout-narrow')), findsOneWidget);
-    expect(tester.widget<TextField>(find.byKey(const Key('chat-compose'))).controller!.text, draft);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('chat-compose')))
+            .controller!
+            .text,
+        draft);
 
     client.close();
   });

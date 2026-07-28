@@ -2,11 +2,45 @@ package discovery_test
 
 import (
 	"context"
+	"errors"
+	"net"
 	"testing"
 	"time"
 
 	"dudka/internal/discovery"
 )
+
+func TestPrivateScanCIDRStaysAroundLocalAddress(t *testing.T) {
+	t.Parallel()
+	if got := discovery.PrivateScanCIDR(net.ParseIP("192.168.42.19"), 16); got != "192.168.42.0/24" {
+		t.Fatalf("got %q", got)
+	}
+	if got := discovery.PrivateScanCIDR(net.ParseIP("10.20.30.140"), 25); got != "10.20.30.128/25" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestScanWithoutArgumentsDerivesPrivateCIDR(t *testing.T) {
+	t.Parallel()
+	node := discovery.NewNode(discovery.Config{
+		PeerID:      "peer-a",
+		DisplayName: "Alice",
+		InstanceID:  "inst-a",
+		ScanCIDR: func() (string, error) {
+			return "192.168.77.0/30", nil
+		},
+		Dialer: func(_, _ string, _ time.Duration) (net.Conn, error) {
+			return nil, errors.New("closed")
+		},
+	})
+	res, err := node.Scan(context.Background(), discovery.ScanRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Probed != 2 {
+		t.Fatalf("res=%+v", res)
+	}
+}
 
 func TestScanFindsPeerWithoutBroadcast(t *testing.T) {
 	t.Parallel()

@@ -91,7 +91,8 @@ void main() {
     client.close();
   });
 
-  testWidgets('feed shows file actions: download progress cancel', (tester) async {
+  testWidgets('feed shows file actions: download progress cancel',
+      (tester) async {
     final messages = <Map<String, Object?>>[
       {
         'type': 'file_announce',
@@ -195,7 +196,7 @@ void main() {
         home: ChatScreen(
           client: client,
           pollInterval: Duration.zero,
-          pickLocalFile: () async => null, // unused in this test
+          pickFiles: () async => const [], // unused in this test
         ),
       ),
     );
@@ -224,7 +225,7 @@ void main() {
     client.close();
   });
 
-  testWidgets('ФАЙЛ announces picked bytes into feed', (tester) async {
+  testWidgets('picker queues file; send icon announces it', (tester) async {
     final messages = <Map<String, Object?>>[];
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
@@ -294,11 +295,13 @@ void main() {
         home: ChatScreen(
           client: client,
           pollInterval: Duration.zero,
-          pickLocalFile: () async => LocalFileBytes(
-            name: 'hi.txt',
-            mime: 'text/plain',
-            bytes: utf8.encode('hi'),
-          ),
+          pickFiles: () async => [
+            LocalFileBytes(
+              name: 'hi.txt',
+              mime: 'text/plain',
+              bytes: utf8.encode('hi'),
+            ),
+          ],
         ),
       ),
     );
@@ -310,7 +313,95 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await pumpFrames(tester);
 
+    expect(find.byKey(const Key('chat-pending-files')), findsOneWidget);
+    expect(find.text('hi.txt'), findsOneWidget);
+    expect(find.textContaining('ФАЙЛ hi.txt'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('chat-blow')));
+    await tester.pump(const Duration(milliseconds: 200));
+    await pumpFrames(tester);
+
     expect(find.textContaining('ФАЙЛ hi.txt'), findsOneWidget);
+    expect(find.byKey(const Key('chat-pending-files')), findsNothing);
+    client.close();
+  });
+
+  testWidgets('completed download shows path and reveals it', (tester) async {
+    const path = '/tmp/dudka/inbox/f1/doc.bin';
+    var revealed = '';
+    final client = EngineClient(
+      baseUrl: 'http://127.0.0.1:9',
+      httpClient: MockClient((req) async {
+        switch (req.url.path) {
+          case '/me':
+            return http.Response('{"peer_id":"me1","name":"Anya"}', 200);
+          case '/peers':
+            return http.Response(
+              '{"peers":[{"peer_id":"p2","display_name":"Boris"}]}',
+              200,
+            );
+          case '/status':
+            return http.Response(
+              '{"proto_major":1,"proto_minor":0,"network":"ok"}',
+              200,
+            );
+          case '/messages':
+            return http.Response(
+              jsonEncode({
+                'messages': [
+                  {
+                    'type': 'file_announce',
+                    'msg_id': 'm1',
+                    'peer_id': 'p2',
+                    'display_name_at_send': 'Boris',
+                    'ts': '2026-07-28T10:00:00Z',
+                    'file_id': 'f1',
+                    'name': 'doc.bin',
+                    'size': 100,
+                    'mime': 'application/octet-stream',
+                    'hash': 'sha256:x',
+                  },
+                ],
+              }),
+              200,
+            );
+          case '/files/transfers':
+            return http.Response(
+              jsonEncode({
+                'transfers': [
+                  {
+                    'file_id': 'f1',
+                    'name': 'doc.bin',
+                    'percent': 100,
+                    'status': 'done',
+                    'path': path,
+                  },
+                ],
+              }),
+              200,
+            );
+          default:
+            return http.Response('nope', 404);
+        }
+      }),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          revealFile: (value) async => revealed = value,
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.textContaining(path), findsOneWidget);
+    expect(find.byKey(const Key('file-reveal-f1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('file-reveal-f1')));
+    await tester.pump();
+    expect(revealed, path);
     client.close();
   });
 }

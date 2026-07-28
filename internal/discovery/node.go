@@ -34,9 +34,10 @@ type Config struct {
 	OnAnnounce  func(Announce, net.Addr)
 	Logf        func(format string, args ...any)
 	DialTimeout time.Duration
-	Dialer      DialFunc // default: net.DialTimeout
-	DialHosts   []string // optional seed hosts from config; dialed after Start (LAN-only)
-	IsAgent     bool     // home-agent marker in announce/register (DUD-AGT-120)
+	Dialer      DialFunc               // default: net.DialTimeout
+	DialHosts   []string               // optional seed hosts from config; dialed after Start (LAN-only)
+	ScanCIDR    func() (string, error) // default: derive active private LAN
+	IsAgent     bool                   // home-agent marker in announce/register (DUD-AGT-120)
 	// OnChatLine handles inbound NDJSON feed lines: "chat" (P030) and "file_announce" (P050).
 	OnChatLine func(host string, line []byte)
 	// OnTailRequest handles inbound type "tail_req" (P033); write response on conn.
@@ -51,12 +52,12 @@ type Config struct {
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
 type Node struct {
-	cfg     Config
-	mu      sync.Mutex
-	conn    net.PacketConn
-	tcpLn   net.Listener
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	cfg           Config
+	mu            sync.Mutex
+	conn          net.PacketConn
+	tcpLn         net.Listener
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
 	local         net.Addr
 	dialing       map[string]struct{}
 	tcpPort       int

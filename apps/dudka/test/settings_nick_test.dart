@@ -15,7 +15,8 @@ Future<void> pumpFrames(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 50));
 }
 
-EngineClient mockClient({required String Function() meName, String? Function(String)? onNick}) {
+EngineClient mockClient(
+    {required String Function() meName, String? Function(String)? onNick}) {
   return EngineClient(
     baseUrl: 'http://127.0.0.1:9',
     httpClient: MockClient((req) async {
@@ -67,7 +68,8 @@ EngineClient mockClient({required String Function() meName, String? Function(Str
 }
 
 void main() {
-  testWidgets('settings screen is nick-only (no avatar/email/phone)', (tester) async {
+  testWidgets('settings screen is nick-only (no avatar/email/phone)',
+      (tester) async {
     final client = mockClient(meName: () => 'OldNick');
     await tester.pumpWidget(
       MaterialApp(
@@ -86,7 +88,8 @@ void main() {
     client.close();
   });
 
-  testWidgets('chat opens settings; save nick updates chat strip', (tester) async {
+  testWidgets('chat opens settings; save nick updates chat strip',
+      (tester) async {
     var name = 'OldNick';
     final client = mockClient(
       meName: () => name,
@@ -97,18 +100,20 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
-    expect(find.text('вы: OldNick'), findsOneWidget);
+    expect(find.textContaining('ДУДКА · OldNick'), findsOneWidget);
     expect(find.byKey(const Key('chat-settings')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('chat-settings')));
     await pumpFrames(tester);
 
     expect(find.byType(SettingsNickScreen), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('settings-nick-field')), 'NewNick');
+    await tester.enterText(
+        find.byKey(const Key('settings-nick-field')), 'NewNick');
     await tester.tap(find.byKey(const Key('settings-nick-save')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -117,7 +122,7 @@ void main() {
 
     expect(find.byType(SettingsNickScreen), findsNothing);
     expect(find.byType(ChatScreen), findsOneWidget);
-    expect(find.text('вы: NewNick'), findsOneWidget);
+    expect(find.textContaining('ДУДКА · NewNick'), findsOneWidget);
     expect(find.textContaining('NewNick'), findsWidgets);
     client.close();
   });

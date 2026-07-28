@@ -39,6 +39,17 @@ func (n *Node) Scan(ctx context.Context, req ScanRequest) (ScanResult, error) {
 	}
 
 	hosts := append([]string{}, req.Hosts...)
+	if len(hosts) == 0 && strings.TrimSpace(req.CIDR) == "" {
+		probe := n.cfg.ScanCIDR
+		if probe == nil {
+			probe = DefaultPrivateScanCIDR
+		}
+		cidr, err := probe()
+		if err != nil {
+			return ScanResult{}, err
+		}
+		req.CIDR = cidr
+	}
 	if len(hosts) == 0 && req.CIDR != "" {
 		expanded, err := ExpandPrivateCIDR(req.CIDR, 256)
 		if err != nil {
@@ -51,40 +62,94 @@ func (n *Node) Scan(ctx context.Context, req ScanRequest) (ScanResult, error) {
 	}
 
 	selfTCP := n.TCPPort()
+	localIPs := localInterfaceIPs()
 	var out ScanResult
 	seen := map[string]struct{}{}
+	candidates := make([]string, 0, len(hosts))
 	for _, host := range hosts {
-		select {
-		case <-ctx.Done():
-			out.Peers = n.cfg.Peers.List()
-			return out, ctx.Err()
-		default:
-		}
 		host = strings.TrimSpace(host)
 		if host == "" || host == "0.0.0.0" {
 			continue
 		}
-		// Skip probing our own TCP listener on loopback.
-		if (host == "127.0.0.1" || host == "::1") && port == selfTCP {
+		// Skip probing our own listener on loopback or a LAN address.
+		if _, local := localIPs[host]; local && port == selfTCP {
 			continue
 		}
-		out.Probed++
-		peer, err := n.dialRegister(host, port)
-		if err != nil || peer == nil {
+		if _, duplicate := seen[host]; duplicate {
 			continue
 		}
-		if _, ok := seen[peer.PeerID]; ok {
-			continue
+		seen[host] = struct{}{}
+		candidates = append(candidates, host)
+	}
+
+	type hit struct {
+		host string
+		peer *Peer
+	}
+	hits := make(chan hit, len(candidates))
+	for _, host := range candidates {
+		host := host
+		go func() {
+			peer, _ := n.dialRegister(host, port)
+			select {
+			case hits <- hit{host: host, peer: peer}:
+			case <-ctx.Done():
+			}
+		}()
+	}
+
+	out.Probed = len(candidates)
+	seen = map[string]struct{}{}
+	for range candidates {
+		select {
+		case <-ctx.Done():
+			out.Peers = n.cfg.Peers.List()
+			return out, ctx.Err()
+		case found := <-hits:
+			if found.peer == nil {
+				continue
+			}
+			if _, ok := seen[found.peer.PeerID]; ok {
+				continue
+			}
+			seen[found.peer.PeerID] = struct{}{}
+			out.Found++
+			out.Peers = append(out.Peers, *found.peer)
+			n.cfg.Logf(
+				"scan_hit peer_id=%s name=%s addr=%s",
+				found.peer.PeerID,
+				found.peer.DisplayName,
+				net.JoinHostPort(found.host, strconv.Itoa(port)),
+			)
 		}
-		seen[peer.PeerID] = struct{}{}
-		out.Found++
-		out.Peers = append(out.Peers, *peer)
-		n.cfg.Logf("scan_hit peer_id=%s name=%s addr=%s", peer.PeerID, peer.DisplayName, net.JoinHostPort(host, strconv.Itoa(port)))
 	}
 	if out.Peers == nil {
 		out.Peers = []Peer{}
 	}
 	return out, nil
+}
+
+func localInterfaceIPs() map[string]struct{} {
+	out := map[string]struct{}{
+		"127.0.0.1": {},
+		"::1":       {},
+	}
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return out
+	}
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			if ip := addrIP(addr); ip != nil {
+				out[ip.String()] = struct{}{}
+			}
+		}
+	}
+	return out
 }
 
 // ExpandPrivateCIDR lists host IPs in a private CIDR (capped), for scan fallback.
@@ -101,13 +166,15 @@ func ExpandPrivateCIDR(cidr string, limit int) ([]string, error) {
 	}
 	ip := make(net.IP, len(ipnet.IP))
 	copy(ip, ipnet.IP.Mask(ipnet.Mask))
+	networkIP := append(net.IP(nil), ip...)
+	broadcastIP := append(net.IP(nil), networkIP...)
+	for i := range broadcastIP {
+		broadcastIP[i] |= ^ipnet.Mask[i]
+	}
 	var hosts []string
 	for ; ipnet.Contains(ip); incIP(ip) {
-		if ip4 := ip.To4(); ip4 != nil {
-			last := ip4[3]
-			if last == 0 || last == 255 {
-				continue
-			}
+		if ip.To4() != nil && (ip.Equal(networkIP) || ip.Equal(broadcastIP)) {
+			continue
 		}
 		hosts = append(hosts, ip.String())
 		if len(hosts) >= limit {

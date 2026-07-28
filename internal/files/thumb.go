@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	_ "image/gif" // register GIF decoder (first frame)
 	"image/jpeg"
 	_ "image/png" // register PNG decoder
 	"os"
@@ -20,10 +21,10 @@ const ThumbMaxEdge = 96
 // MaxThumbBytes caps on-wire thumb_b64 payload after JPEG encode.
 const MaxThumbBytes = 48 << 10
 
-// IsThumbMIME reports jpeg/png/webp/heic/heif candidates (P056/P057).
+// IsThumbMIME reports gif/jpeg/png/webp/heic/heif candidates.
 func IsThumbMIME(mime string) bool {
 	switch strings.ToLower(strings.TrimSpace(mime)) {
-	case "image/jpeg", "image/jpg", "image/png", "image/webp":
+	case "image/gif", "image/jpeg", "image/jpg", "image/png", "image/webp":
 		return true
 	default:
 		return IsHEICMIME(mime)

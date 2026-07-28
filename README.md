@@ -24,7 +24,8 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # curl -s http://127.0.0.1:17880/peers → {"peers":[{"peer_id":"…","updated":false,…}]}
 # curl -s http://127.0.0.1:17880/status → proto_major + incompatible[]
 # curl -s -X POST http://127.0.0.1:17880/scan -d '{"hosts":["192.168.1.10"],"port":41777}'
-# (scan — fallback, когда UDP broadcast отфильтрован)
+# curl -s -X POST http://127.0.0.1:17880/scan -d '{}'
+# (пустой scan сам выбирает активную приватную подсеть; explicit hosts остаются для диагностики)
 # публичный seed IP не уходит в WAN: лог wan_refuse (DUD-NET-101)
 # ./dist/dudkad -dial-hosts 8.8.8.8 …
 # curl -s -X POST http://127.0.0.1:17880/send -d '{"text":"привет"}' → accepted|queued (не «доставлено»)

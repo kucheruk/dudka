@@ -69,7 +69,10 @@ ADR: не требуется
 Priority: P0  
 Status: Partial
 
-Для mime `image/jpeg`, `image/png`, `image/webp`, `image/heic` (если платформа декодирует) в ленте показывается thumbnail без отдельного обязательного «скачать, чтобы увидеть превью». Полный файл по-прежнему по запросу/автозагрузке политики клиента.
+Для mime `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `image/heic`
+(если платформа декодирует) в ленте показывается thumbnail без отдельного
+обязательного «скачать, чтобы увидеть превью». Для GIF достаточно первого
+кадра. Полный файл по-прежнему по запросу/автозагрузке политики клиента.
 
 Проверка:
 
@@ -80,6 +83,25 @@ Status: Partial
 - evidence: `scripts/file_thumb_test.sh`, `scripts/file_heic_test.sh`, `scripts/tui_files_e2e_test.sh`, `./scripts/flutter_thumbs_test.sh` (P068).
 
 Зависимости: DUD-FILE-101  
+ADR: не требуется
+
+### DUD-FILE-140
+
+Priority: P0
+Status: Accepted
+
+Успешное скачивание не ограничивается copy «скачано»: UI показывает точный
+локальный путь. На macOS доступно действие «ПОКАЗАТЬ В FINDER», на Windows и
+Linux — эквивалентное действие системного файлового менеджера. На мобильных
+путь остаётся видимым, даже если ОС не позволяет раскрыть app-private каталог.
+
+Проверка:
+
+- `status=done` без `path` не выдаётся за полностью объяснённый успех;
+- desktop reveal получает ровно `Transfer.path`;
+- evidence: `apps/dudka/test/file_transfer_test.dart`.
+
+Зависимости: DUD-FILE-110
 ADR: не требуется
 
 ### DUD-FILE-130

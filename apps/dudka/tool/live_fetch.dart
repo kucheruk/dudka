@@ -1,7 +1,7 @@
 import 'package:dudka/engine/client.dart';
 
 /// Live: start async fetch and optionally wait for done/cancel.
-/// Usage: dart run tool/live_fetch.dart <engine-base-url> <file_id> [--wait|--cancel|--cancel-at N]
+/// Usage: `dart run tool/live_fetch.dart <engine-base-url> <file_id> [--wait|--cancel|--cancel-at N]`
 Future<void> main(List<String> args) async {
   if (args.length < 2) {
     throw StateError(
@@ -53,7 +53,9 @@ Future<void> main(List<String> args) async {
         (t) => t.fileId == fileId,
         orElse: () => tr,
       );
-      if (cancelAt != null && tr.percent >= cancelAt && tr.status == 'downloading') {
+      if (cancelAt != null &&
+          tr.percent >= cancelAt &&
+          tr.status == 'downloading') {
         tr = await c.cancelFetch(fileId);
         // ignore: avoid_print
         print('live_fetch cancelled status=${tr.status} percent=${tr.percent}');
@@ -63,7 +65,9 @@ Future<void> main(List<String> args) async {
         }
         return;
       }
-      if (tr.status == 'done' || tr.status == 'cancelled' || tr.status == 'error') {
+      if (tr.status == 'done' ||
+          tr.status == 'cancelled' ||
+          tr.status == 'error') {
         break;
       }
     }

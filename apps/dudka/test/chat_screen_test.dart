@@ -83,11 +83,14 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
     expect(find.byKey(const Key('chat-status')), findsOneWidget);
+    expect(find.byKey(const Key('chat-header')), findsOneWidget);
+    expect(find.text('Чат'), findsNothing);
     expect(find.textContaining('Anya'), findsWidgets);
     expect(find.textContaining('онлайн 2'), findsOneWidget);
     expect(find.textContaining('ок'), findsWidgets);
@@ -98,18 +101,22 @@ void main() {
     expect(find.textContaining('НИКОГО РЯДОМ'), findsNothing);
 
     expect(find.byKey(const Key('chat-feed')), findsOneWidget);
+    expect(find.byType(SelectionArea), findsOneWidget);
     expect(find.textContaining('12:34 · Boris · hello lane'), findsOneWidget);
 
-    expect(find.text('ОТПРАВИТЬ'), findsOneWidget);
+    expect(find.byIcon(Icons.attach_file), findsOneWidget);
+    expect(find.byIcon(Icons.send), findsOneWidget);
     expect(find.byKey(const Key('chat-compose')), findsOneWidget);
 
     client.close();
   });
 
-  testWidgets('empty peers shows НИКОГО РЯДОМ and один in status', (tester) async {
+  testWidgets('empty peers shows НИКОГО РЯДОМ and один in status',
+      (tester) async {
     final client = mockChatClient(meName: 'Katya', peers: const []);
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
@@ -124,7 +131,8 @@ void main() {
   testWidgets('no_network shows НЕТ СЕТИ without ИСКАТЬ', (tester) async {
     final client = mockChatClient(meName: 'Katya', network: 'no_network');
     await tester.pumpWidget(
-      MaterialApp(home: ChatScreen(client: client, pollInterval: Duration.zero)),
+      MaterialApp(
+          home: ChatScreen(client: client, pollInterval: Duration.zero)),
     );
     await pumpFrames(tester);
 
