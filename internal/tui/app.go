@@ -10,7 +10,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const tickInterval = 500 * time.Millisecond
+const (
+	tickInterval           = 500 * time.Millisecond
+	clipboardPulseDuration = tickInterval + 250*time.Millisecond
+)
 
 type tickMsg time.Time
 
@@ -140,7 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.clipboard = osc52Sequence(report)
 			m.statusMsg = "ДИАГНОСТИКА СКОПИРОВАНА"
 			m.statusErr = false
-			return m, tea.Tick(80*time.Millisecond, func(time.Time) tea.Msg {
+			return m, tea.Tick(clipboardPulseDuration, func(time.Time) tea.Msg {
 				return clipboardPulseDoneMsg{}
 			})
 		case tea.KeyUp:

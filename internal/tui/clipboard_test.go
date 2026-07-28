@@ -117,3 +117,10 @@ func TestF5WithoutErrorDoesNothing(t *testing.T) {
 		t.Fatal("F5 without an error must not emit OSC52")
 	}
 }
+
+func TestClipboardPulseOutlivesOneRefreshFrame(t *testing.T) {
+	t.Parallel()
+	if clipboardPulseDuration <= tickInterval {
+		t.Fatalf("clipboard pulse %s must outlive refresh frame %s", clipboardPulseDuration, tickInterval)
+	}
+}
