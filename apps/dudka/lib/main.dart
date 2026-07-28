@@ -8,6 +8,8 @@ import 'desktop/desktop_lifecycle.dart';
 import 'engine/bundle.dart';
 import 'engine/client.dart';
 import 'engine/host.dart';
+import 'session/first_run_store.dart';
+import 'storage/app_paths.dart';
 import 'update/update_manager.dart';
 
 /// macOS-first shell (P061/P081).
@@ -25,15 +27,28 @@ Future<void> main(List<String> arguments) async {
 
   late final String engineBase;
   EngineHost? hostedEngine;
+  final firstRunStore = FirstRunStore.inDir(DudkaAppPaths.shellDataDir());
 
   if (predefined.isNotEmpty) {
     engineBase = predefined;
   } else {
     final bin = binDefine.isNotEmpty ? binDefine : resolveBundledDudkadBin();
     if (bin != null && bin.isNotEmpty) {
-      final dataDir = _defaultEngineDataDir();
-      hostedEngine =
-          EngineHost(binaryPath: bin, dataDir: dataDir.path, name: 'ДУДКА');
+      final dataDir = DudkaAppPaths.engineDataDir();
+      final engineNameFile =
+          File('${dataDir.path}${Platform.pathSeparator}display_name');
+      var engineHasName = false;
+      try {
+        engineHasName = engineNameFile.existsSync() &&
+            engineNameFile.readAsStringSync().trim().isNotEmpty;
+      } catch (_) {
+        // Let the engine report an unreadable identity file itself.
+      }
+      hostedEngine = EngineHost(
+        binaryPath: bin,
+        dataDir: dataDir.path,
+        name: engineHasName ? '' : firstRunStore.confirmedNick() ?? '',
+      );
       engineBase = await hostedEngine.start();
     } else {
       engineBase = 'http://127.0.0.1:17880';
@@ -62,24 +77,13 @@ Future<void> main(List<String> arguments) async {
     await desktop.initialize(startHidden: arguments.contains('--hidden'));
   }
 
-  runApp(DudkaApp(
-    engineBase: engineBase,
-    client: EngineClient(baseUrl: engineBase),
-    updater: updater,
-    desktop: desktop,
-  ));
-}
-
-Directory _defaultEngineDataDir() {
-  final home = Platform.environment[Platform.isWindows ? 'APPDATA' : 'HOME'];
-  if (home != null && home.isNotEmpty && Platform.isMacOS) {
-    return Directory('$home/Library/Application Support/dudka/flutter-engine');
-  }
-  if (home != null && home.isNotEmpty && Platform.isWindows) {
-    return Directory('$home\\Dudka\\engine');
-  }
-  if (home != null && home.isNotEmpty) {
-    return Directory('$home/.local/share/dudka/engine');
-  }
-  return Directory('${Directory.systemTemp.path}/dudka-flutter-engine');
+  runApp(
+    DudkaApp(
+      engineBase: engineBase,
+      client: EngineClient(baseUrl: engineBase),
+      firstRunStore: firstRunStore,
+      updater: updater,
+      desktop: desktop,
+    ),
+  );
 }

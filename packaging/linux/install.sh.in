@@ -1,0 +1,45 @@
+#!/bin/sh
+# Install the current Dudka GUI package on Ubuntu/Debian-compatible amd64.
+set -eu
+
+version='@VERSION@'
+expected_sha256='@DEB_SHA256@'
+default_url="https://github.com/kucheruk/dudka/releases/download/v${version}/dudka-linux-amd64.deb"
+deb_url="${DUDKA_DEB_URL:-$default_url}"
+
+fail() {
+  echo "Не удалось установить Дудку: $*" >&2
+  exit 1
+}
+
+[ "$(uname -s)" = "Linux" ] || fail "нужен Linux"
+command -v curl >/dev/null 2>&1 || fail "не найден curl"
+command -v dpkg >/dev/null 2>&1 || fail "не найден dpkg"
+command -v dpkg-deb >/dev/null 2>&1 || fail "не найден dpkg-deb"
+command -v apt-get >/dev/null 2>&1 || fail "не найден apt"
+command -v sha256sum >/dev/null 2>&1 || fail "не найден sha256sum"
+[ "$(dpkg --print-architecture)" = "amd64" ] || fail "пока поддерживается amd64"
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/dudka-install.XXXXXX")"
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+deb="$work/dudka-linux-amd64.deb"
+
+echo "Скачиваю Дудку ${version}…"
+curl -fL --retry 3 --connect-timeout 15 -o "$deb" "$deb_url"
+printf '%s  %s\n' "$expected_sha256" "$deb" | sha256sum -c - >/dev/null ||
+  fail "контрольная сумма пакета не совпала"
+dpkg-deb --info "$deb" >/dev/null || fail "скачан повреждённый DEB"
+
+if [ "${DUDKA_INSTALL_DRY_RUN:-0}" = "1" ]; then
+  echo "Пакет Дудки ${version} проверен."
+  exit 0
+fi
+
+echo "Устанавливаю Дудку…"
+if [ "$(id -u)" -eq 0 ]; then
+  apt-get install -y "$deb"
+else
+  command -v sudo >/dev/null 2>&1 || fail "не найден sudo"
+  sudo apt-get install -y "$deb"
+fi
+echo "Готово. Откройте ДУДКУ из меню приложений."

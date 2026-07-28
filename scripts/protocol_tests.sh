@@ -17,6 +17,7 @@ tests=(
   scan_test.sh
   wan_test.sh
   send_test.sh
+  reinstall_persistence_test.sh
   tail_test.sh
   keeper_leave_test.sh
   besteffort_test.sh

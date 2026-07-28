@@ -64,7 +64,14 @@ sed \
 DEB="$OUT/dudka-linux-${ARCH}.deb"
 rm -f "$DEB"
 dpkg-deb --build "$PKG" "$DEB" >/dev/null
+DEB_SHA256="$(sha256sum "$DEB" | awk '{print $1}')"
+sed \
+  -e "s/@VERSION@/$VERSION/g" \
+  -e "s/@DEB_SHA256@/$DEB_SHA256/g" \
+  packaging/linux/install.sh.in >"$OUT/install.sh"
+chmod 0755 "$OUT/install.sh"
 
 echo "OK"
 echo "  installer: $DEB"
 echo "  bundle:    $TAR"
+echo "  one-liner: $OUT/install.sh"

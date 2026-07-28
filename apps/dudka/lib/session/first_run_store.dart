@@ -24,8 +24,26 @@ class FirstRunStore {
     }
   }
 
-  Future<void> markNickConfirmed() async {
+  String? confirmedNick() {
+    if (!file.existsSync()) return null;
+    try {
+      final map = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      if (map['nick_confirmed'] != true) return null;
+      final nick = (map['nick'] as String?)?.trim() ?? '';
+      return nick.isEmpty ? null : nick;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> markNickConfirmed([String? nick]) async {
     file.parent.createSync(recursive: true);
-    file.writeAsStringSync(jsonEncode({'nick_confirmed': true}));
+    final normalized = nick?.trim() ?? '';
+    file.writeAsStringSync(
+      jsonEncode({
+        'nick_confirmed': true,
+        if (normalized.isNotEmpty) 'nick': normalized,
+      }),
+    );
   }
 }

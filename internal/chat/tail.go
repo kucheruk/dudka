@@ -168,7 +168,9 @@ func (h *Hub) fetchTail(p discovery.Peer) error {
 	for _, msg := range env.Messages {
 		m := msg
 		h.materializeThumb(&m)
-		_ = h.store.Append(m)
+		if _, err := h.store.AppendPersistent(m); err != nil {
+			h.logf("tail_persist_err msg_id=%s err=%v", m.MsgID, err)
+		}
 	}
 	return nil
 }

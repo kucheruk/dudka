@@ -65,7 +65,11 @@ func main() {
 	fmt.Printf("instance_id=%s\n", instanceID)
 
 	peers := discovery.NewPeerStore()
-	msgs := chat.NewStore()
+	msgs, err := chat.NewPersistentStore(filepath.Join(*dataDir, "messages.json"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dudkad: history: %v\n", err)
+		os.Exit(1)
+	}
 	blobs, err := files.NewStore(filepath.Join(*dataDir, "blobs"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: blobs: %v\n", err)
@@ -89,15 +93,15 @@ func main() {
 		}
 	}
 	disc := discovery.NewNode(discovery.Config{
-		PeerID:      peerID,
-		DisplayName: displayName,
-		InstanceID:  instanceID,
-		UDPPort:     *announcePort,
-		TCPPort:     *sessionPort,
-		Interval:    *announceInterval,
-		Target:      *announceTarget,
-		DialHosts:   seeds,
-		IsAgent:     *asAgent,
+		PeerID:             peerID,
+		DisplayName:        displayName,
+		InstanceID:         instanceID,
+		UDPPort:            *announcePort,
+		TCPPort:            *sessionPort,
+		Interval:           *announceInterval,
+		Target:             *announceTarget,
+		DialHosts:          seeds,
+		IsAgent:            *asAgent,
 		Peers:              peers,
 		OnChatLine:         hub.HandleChatLine,
 		OnTailRequest:      hub.HandleTailRequest,

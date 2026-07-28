@@ -4,11 +4,7 @@ import 'dart:io';
 
 /// Spawns local `dudkad` (subprocess + loopback) and yields its HTTP base URL (P061).
 class EngineHost {
-  EngineHost({
-    required this.binaryPath,
-    required this.dataDir,
-    this.name = 'ДУДКА',
-  });
+  EngineHost({required this.binaryPath, required this.dataDir, this.name = ''});
 
   final String binaryPath;
   final String dataDir;
@@ -48,20 +44,7 @@ class EngineHost {
 
     final proc = await Process.start(
       binaryPath,
-      [
-        '-data-dir',
-        dataDir,
-        '-name',
-        name,
-        '-listen',
-        '127.0.0.1:0',
-        '-announce-port',
-        '$announcePort',
-        '-session-port',
-        '0',
-        '-announce-interval',
-        '1h',
-      ],
+      arguments(announcePort: announcePort),
       mode: ProcessStartMode.normal,
     );
     _proc = proc;
@@ -70,10 +53,9 @@ class EngineHost {
     var ready = false;
     final done = Completer<void>();
     // Keep draining stdout/stderr so dudkad cannot block on a full pipe.
-    proc.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .listen((line) {
+    proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((
+      line,
+    ) {
       listen ??= parseListenLine(line);
       if (parseReadyLine(line)) ready = true;
       if (listen != null && ready && !done.isCompleted) {
@@ -92,6 +74,20 @@ class EngineHost {
     _baseUrl = baseUrlFromListen(listen!);
     return _baseUrl!;
   }
+
+  List<String> arguments({required int announcePort}) => [
+    '-data-dir',
+    dataDir,
+    if (name.trim().isNotEmpty) ...['-name', name.trim()],
+    '-listen',
+    '127.0.0.1:0',
+    '-announce-port',
+    '$announcePort',
+    '-session-port',
+    '0',
+    '-announce-interval',
+    '1h',
+  ];
 
   Future<void> stop() async {
     final p = _proc;

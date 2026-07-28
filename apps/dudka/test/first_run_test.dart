@@ -76,6 +76,7 @@ void main() {
     await tester.pump();
 
     expect(store.isNickConfirmed(), isTrue);
+    expect(store.confirmedNick(), 'Vasya');
     expect(find.byType(FirstRunNickScreen), findsNothing);
     expect(find.byType(ChatScreen), findsOneWidget);
     client.close();
@@ -116,13 +117,15 @@ void main() {
     await tester.pump();
 
     expect(store.isNickConfirmed(), isTrue);
+    expect(store.confirmedNick(), 'Сонный+Барсук');
     expect(postedBody, contains('Сонный+Барсук'));
     expect(find.byType(ChatScreen), findsOneWidget);
     client.close();
   });
 
-  testWidgets('confirmed nick skips first-run straight to chat',
-      (tester) async {
+  testWidgets('confirmed nick skips first-run straight to chat', (
+    tester,
+  ) async {
     await store.markNickConfirmed();
     final client = EngineClient(
       baseUrl: 'http://127.0.0.1:9',
@@ -144,6 +147,37 @@ void main() {
     expect(find.byType(FirstRunNickScreen), findsNothing);
     expect(find.textContaining('ДУДКА · Katya'), findsOneWidget);
     expect(find.byKey(const Key('chat-status')), findsOneWidget);
+    client.close();
+  });
+
+  testWidgets('legacy product-name placeholder asks for nick again', (
+    tester,
+  ) async {
+    await store.markNickConfirmed();
+    final client = EngineClient(
+      baseUrl: 'http://127.0.0.1:9',
+      httpClient: MockClient((req) async {
+        return chatSnapshotResponse(req, meName: 'ДУДКА') ??
+            http.Response('nope', 404);
+      }),
+    );
+    await tester.pumpWidget(
+      DudkaApp(
+        engineBase: 'http://127.0.0.1:9',
+        client: client,
+        firstRunStore: store,
+        chatPollInterval: Duration.zero,
+      ),
+    );
+    await pumpFrames(tester);
+    expect(find.byType(FirstRunNickScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('nick-field')))
+          .controller!
+          .text,
+      isEmpty,
+    );
     client.close();
   });
 }

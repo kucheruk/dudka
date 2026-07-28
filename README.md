@@ -82,6 +82,15 @@ Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shel
 Для обычной установки используйте `dudka-linux-amd64.deb`. Терминал не
 открывается, `dudkad` уже находится внутри пакета.
 
+Готовая версия устанавливается одной строкой:
+
+```bash
+curl -fsSL https://zamoo.team/dudka/install.sh | sh
+```
+
+Скрипт скачивает точный версионный DEB, сверяет SHA-256 и запускает системный
+`apt`. DEB и переносной архив остаются доступны отдельно.
+
 ## Дополнительный Linux TUI (P080)
 
 Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):

@@ -23,6 +23,7 @@ class ChatScreen extends StatefulWidget {
     this.revealFile,
     this.updater,
     this.desktop,
+    this.onNickChanged,
   });
 
   final EngineClient client;
@@ -31,6 +32,7 @@ class ChatScreen extends StatefulWidget {
   final DownloadedFileRevealer? revealFile;
   final UpdateController? updater;
   final DesktopLifecycleHandle? desktop;
+  final Future<void> Function(String nick)? onNickChanged;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -150,6 +152,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (!mounted) return;
     if (updated != null) {
+      await widget.onNickChanged?.call(updated);
       await _refresh();
     }
   }
@@ -635,7 +638,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _participantTile(PeerInfo peer, ChatSnapshot snap) {
-    final isMe = peer.peerId == snap.me.peerId ||
+    final isMe =
+        peer.peerId == snap.me.peerId ||
         (snap.me.peerId.trim().isEmpty && peer.peerId == 'self');
     return Text(
       isMe ? '${peer.displayName} · ВЫ' : peer.displayName,

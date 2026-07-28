@@ -293,3 +293,25 @@ overlay taskbar, Linux — launcher count там, где среда поддер
 
 Зависимости: DUD-UI-181
 ADR: не требуется
+
+### DUD-UI-183
+
+Priority: P0
+Status: Accepted
+
+Linux GUI поставляется тремя способами: проверяемый shell-однострочник,
+устанавливаемый `.deb` и переносной `.tar.gz`. Однострочник скачивает точный
+версионный DEB по HTTPS, проверяет встроенный SHA-256 и устанавливает его через
+системный `apt`. Основная Linux-проверка выполняется на актуальном Ubuntu CI:
+пакет устанавливается и GUI остаётся запущенным в виртуальном дисплее.
+
+Проверка:
+
+- `curl -fsSL https://zamoo.team/dudka/install.sh | sh` устанавливает GUI;
+- неверная контрольная сумма останавливает установку до `apt`;
+- `.deb` и `.tar.gz` остаются в том же релизе;
+- evidence: `packaging/linux/install.sh.in`,
+  `./scripts/build_linux_app_test.sh`, Ubuntu desktop workflow.
+
+Зависимости: DUD-UI-180
+ADR: не требуется

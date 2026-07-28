@@ -32,12 +32,18 @@
 ## Linux
 
 ```bash
-sudo apt install ./dudka-linux-amd64.deb
+curl -fsSL https://zamoo.team/dudka/install.sh | sh
 ```
 
 После установки откройте **ДУДКУ** из меню приложений. Это такое же графическое
 приложение, как на macOS. Терминальный TUI остаётся отдельным инструментом для
 диагностики.
+
+Если удобнее скачать файл вручную:
+
+```bash
+sudo apt install ./dudka-linux-amd64.deb
+```
 
 ## Windows
 

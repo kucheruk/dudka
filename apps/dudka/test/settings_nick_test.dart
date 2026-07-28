@@ -28,8 +28,10 @@ class FakeAutostart implements AutostartController {
   }
 }
 
-EngineClient mockClient(
-    {required String Function() meName, String? Function(String)? onNick}) {
+EngineClient mockClient({
+  required String Function() meName,
+  String? Function(String)? onNick,
+}) {
   return EngineClient(
     baseUrl: 'http://127.0.0.1:9',
     httpClient: MockClient((req) async {
@@ -81,8 +83,9 @@ EngineClient mockClient(
 }
 
 void main() {
-  testWidgets('settings screen is nick-only (no avatar/email/phone)',
-      (tester) async {
+  testWidgets('settings screen is nick-only (no avatar/email/phone)', (
+    tester,
+  ) async {
     final client = mockClient(meName: () => 'OldNick');
     await tester.pumpWidget(
       MaterialApp(
@@ -123,9 +126,11 @@ void main() {
     client.close();
   });
 
-  testWidgets('chat opens settings; save nick updates chat strip',
-      (tester) async {
+  testWidgets('chat opens settings; save nick updates chat strip', (
+    tester,
+  ) async {
     var name = 'OldNick';
+    String? redundantNick;
     final client = mockClient(
       meName: () => name,
       onNick: (n) {
@@ -136,7 +141,14 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          onNickChanged: (nick) async {
+            redundantNick = nick;
+          },
+        ),
+      ),
     );
     await pumpFrames(tester);
 
@@ -148,7 +160,9 @@ void main() {
 
     expect(find.byType(SettingsNickScreen), findsOneWidget);
     await tester.enterText(
-        find.byKey(const Key('settings-nick-field')), 'NewNick');
+      find.byKey(const Key('settings-nick-field')),
+      'NewNick',
+    );
     await tester.tap(find.byKey(const Key('settings-nick-save')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -159,6 +173,7 @@ void main() {
     expect(find.byType(ChatScreen), findsOneWidget);
     expect(find.textContaining('ДУДКА · NewNick'), findsOneWidget);
     expect(find.textContaining('NewNick'), findsWidgets);
+    expect(redundantNick, 'NewNick');
     client.close();
   });
 }

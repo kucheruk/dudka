@@ -8,6 +8,7 @@ import 'nick/fallback.dart';
 import 'screens/chat_screen.dart';
 import 'screens/first_run_nick_screen.dart';
 import 'session/first_run_store.dart';
+import 'storage/app_paths.dart';
 import 'theme/dudka_theme.dart';
 import 'update/update_manager.dart';
 
@@ -59,26 +60,18 @@ class _DudkaAppState extends State<DudkaApp> {
       suggested = me.name;
     } catch (_) {}
     if (!mounted) return;
-    // Re-read store after await — first-run may have completed meanwhile.
+    final confirmed = _store.isNickConfirmed();
+    final legacyPlaceholder =
+        confirmed && suggested.trim().toUpperCase() == 'ДУДКА';
+    // 0.4.0 and older forced the product name into the user's nick on every
+    // GUI start. Ask once again when that legacy placeholder is detected.
     setState(() {
-      _suggested = suggested;
-      _nickConfirmed = _store.isNickConfirmed();
+      _suggested = legacyPlaceholder ? '' : suggested;
+      _nickConfirmed = legacyPlaceholder ? false : confirmed;
     });
   }
 
-  Directory _defaultShellDir() {
-    final home = Platform.environment[Platform.isWindows ? 'APPDATA' : 'HOME'];
-    if (home != null && home.isNotEmpty && Platform.isMacOS) {
-      return Directory('$home/Library/Application Support/dudka/flutter-shell');
-    }
-    if (home != null && home.isNotEmpty && Platform.isWindows) {
-      return Directory('$home\\Dudka\\shell');
-    }
-    if (home != null && home.isNotEmpty) {
-      return Directory('$home/.local/share/dudka/shell');
-    }
-    return Directory('${Directory.systemTemp.path}/dudka-flutter-shell');
-  }
+  Directory _defaultShellDir() => DudkaAppPaths.shellDataDir();
 
   @override
   void dispose() {
@@ -102,15 +95,17 @@ class _DudkaAppState extends State<DudkaApp> {
     final confirmed = _nickConfirmed;
     if (confirmed == null) {
       return const Scaffold(
-        body:
-            Center(child: CircularProgressIndicator(key: Key('boot-loading'))),
+        body: Center(
+          child: CircularProgressIndicator(key: Key('boot-loading')),
+        ),
       );
     }
     if (!confirmed) {
       return FirstRunNickScreen(
         client: _client,
         suggested: _suggested,
-        hostnameForFallback: widget.hostnameForFallback ??
+        hostnameForFallback:
+            widget.hostnameForFallback ??
             () {
               try {
                 return Platform.localHostname;
@@ -119,8 +114,8 @@ class _DudkaAppState extends State<DudkaApp> {
               }
             },
         nickPick: widget.nickPick,
-        onDone: (_) async {
-          await _store.markNickConfirmed();
+        onDone: (nick) async {
+          await _store.markNickConfirmed(nick);
           if (!mounted) return;
           setState(() => _nickConfirmed = true);
         },
@@ -131,6 +126,7 @@ class _DudkaAppState extends State<DudkaApp> {
       pollInterval: widget.chatPollInterval,
       updater: widget.updater,
       desktop: widget.desktop,
+      onNickChanged: (nick) => _store.markNickConfirmed(nick),
     );
   }
 }

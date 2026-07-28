@@ -17,13 +17,13 @@ import (
 
 // Config wires a Hub to identity, peer table and dialer.
 type Config struct {
-	PeerID    string
-	Name      string
-	Store     *Store
-	Peers     *discovery.PeerStore
-	Dialer    discovery.DialFunc
-	Timeout   time.Duration
-	Logf      func(format string, args ...any)
+	PeerID        string
+	Name          string
+	Store         *Store
+	Peers         *discovery.PeerStore
+	Dialer        discovery.DialFunc
+	Timeout       time.Duration
+	Logf          func(format string, args ...any)
 	Blobs         *files.Store  // local source blobs (P051)
 	InboxDir      string        // where fetched files land (P051)
 	ThumbsDir     string        // local JPEG previews for image announces (P056)
@@ -33,14 +33,14 @@ type Config struct {
 
 // Hub fans out local sends to online peers and ingests inbound chat lines.
 type Hub struct {
-	mu        sync.RWMutex
-	peerID    string
-	name      string
-	store     *Store
-	peers     *discovery.PeerStore
-	dialer    discovery.DialFunc
-	timeout   time.Duration
-	logf      func(format string, args ...any)
+	mu            sync.RWMutex
+	peerID        string
+	name          string
+	store         *Store
+	peers         *discovery.PeerStore
+	dialer        discovery.DialFunc
+	timeout       time.Duration
+	logf          func(format string, args ...any)
 	blobs         *files.Store
 	inboxDir      string
 	thumbsDir     string
@@ -74,14 +74,14 @@ func NewHub(cfg Config) *Hub {
 		cfg.ChunkSize = files.DefaultChunkSize
 	}
 	return &Hub{
-		peerID:    cfg.PeerID,
-		name:      cfg.Name,
-		store:     cfg.Store,
-		peers:     cfg.Peers,
-		dialer:    cfg.Dialer,
-		timeout:   cfg.Timeout,
-		channels:  map[string]struct{}{DefaultChannel: {}},
-		logf:      cfg.Logf,
+		peerID:        cfg.PeerID,
+		name:          cfg.Name,
+		store:         cfg.Store,
+		peers:         cfg.Peers,
+		dialer:        cfg.Dialer,
+		timeout:       cfg.Timeout,
+		channels:      map[string]struct{}{DefaultChannel: {}},
+		logf:          cfg.Logf,
 		blobs:         cfg.Blobs,
 		inboxDir:      cfg.InboxDir,
 		thumbsDir:     cfg.ThumbsDir,
@@ -296,7 +296,13 @@ func (h *Hub) materializeThumb(msg *Message) {
 }
 
 func (h *Hub) publish(msg Message) (SendResult, error) {
-	_ = h.store.Append(msg)
+	inserted, err := h.store.AppendPersistent(msg)
+	if err != nil {
+		return SendResult{}, err
+	}
+	if !inserted {
+		return SendResult{}, fmt.Errorf("chat: duplicate msg_id")
+	}
 	peers := h.peers.List()
 	for _, p := range peers {
 		p := p
@@ -334,7 +340,9 @@ func (h *Hub) HandleChatLine(_ string, line []byte) {
 		_ = h.EnsureChannel(msg.Channel)
 	}
 	h.materializeThumb(&msg)
-	if h.store.Append(msg) {
+	if inserted, err := h.store.AppendPersistent(msg); err != nil {
+		h.logf("chat_persist_err msg_id=%s err=%v", msg.MsgID, err)
+	} else if inserted {
 		h.logf("chat_rx msg_id=%s peer_id=%s", msg.MsgID, msg.PeerID)
 	}
 	// Optional ack/retry cue (P098): reply with ack when asked; still not E2E delivery claim.
