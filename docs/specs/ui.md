@@ -195,15 +195,20 @@ ADR: не требуется
 Priority: P1
 Status: Accepted
 
-Иконка приложения следует миру rhythm-machine panel: charcoal‑панель,
-силуэт раструба и четыре step-индикатора red/orange/yellow/white. Один мастер
-порождает нативные размеры macOS, iOS, Android и Windows; дефолтный Flutter
-знак не используется.
+Иконка приложения следует миру rhythm-machine panel, но не рисует буквальную
+дудку, раструб или speech bubble. Знак — четыре сцепленных тяжёлых блока:
+красный сверху-слева, оранжевый сверху-справа, off-white снизу-слева и жёлтый
+снизу-справа. Их срезы образуют ломаный чёрный центр на charcoal-поле.
+Геометрия угловатая и читается в 16 px. Утверждённый PNG-источник порождает
+нативные размеры macOS, iOS, Android и Windows; дефолтный Flutter знак не
+используется.
 
 Проверка:
 
 - asset catalogs/resources всех четырёх GUI-платформ содержат новый знак;
-- мастер: `apps/dudka/assets/branding/app_icon_master.png`;
+- утверждённый источник: `apps/dudka/assets/branding/app_icon_source.png`;
+- нормализованный мастер: `apps/dudka/assets/branding/app_icon_master.png`;
+- генерация: `./scripts/generate_app_icons.sh`;
 - evidence: platform builds и визуальная проверка 1024/16 px.
 
 Зависимости: DUD-UI-160

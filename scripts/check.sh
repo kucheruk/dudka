@@ -11,4 +11,5 @@ fi
 
 go test ./...
 ./scripts/release_contract_test.sh
+./scripts/app_icon_test.sh
 ./scripts/protocol_tests.sh

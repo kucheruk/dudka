@@ -93,6 +93,13 @@ open dist/dudka.app
 
 Контракт: `./scripts/build_macos_app_test.sh`.
 
+Иконка всех GUI-платформ генерируется из утверждённого
+`apps/dudka/assets/branding/app_icon_source.png` одной командой:
+
+```bash
+./scripts/generate_app_icons.sh
+```
+
 ## Автообновление desktop
 
 macOS и полный Windows GUI проверяют только
