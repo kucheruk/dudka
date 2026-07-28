@@ -19,22 +19,28 @@ jobs:
           channel: stable
           flutter-version: 3.44.8
           cache: true
-      - name: Install Inno Setup
-        shell: pwsh
-        run: choco install innosetup --no-progress -y
       - name: Test Flutter
         working-directory: apps/dudka
         run: flutter test
-      - name: Build Windows GUI and installer
+      - name: Build portable Windows GUI
         shell: bash
         run: ./scripts/build_windows_app.sh
+      - name: Start the portable Windows app
+        shell: pwsh
+        run: |
+          Expand-Archive dist/dudka-windows-amd64.zip -DestinationPath dist/smoke
+          $gui = Resolve-Path dist/smoke/dudka-windows/dudka.exe
+          $engine = Resolve-Path dist/smoke/dudka-windows/internal/dudkad.exe
+          if (-not (Test-Path $engine)) { throw "internal engine missing" }
+          $process = Start-Process -FilePath $gui -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "portable GUI exited early" }
+          taskkill /PID $process.Id /T /F
       - uses: actions/upload-artifact@v4
         with:
           name: dudka-windows-amd64
           if-no-files-found: error
-          path: |
-            dist/dudka-windows-amd64-setup.exe
-            dist/dudka-windows-amd64.zip
+          path: dist/dudka-windows-amd64.zip
 
   linux:
     if: ${{ !contains(github.event.head_commit.message, '[windows-only]') }}

@@ -151,14 +151,14 @@ Android — системной установкой APK; самодельная 
 
 ```bash
 ./scripts/build_windows_app.sh
-# → dist/dudka-windows-amd64-setup.exe
-# → dist/dudka-windows-amd64.zip (служебный пакет автообновления)
+# → dist/dudka-windows-amd64.zip
 ```
 
 Скрипт выполняется на Windows; в репозитории есть desktop-build workflow.
-Пользователь получает один `dudka-windows-amd64-setup.exe`, один ярлык Дудки и
-графическое окно без терминала. Встроенный engine не показывается отдельной
-программой. Контракт: `./scripts/build_windows_app_test.sh`.
+Пользователь распаковывает portable ZIP и запускает один `dudka.exe` без
+терминала и установки. Встроенный engine лежит в служебной подпапке и не
+показывается как отдельная программа. Контракт:
+`./scripts/build_windows_app_test.sh`.
 
 ## Сборка Android (P083)
 

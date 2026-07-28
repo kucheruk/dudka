@@ -1,9 +1,14 @@
 import 'dart:io';
 
-/// Locate packaged `dudkad` beside the Flutter executable (P081).
-String? resolveBundledDudkadBin() {
+/// Locate packaged `dudkad` inside a desktop bundle (P081/P156).
+String? resolveBundledDudkadBin({String? executablePath}) {
   try {
-    final exeDir = File(Platform.resolvedExecutable).parent;
+    final exeDir = File(executablePath ?? Platform.resolvedExecutable).parent;
+    final windowsInternal = File(
+      '${exeDir.path}${Platform.pathSeparator}internal'
+      '${Platform.pathSeparator}dudkad.exe',
+    );
+    if (windowsInternal.existsSync()) return windowsInternal.path;
     final sibling = File('${exeDir.path}/dudkad');
     if (sibling.existsSync()) return sibling.path;
     final resources = Directory('${exeDir.parent.path}/Resources');

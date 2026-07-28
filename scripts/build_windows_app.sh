@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P149: full Windows Flutter GUI → update ZIP + one user-facing installer.
+# P156: full Windows Flutter GUI → one portable ZIP.
 # Run on Windows (locally or in GitHub Actions).
 set -euo pipefail
 
@@ -23,9 +23,6 @@ command -v powershell.exe >/dev/null 2>&1 || fail "powershell.exe not on PATH"
 
 OUT="${DIST:-$ROOT/dist}"
 ARCH="${GOARCH:-amd64}"
-VERSION="$(awk '/^version: / { split($2, parts, "+"); print parts[1] }' \
-  apps/dudka/pubspec.yaml)"
-[[ -n "$VERSION" ]] || fail "version missing in pubspec.yaml"
 mkdir -p "$OUT"
 
 echo "building hidden Windows engine"
@@ -48,7 +45,8 @@ BUNDLE="$OUT/dudka-windows"
 rm -rf "$BUNDLE"
 mkdir -p "$BUNDLE"
 cp -R "$REL/." "$BUNDLE/"
-cp "$ENGINE" "$BUNDLE/dudkad.exe"
+mkdir -p "$BUNDLE/internal"
+cp "$ENGINE" "$BUNDLE/internal/dudkad.exe"
 
 ZIP="$OUT/dudka-windows-${ARCH}.zip"
 rm -f "$ZIP"
@@ -57,20 +55,8 @@ ZIP_WIN="$(cygpath -w "$ZIP")"
 powershell.exe -NoProfile -Command \
   "Compress-Archive -LiteralPath '$BUNDLE_WIN' -DestinationPath '$ZIP_WIN' -Force"
 
-ISCC="${ISCC:-/c/Program Files (x86)/Inno Setup 6/ISCC.exe}"
-[[ -x "$ISCC" ]] || fail "Inno Setup 6 compiler missing: $ISCC"
-ISCC_WIN="$(cygpath -w "$ISCC")"
-OUT_WIN="$(cygpath -w "$OUT")"
-ISS_WIN="$(cygpath -w packaging/windows/dudka.iss)"
-powershell.exe -NoProfile -Command \
-  "& '$ISCC_WIN' '/DAppVersion=$VERSION' '/DBundleDir=$BUNDLE_WIN' '/DOutputDir=$OUT_WIN' '$ISS_WIN'" \
-  >/dev/null
-
-SETUP="$OUT/dudka-windows-${ARCH}-setup.exe"
-[[ -s "$SETUP" ]] || fail "installer missing: $SETUP"
-[[ -s "$ZIP" ]] || fail "update ZIP missing: $ZIP"
+[[ -s "$ZIP" ]] || fail "portable ZIP missing: $ZIP"
 
 rm -f "$ENGINE"
 echo "OK"
-echo "  installer: $SETUP"
-echo "  updater:   $ZIP"
+echo "  portable: $ZIP"

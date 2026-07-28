@@ -17,7 +17,7 @@ import 'update/update_manager.dart';
 /// Engine URL resolution order:
 /// 1. `--dart-define=DUDKA_ENGINE=http://127.0.0.1:PORT` (external dudkad)
 /// 2. `--dart-define=DUDKAD_BIN=/path/to/dudkad`
-/// 3. bundled `dudkad` next to the app executable (`.app/Contents/MacOS/dudkad`)
+/// 3. bundled `dudkad` in the platform application bundle
 /// 4. default attach `http://127.0.0.1:17880`
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
