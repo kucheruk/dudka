@@ -59,6 +59,19 @@ func TestRenderScreenAloneShowsSeek(t *testing.T) {
 	}
 }
 
+func TestRenderScreenErrorShowsCopyAction(t *testing.T) {
+	t.Parallel()
+	out := tui.RenderScreen(tui.ScreenState{
+		Snap:         tui.Snapshot{MeName: "Аня", EngineOK: true, Network: tui.NetworkOK},
+		StatusMsg:    "ПОИСК НЕ ЗАВЕРШЁН · повторите /search",
+		StatusError:  true,
+		CanCopyError: true,
+	}, 100, 20)
+	if !strings.Contains(out, "F5 · КОПИРОВАТЬ ОШИБКУ") {
+		t.Fatalf("missing copy-error action:\n%s", out)
+	}
+}
+
 func TestNewModelInitAndViewSmoke(t *testing.T) {
 	t.Parallel()
 	m := tui.NewModel(tui.NewClient("http://127.0.0.1:9"))

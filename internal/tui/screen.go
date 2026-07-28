@@ -11,11 +11,13 @@ import (
 
 // ScreenState is pure view input for the interactive TUI (P046).
 type ScreenState struct {
-	Snap       Snapshot
-	Compose    string
-	StatusMsg  string
-	FeedScroll int
-	CursorOn   bool
+	Snap         Snapshot
+	Compose      string
+	StatusMsg    string
+	StatusError  bool
+	CanCopyError bool
+	FeedScroll   int
+	CursorOn     bool
 }
 
 // RenderScreen paints fixed panels for width×height (no I/O). DESIGN.md charcoal + RU labels.
@@ -35,8 +37,8 @@ func RenderScreen(st ScreenState, width, height int) string {
 	}
 
 	rows = append(rows, paintCompose(st.Compose, st.CursorOn, lay.Width))
-	rows = append(rows, paintNotice(st.StatusMsg, lay.Width))
-	rows = append(rows, paintHelp(st.Snap, lay.Width))
+	rows = append(rows, paintNotice(st.StatusMsg, st.StatusError, lay.Width))
+	rows = append(rows, paintHelp(st.Snap, st.CanCopyError, lay.Width))
 
 	for len(rows) < height {
 		rows = append(rows, fillBg("", width, colorPanel))
@@ -204,17 +206,17 @@ func paintCompose(compose string, cursor bool, width int) string {
 	return fillBg(joined, width, colorPanelDeep)
 }
 
-func paintHelp(snap Snapshot, width int) string {
-	return fillBg(styleDim().Render(truncateRunes(helpText(snap), width)), width, colorPanel)
+func paintHelp(snap Snapshot, canCopyError bool, width int) string {
+	return fillBg(styleDim().Render(truncateRunes(helpText(snap, canCopyError), width)), width, colorPanel)
 }
 
-func paintNotice(statusMsg string, width int) string {
+func paintNotice(statusMsg string, isError bool, width int) string {
 	msg := strings.TrimSpace(statusMsg)
 	if msg == "" {
 		msg = "ГОТОВО"
 	}
 	style := styleDim()
-	if strings.Contains(msg, "НЕ ЗАВЕРШЁН") {
+	if isError {
 		style = styleErr()
 	} else if strings.Contains(msg, "ИЩУ") {
 		style = styleStatus()
@@ -222,8 +224,11 @@ func paintNotice(statusMsg string, width int) string {
 	return fillBg(style.Render(" "+truncateRunes(msg, width-1)), width, colorPanel)
 }
 
-func helpText(snap Snapshot) string {
+func helpText(snap Snapshot, canCopyError bool) string {
 	base := "ENTER отправить  ↑↓ лента  /nick Имя  /announce путь  ESC выход"
+	if canCopyError {
+		base = "F5 · КОПИРОВАТЬ ОШИБКУ  " + base
+	}
 	if snap.EngineOK && snap.Network != NetworkNoNetwork && len(snap.Peers) == 0 {
 		base = "/search найти  " + base
 	}

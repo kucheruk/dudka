@@ -19,7 +19,12 @@ type snapMsg struct {
 	err  error
 }
 
-type statusErrMsg string
+type statusErrMsg struct {
+	display string
+	detail  string
+}
+
+type clipboardPulseDoneMsg struct{}
 
 // Model is the interactive bubbletea TUI (P046).
 type Model struct {
@@ -27,6 +32,9 @@ type Model struct {
 	input      textinput.Model
 	snap       Snapshot
 	statusMsg  string
+	statusErr  bool
+	lastError  string
+	clipboard  string
 	feedScroll int
 	width      int
 	height     int
@@ -81,13 +89,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.refreshCmd(), tickCmd())
 	case snapMsg:
 		m.snap = msg.snap
+		if msg.err != nil {
+			m.lastError = technicalError("обновление", msg.err)
+		}
 		return m, nil
 	case statusErrMsg:
-		m.statusMsg = string(msg)
+		m.statusMsg = msg.display
+		m.statusErr = true
+		m.lastError = msg.detail
+		return m, nil
+	case clipboardPulseDoneMsg:
+		m.clipboard = ""
 		return m, nil
 	case scanDoneMsg:
 		m.snap = msg.snap
 		m.statusMsg = fmt.Sprintf("ПОИСК ЗАВЕРШЁН · найдено: %d", msg.n)
+		m.statusErr = false
+		m.lastError = ""
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -103,6 +121,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case tea.KeyEnter:
 			return m.submitCompose()
+		case tea.KeyF5:
+			if m.lastError == "" {
+				return m, nil
+			}
+			m.clipboard = osc52Sequence(m.lastError)
+			m.statusMsg = "ОШИБКА СКОПИРОВАНА"
+			m.statusErr = false
+			return m, tea.Tick(80*time.Millisecond, func(time.Time) tea.Msg {
+				return clipboardPulseDoneMsg{}
+			})
 		case tea.KeyUp:
 			m.feedScroll++
 			return m, nil
@@ -132,6 +160,8 @@ func (m Model) submitCompose() (tea.Model, tea.Cmd) {
 	line := m.input.Value()
 	m.input.SetValue("")
 	m.statusMsg = ""
+	m.statusErr = false
+	m.lastError = ""
 	if strings.TrimSpace(line) == "" {
 		return m, nil
 	}
@@ -143,10 +173,13 @@ func (m Model) submitCompose() (tea.Model, tea.Cmd) {
 	return m, func() tea.Msg {
 		if err := HandleComposeLine(c, line); err != nil {
 			if _, warning := err.(*ErrLargeFileWarning); warning {
-				return statusErrMsg(err.Error())
+				return statusErrMsg{display: err.Error(), detail: technicalError("файл", err)}
 			}
 			logTUIError("compose", err)
-			return statusErrMsg(composeErrorMessage(line))
+			return statusErrMsg{
+				display: composeErrorMessage(line),
+				detail:  technicalError("команда", err),
+			}
 		}
 		snap, err := c.Fetch()
 		if err != nil {
@@ -177,12 +210,18 @@ func (m Model) scanCmd() tea.Cmd {
 		n, err := c.Scan()
 		if err != nil {
 			logTUIError("search", err)
-			return statusErrMsg("ПОИСК НЕ ЗАВЕРШЁН · повторите /search · подробности в tui.log")
+			return statusErrMsg{
+				display: "ПОИСК НЕ ЗАВЕРШЁН · повторите /search",
+				detail:  technicalError("поиск", err),
+			}
 		}
 		snap, ferr := c.Fetch()
 		if ferr != nil {
 			logTUIError("search refresh", ferr)
-			return statusErrMsg(fmt.Sprintf("НАЙДЕНО: %d · лента обновится автоматически", n))
+			return statusErrMsg{
+				display: fmt.Sprintf("ЛЕНТА НЕ ОБНОВЛЕНА · найдено: %d", n),
+				detail:  technicalError("обновление после поиска", ferr),
+			}
 		}
 		// Prefer snap update; status shown via a tiny wrapper message type.
 		return scanDoneMsg{n: n, snap: snap}
@@ -200,13 +239,19 @@ func (m Model) View() string {
 		return ""
 	}
 	content := RenderScreen(ScreenState{
-		Snap:       m.snap,
-		Compose:    m.input.Value(),
-		StatusMsg:  m.statusMsg,
-		FeedScroll: m.feedScroll,
-		CursorOn:   true,
+		Snap:         m.snap,
+		Compose:      m.input.Value(),
+		StatusMsg:    m.statusMsg,
+		StatusError:  m.statusErr,
+		CanCopyError: m.lastError != "",
+		FeedScroll:   m.feedScroll,
+		CursorOn:     true,
 	}, m.width, m.height)
-	return styleCanvas(m.width, m.height).Render(content)
+	return m.clipboard + styleCanvas(m.width, m.height).Render(content)
+}
+
+func technicalError(scope string, err error) string {
+	return fmt.Sprintf("%s: %v", scope, err)
 }
 
 func maxInt(a, b int) int {
