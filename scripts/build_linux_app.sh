@@ -17,7 +17,8 @@ command -v dpkg-deb >/dev/null 2>&1 || fail "dpkg-deb not on PATH"
 
 OUT="${DIST:-$ROOT/dist}"
 ARCH="${GOARCH:-amd64}"
-VERSION="$(sed -n 's/^version: \\([0-9][0-9.]*\\)+[0-9][0-9]*$/\\1/p' apps/dudka/pubspec.yaml)"
+VERSION="$(awk '/^version: / { split($2, parts, "+"); print parts[1] }' \
+  apps/dudka/pubspec.yaml)"
 [[ -n "$VERSION" ]] || fail "version missing in pubspec.yaml"
 mkdir -p "$OUT"
 
