@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dudka/engine/client.dart';
 import 'package:dudka/screens/chat_screen.dart';
+import 'package:dudka/update/update_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,28 @@ Future<void> pumpFrames(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
+}
+
+class FakeUpdateController extends ChangeNotifier implements UpdateController {
+  FakeUpdateController(this._snapshot);
+
+  UpdateSnapshot _snapshot;
+  int startCalls = 0;
+  int activateCalls = 0;
+
+  @override
+  UpdateSnapshot get snapshot => _snapshot;
+
+  @override
+  void start() => startCalls++;
+
+  @override
+  Future<void> activate() async => activateCalls++;
+
+  void setSnapshot(UpdateSnapshot value) {
+    _snapshot = value;
+    notifyListeners();
+  }
 }
 
 EngineClient mockChatClient({
@@ -140,5 +163,71 @@ void main() {
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();
+  });
+
+  testWidgets('verified update shows button and activates once',
+      (tester) async {
+    final client = mockChatClient(meName: 'Katya');
+    final updater = FakeUpdateController(
+      const UpdateSnapshot(
+        phase: UpdatePhase.ready,
+        version: '0.3.1',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          updater: updater,
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(updater.startCalls, 1);
+    expect(find.byKey(const Key('update-ready')), findsOneWidget);
+    expect(find.text('АПДЕЙТ 0.3.1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('update-ready')));
+    await tester.pump();
+    expect(updater.activateCalls, 1);
+
+    client.close();
+    updater.dispose();
+  });
+
+  testWidgets('update action stays hidden until package is verified',
+      (tester) async {
+    final client = mockChatClient(meName: 'Katya');
+    final updater = FakeUpdateController(
+      const UpdateSnapshot(
+        phase: UpdatePhase.downloading,
+        version: '0.3.1',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          updater: updater,
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.byKey(const Key('update-ready')), findsNothing);
+    updater.setSnapshot(
+      const UpdateSnapshot(
+        phase: UpdatePhase.ready,
+        version: '0.3.1',
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('update-ready')), findsOneWidget);
+
+    client.close();
+    updater.dispose();
   });
 }

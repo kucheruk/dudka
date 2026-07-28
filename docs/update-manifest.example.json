@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "version": "0.3.1",
+  "packages": {
+    "macos-universal": {
+      "url": "https://github.com/kucheruk/dudka/releases/download/v0.3.1/dudka-macos-universal.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 12345678,
+      "format": "zip"
+    },
+    "windows-amd64": {
+      "url": "https://github.com/kucheruk/dudka/releases/download/v0.3.1/dudka-windows-amd64.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 12345678,
+      "format": "zip"
+    }
+  }
+}

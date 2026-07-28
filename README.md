@@ -1,6 +1,8 @@
 # ДУДКА (`dudka`)
 
-Локальный чат квартиры: текст и файлы в одном Wi‑Fi без аккаунтов, облака и исходящего интернета в рантайме.
+Локальный чат квартиры: текст и файлы в одном Wi‑Fi без аккаунтов и облака.
+Единственный WAN-запрос GUI — неперсонализированная проверка обновлений на
+`zamoo.team`; чат и engine остаются строго локальными.
 
 ## Статус
 
@@ -80,15 +82,31 @@ Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shel
 
 ## Сборка macOS desktop (P081)
 
-Одна команда → `dist/dudka.app` + zip (engine `dudkad` внутри бандла):
+Одна команда → `dist/dudka.app` + update ZIP + DMG (engine `dudkad` внутри):
 
 ```bash
 ./scripts/build_macos_app.sh
 open dist/dudka.app
-# архив: dist/dudka-macos.zip
+# автоапдейт: dist/dudka-macos-universal.zip
+# ручная установка: dist/dudka-macos-universal.dmg
 ```
 
 Контракт: `./scripts/build_macos_app_test.sh`.
+
+## Автообновление desktop
+
+macOS и полный Windows GUI проверяют только
+`https://zamoo.team/dudka/update.json` при старте и раз в 15 минут. Новая
+версия заранее скачивается и проверяется по размеру и SHA-256; только после
+этого в хедере появляется `АПДЕЙТ X.Y.Z`. По нажатию приложение закрывается,
+через 10 секунд проверенный пакет заменяет текущую установку и новая версия
+запускается. Manifest: [`docs/update-manifest.example.json`](docs/update-manifest.example.json),
+контракт: [`docs/specs/updates.md`](docs/specs/updates.md).
+
+На macOS приложение нужно перенести из DMG в `/Applications` или другую
+доступную для записи папку. iOS обновляется через App Store/TestFlight,
+Android — системной установкой APK; самодельная фоновая замена там не
+используется.
 
 ## Выпуск версии
 

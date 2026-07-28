@@ -6,6 +6,7 @@ import 'app.dart';
 import 'engine/bundle.dart';
 import 'engine/client.dart';
 import 'engine/host.dart';
+import 'update/update_manager.dart';
 
 /// macOS-first shell (P061/P081).
 ///
@@ -21,6 +22,7 @@ Future<void> main() async {
   const binDefine = String.fromEnvironment('DUDKAD_BIN');
 
   late final String engineBase;
+  EngineHost? hostedEngine;
 
   if (predefined.isNotEmpty) {
     engineBase = predefined;
@@ -28,14 +30,30 @@ Future<void> main() async {
     final bin = binDefine.isNotEmpty ? binDefine : resolveBundledDudkadBin();
     if (bin != null && bin.isNotEmpty) {
       final dataDir = _defaultEngineDataDir();
-      final host = EngineHost(binaryPath: bin, dataDir: dataDir.path, name: 'ДУДКА');
-      engineBase = await host.start();
+      hostedEngine =
+          EngineHost(binaryPath: bin, dataDir: dataDir.path, name: 'ДУДКА');
+      engineBase = await hostedEngine.start();
     } else {
       engineBase = 'http://127.0.0.1:17880';
     }
   }
 
-  runApp(DudkaApp(engineBase: engineBase, client: EngineClient(baseUrl: engineBase)));
+  UpdateManager? updater;
+  try {
+    updater = await UpdateManager.forCurrentPlatform(
+      beforeExit: () async {
+        await hostedEngine?.stop();
+      },
+    );
+  } catch (_) {
+    // Update availability must never block the LAN chat.
+  }
+
+  runApp(DudkaApp(
+    engineBase: engineBase,
+    client: EngineClient(baseUrl: engineBase),
+    updater: updater,
+  ));
 }
 
 Directory _defaultEngineDataDir() {

@@ -188,6 +188,19 @@
 
 ---
 
+## Фаза 9 — Desktop auto-update
+
+- [x] P140 Зафиксировать manifest/trust/network contract (`DUD-UPD-101`)
+- [x] P141 Проверять новую версию и заранее скачивать пакет с size/SHA-256 (`DUD-UPD-110`)
+- [x] P142 Показывать `АПДЕЙТ X.Y.Z` только для проверенного готового пакета
+- [x] P143 По нажатию остановить engine и через 10 секунд заменить/запустить macOS или Windows GUI (`DUD-UPD-120`)
+- [x] P144 Публиковать `update.json` вместе с каждой новой desktop-версией
+- [x] P145 Автотесты manifest/download/hash/widget/helper + macOS package gate
+
+---
+
 ## Не делаем (пока явно не попросят)
 
-Облако, Доверие/Диалоги runtime, mDNS-only, голос/звонки, E2E-маркетинг, регистрация, доска в «Делах» как бэклог, callhome.
+Облако, Доверие/Диалоги runtime, mDNS-only, голос/звонки, E2E-маркетинг,
+регистрация, доска в «Делах» как бэклог, callhome/telemetry. Единственное
+WAN-исключение — desktop update по `DUD-UPD-*`.

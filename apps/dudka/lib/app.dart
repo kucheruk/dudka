@@ -8,6 +8,7 @@ import 'screens/chat_screen.dart';
 import 'screens/first_run_nick_screen.dart';
 import 'session/first_run_store.dart';
 import 'theme/dudka_theme.dart';
+import 'update/update_manager.dart';
 
 /// Flutter shell (P061/P062): first-run nick → chat.
 class DudkaApp extends StatefulWidget {
@@ -19,6 +20,7 @@ class DudkaApp extends StatefulWidget {
     this.hostnameForFallback,
     this.nickPick,
     this.chatPollInterval = const Duration(seconds: 1),
+    this.updater,
   });
 
   final String engineBase;
@@ -27,6 +29,7 @@ class DudkaApp extends StatefulWidget {
   final String Function()? hostnameForFallback;
   final NickPick? nickPick;
   final Duration chatPollInterval;
+  final UpdateController? updater;
 
   @override
   State<DudkaApp> createState() => _DudkaAppState();
@@ -113,6 +116,10 @@ class _DudkaAppState extends State<DudkaApp> {
         },
       );
     }
-    return ChatScreen(client: _client, pollInterval: widget.chatPollInterval);
+    return ChatScreen(
+      client: _client,
+      pollInterval: widget.chatPollInterval,
+      updater: widget.updater,
+    );
   }
 }

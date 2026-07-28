@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P081: build macOS Flutter desktop → dist/dudka.app + zip archive.
+# P081/P145: build macOS Flutter desktop → .app + update ZIP + DMG.
 # Usage: ./scripts/build_macos_app.sh
 # Optional: DIST=/tmp/out ./scripts/build_macos_app.sh
 set -euo pipefail
@@ -44,8 +44,11 @@ rm -rf "$APP_DST"
 cp -R "$APP_SRC" "$APP_DST"
 cp "$OUT/dudkad-darwin-universal" "$APP_DST/Contents/MacOS/dudkad"
 chmod +x "$APP_DST/Contents/MacOS/dudkad"
+command -v codesign >/dev/null 2>&1 || fail "codesign not on PATH"
+codesign --force --sign - "$APP_DST/Contents/MacOS/dudkad" >/dev/null
+codesign --force --deep --sign - "$APP_DST" >/dev/null
 
-ZIP="$OUT/dudka-macos.zip"
+ZIP="$OUT/dudka-macos-universal.zip"
 rm -f "$ZIP"
 (
   cd "$OUT"

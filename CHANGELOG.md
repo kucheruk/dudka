@@ -3,6 +3,27 @@
 Все заметные изменения Дудки фиксируются здесь. Текст секции версии используется
 как источник release notes перед публикацией.
 
+## [0.3.0] — 2026-07-28
+
+### Добавлено
+
+- Автообновление прямой desktop-сборки macOS и полного Windows GUI через
+  публичный manifest на `zamoo.team`, без identity, telemetry и данных чата.
+- Предварительная загрузка пакета с проверкой HTTPS, размера и SHA-256 до
+  появления кнопки `АПДЕЙТ X.Y.Z`.
+- Detached updater для macOS и Windows: после явного нажатия он ждёт 10 секунд,
+  сохраняет предыдущую установку, заменяет приложение и запускает новую версию.
+- Тесты manifest, сравнения версий, целостности пакета, update-кнопки и
+  platform helper scripts.
+
+### Изменено
+
+- macOS direct-download сборка вышла из App Sandbox, чтобы иметь возможность
+  заменить собственный `.app`; LAN-границы и единственное WAN-исключение
+  закреплены отдельной спецификацией.
+- macOS update ZIP получил стабильное имя `dudka-macos-universal.zip`, а
+  пакет после встраивания универсального `dudkad` заново подписывается.
+
 ## [0.2.0] — 2026-07-28
 
 ### Добавлено
@@ -40,5 +61,6 @@
 - Первая ранняя сборка LAN-чата: discovery, общий текстовый feed, файлы,
   Flutter GUI, Linux/Windows TUI и локальный MCP для домашних агентов.
 
+[0.3.0]: https://github.com/kucheruk/dudka/releases/tag/v0.3.0
 [0.2.0]: https://github.com/kucheruk/dudka/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kucheruk/dudka/releases/tag/v0.1.0-alpha.1

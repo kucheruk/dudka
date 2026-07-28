@@ -8,6 +8,7 @@ import '../engine/client.dart';
 import '../files/local_file_actions.dart';
 import '../layout/chat_layout.dart';
 import '../theme/dudka_theme.dart';
+import '../update/update_manager.dart';
 import '../widgets/step_progress.dart';
 import 'settings_nick_screen.dart';
 
@@ -19,12 +20,14 @@ class ChatScreen extends StatefulWidget {
     this.pollInterval = const Duration(seconds: 1),
     this.pickFiles,
     this.revealFile,
+    this.updater,
   });
 
   final EngineClient client;
   final Duration pollInterval;
   final LocalFilesPicker? pickFiles;
   final DownloadedFileRevealer? revealFile;
+  final UpdateController? updater;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -48,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _refresh();
+    widget.updater?.start();
     if (widget.pollInterval > Duration.zero) {
       _timer = Timer.periodic(widget.pollInterval, (_) => _refresh());
     }
@@ -196,6 +200,19 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _activateUpdate() async {
+    final updater = widget.updater;
+    if (updater == null) return;
+    try {
+      await updater.activate();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось обновить: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -239,6 +256,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
+            if (widget.updater != null)
+              AnimatedBuilder(
+                animation: widget.updater!,
+                builder: (context, _) {
+                  final update = widget.updater!.snapshot;
+                  if (!update.isReady) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: FilledButton.icon(
+                      key: const Key('update-ready'),
+                      onPressed: _activateUpdate,
+                      icon: const Icon(Icons.system_update_alt, size: 18),
+                      label: Text('АПДЕЙТ ${update.version}'),
+                    ),
+                  );
+                },
+              ),
             IconButton(
               key: const Key('chat-settings'),
               tooltip: 'Настройки',

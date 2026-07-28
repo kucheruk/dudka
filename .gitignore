@@ -12,6 +12,7 @@
 .vscode/
 *.swp
 .DS_Store
+/.worktrees/
 
 # Go
 /coverage.out

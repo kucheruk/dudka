@@ -23,7 +23,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 DIST="$tmpdir/dist" ./scripts/build_macos_app.sh || fail "build_macos_app.sh failed"
 
 app="$tmpdir/dist/dudka.app"
-zip="$tmpdir/dist/dudka-macos.zip"
+zip="$tmpdir/dist/dudka-macos-universal.zip"
 dmg="$tmpdir/dist/dudka-macos-universal.dmg"
 [[ -d "$app" ]] || fail "missing $app"
 [[ -f "$app/Contents/Info.plist" ]] || fail "not a macOS app bundle (no Info.plist)"
@@ -31,6 +31,15 @@ dmg="$tmpdir/dist/dudka-macos-universal.dmg"
 [[ -x "$app/Contents/MacOS/dudkad" ]] || fail "bundled dudkad missing next to app binary"
 [[ -f "$zip" ]] || fail "missing zip archive $zip"
 [[ -f "$dmg" ]] || fail "missing disk image $dmg"
+if grep -q 'com.apple.security.app-sandbox' apps/dudka/macos/Runner/Release.entitlements; then
+  fail "direct-update build cannot use App Sandbox"
+fi
+codesign --verify --deep --strict "$app" \
+  || fail "app bundle signature is invalid after embedding dudkad"
+bundle_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")"
+expected_version="$(sed -n 's/^version: \([0-9][0-9.]*\)+[0-9][0-9]*$/\1/p' apps/dudka/pubspec.yaml)"
+[[ "$bundle_version" == "$expected_version" ]] \
+  || fail "bundle version is $bundle_version, want $expected_version"
 file "$app/Contents/MacOS/dudkad" | grep -q 'universal binary' \
   || fail "bundled dudkad must contain Intel and Apple Silicon slices"
 

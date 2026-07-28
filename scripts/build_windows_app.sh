@@ -50,7 +50,8 @@ copy ..\\..\\dist\\dudkad-windows-amd64.exe build\\windows\\x64\\runner\\Release
 \`\`\`
 
 The release folder is the runnable artifact (dudka.exe + dudkad.exe beside it).
-Zip that folder for family install.
+Zip that folder as \`dudka-windows-amd64.zip\` for family install and
+auto-update. The update manifest must never point to the standalone TUI exe.
 
 Bundled binary resolution matches macOS: \`resolveBundledDudkadBin\` looks next to the app executable.
 EOF
@@ -74,8 +75,8 @@ if [[ "$HOST" == MINGW* || "$HOST" == MSYS* || "$HOST" == CYGWIN* || "$HOST" == 
   (
     cd "$OUT"
     if command -v zip >/dev/null 2>&1; then
-      rm -f dudka-windows.zip
-      zip -qr dudka-windows.zip dudka-windows
+      rm -f "dudka-windows-${ARCH}.zip"
+      zip -qr "dudka-windows-${ARCH}.zip" dudka-windows
     fi
   )
   echo "OK Flutter bundle → $OUT/dudka-windows/"
