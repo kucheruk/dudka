@@ -52,14 +52,16 @@ cp "$ENGINE" "$BUNDLE/dudkad.exe"
 
 ZIP="$OUT/dudka-windows-${ARCH}.zip"
 rm -f "$ZIP"
+BUNDLE_WIN="$(cygpath -w "$BUNDLE")"
+ZIP_WIN="$(cygpath -w "$ZIP")"
 powershell.exe -NoProfile -Command \
-  "Compress-Archive -LiteralPath '$BUNDLE' -DestinationPath '$ZIP' -Force"
+  "Compress-Archive -LiteralPath '$BUNDLE_WIN' -DestinationPath '$ZIP_WIN' -Force"
 
 ISCC="${ISCC:-/c/Program Files (x86)/Inno Setup 6/ISCC.exe}"
 [[ -x "$ISCC" ]] || fail "Inno Setup 6 compiler missing: $ISCC"
 "$ISCC" \
   "/DAppVersion=$VERSION" \
-  "/DBundleDir=$(cygpath -w "$BUNDLE")" \
+  "/DBundleDir=$BUNDLE_WIN" \
   "/DOutputDir=$(cygpath -w "$OUT")" \
   packaging/windows/dudka.iss >/dev/null
 

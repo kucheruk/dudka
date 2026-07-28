@@ -37,6 +37,7 @@ jobs:
             dist/dudka-windows-amd64.zip
 
   linux:
+    if: ${{ !contains(github.event.head_commit.message, '[windows-only]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
