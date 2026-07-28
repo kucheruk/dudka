@@ -61,6 +61,7 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 # ./dist/dudka -engine … -once          # один plain-кадр (скрипты)
 # ./dist/dudka -engine … -send "привет" # one-shot
 # ./dist/dudka -engine … -nick "Вася"
+# /search                              # найти соседей; /scan и /поиск — алиасы
 # ./dist/dudka -watch -engine …         # legacy line-mode для тестов
 ```
 
@@ -77,7 +78,9 @@ curl -fsSL https://zamoo.team/dudka/install.sh | sh
 ```
 
 Скрипт скачивает точный архив, сверяет SHA-256 и кладёт `dudka` с `dudkad`
-в `~/.local/bin`. Он не вызывает `apt`, `sudo` и не ставит GUI-зависимости.
+в `~/.local/bin`. Пакеты и GUI-зависимости не устанавливаются. Если UFW
+активен, установщик один раз просит sudo и сам добавляет два узких правила
+`41777/tcp+udp` только для текущей приватной LAN-подсети.
 
 Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):
 

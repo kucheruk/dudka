@@ -224,7 +224,8 @@ func (c *Client) Scan() (found int, err error) {
 	if c.base == "" {
 		return 0, fmt.Errorf("tui: engine URL empty")
 	}
-	resp, err := c.client.Post(c.base+"/scan", "application/json", bytes.NewReader([]byte("{}")))
+	scanClient := &http.Client{Timeout: 7 * time.Second}
+	resp, err := scanClient.Post(c.base+"/scan", "application/json", bytes.NewReader([]byte("{}")))
 	if err != nil {
 		return 0, err
 	}

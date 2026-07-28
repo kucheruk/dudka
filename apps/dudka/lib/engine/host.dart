@@ -37,14 +37,9 @@ class EngineHost {
     }
     await Directory(dataDir).create(recursive: true);
 
-    // Ephemeral UDP port avoids clashing with a system dudkad on 41777.
-    final announce = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final announcePort = announce.port;
-    await announce.close();
-
     final proc = await Process.start(
       binaryPath,
-      arguments(announcePort: announcePort),
+      arguments(),
       mode: ProcessStartMode.normal,
     );
     _proc = proc;
@@ -75,18 +70,12 @@ class EngineHost {
     return _baseUrl!;
   }
 
-  List<String> arguments({required int announcePort}) => [
+  List<String> arguments() => [
     '-data-dir',
     dataDir,
     if (name.trim().isNotEmpty) ...['-name', name.trim()],
     '-listen',
     '127.0.0.1:0',
-    '-announce-port',
-    '$announcePort',
-    '-session-port',
-    '0',
-    '-announce-interval',
-    '1h',
   ];
 
   Future<void> stop() async {

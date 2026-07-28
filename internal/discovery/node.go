@@ -48,6 +48,10 @@ type Config struct {
 	OnPeerUpserted func(Peer, UpsertResult)
 	// OnPeerRemoved fires when a peer is pruned after PeerTTL (P034).
 	OnPeerRemoved func(Peer)
+	// OnRegisterBacklog writes recent feed lines back over an inbound register
+	// connection. This keeps chat bidirectional when only one peer can accept
+	// new TCP connections through its host firewall.
+	OnRegisterBacklog func(Peer) [][]byte
 }
 
 // Node sends periodic announces, accepts TCP register, and dials peers on announce.
@@ -445,9 +449,25 @@ func (n *Node) handleSessionConn(conn net.Conn) {
 		return
 	}
 
-	n.rememberPeer(peerFromRegister(req, host))
+	peer := peerFromRegister(req, host)
+	n.rememberPeer(peer)
 	n.cfg.Logf("register_rx peer_id=%s name=%s from=%s", req.PeerID, req.DisplayName, conn.RemoteAddr().String())
-	_ = writeRegister(conn, self)
+	if err := writeRegister(conn, self); err != nil {
+		return
+	}
+	n.mu.Lock()
+	backlog := n.cfg.OnRegisterBacklog
+	n.mu.Unlock()
+	if backlog != nil {
+		for _, frame := range backlog(peer) {
+			if len(frame) == 0 {
+				continue
+			}
+			if _, err := conn.Write(frame); err != nil {
+				return
+			}
+		}
+	}
 }
 
 func (n *Node) readLoop(ctx context.Context, conn net.PacketConn) {
@@ -500,12 +520,14 @@ func (n *Node) maybeRegister(a Announce, from net.Addr) {
 		n.mu.Unlock()
 		return
 	}
-	// Skip dial if already known with same instance; refresh LastSeen (P034 TTL).
+	// Refresh known peers, but still register again. Besides keeping the peer
+	// table fresh, the accepted connection carries the peer's reverse backlog.
+	// This makes delivery work when a host firewall permits connections in only
+	// one direction.
 	for _, p := range n.cfg.Peers.List() {
 		if p.PeerID == a.PeerID && p.InstanceID == a.InstanceID {
-			n.mu.Unlock()
 			_ = n.cfg.Peers.Touch(a.PeerID)
-			return
+			break
 		}
 	}
 	n.dialing[a.PeerID] = struct{}{}
@@ -581,6 +603,21 @@ func (n *Node) dialRegister(host string, port int) (*Peer, error) {
 	p := peerFromRegister(resp, host)
 	n.rememberPeer(p)
 	n.cfg.Logf("register_ok peer_id=%s name=%s addr=%s", resp.PeerID, resp.DisplayName, addr)
+	n.mu.Lock()
+	onChat := n.cfg.OnChatLine
+	n.mu.Unlock()
+	for onChat != nil {
+		line, readErr := br.ReadBytes('\n')
+		if len(line) > 0 {
+			switch peekJSONType(line) {
+			case "chat", "file_announce":
+				onChat(host, line)
+			}
+		}
+		if readErr != nil {
+			break
+		}
+	}
 	return &p, nil
 }
 
@@ -625,6 +662,11 @@ func (n *Node) sendOnce() {
 		return
 	}
 	_, _ = conn.WriteTo(raw, dst)
+	if cfg.Target == "" {
+		for _, subnetBroadcast := range interfaceBroadcasts(dst.(*net.UDPAddr).Port) {
+			_, _ = conn.WriteTo(raw, subnetBroadcast)
+		}
+	}
 }
 
 func peekJSONType(line []byte) string {

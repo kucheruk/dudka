@@ -90,6 +90,12 @@ func peerFromRegister(r Register, host string) Peer {
 }
 
 func (n *Node) rememberPeer(p Peer) {
+	for _, known := range n.cfg.Peers.List() {
+		if known.PeerID == p.PeerID && known.InstanceID == p.InstanceID {
+			_ = n.cfg.Peers.Touch(p.PeerID)
+			return
+		}
+	}
 	res := n.cfg.Peers.Upsert(p)
 	if res.InstanceChanged {
 		n.cfg.Logf("%s", FormatPeerUpdated(p.PeerID, res.OldInstanceID, p.InstanceID))
@@ -97,7 +103,7 @@ func (n *Node) rememberPeer(p Peer) {
 	n.mu.Lock()
 	onUpsert := n.cfg.OnPeerUpserted
 	n.mu.Unlock()
-	if onUpsert != nil {
+	if onUpsert != nil && (res.Created || res.InstanceChanged) {
 		onUpsert(p, res)
 	}
 }

@@ -54,6 +54,9 @@ func TestRenderScreenAloneShowsSeek(t *testing.T) {
 	if !strings.Contains(out, "ИСКАТЬ") {
 		t.Fatalf("missing seek affordance:\n%s", out)
 	}
+	if !strings.Contains(out, "/search") {
+		t.Fatalf("missing explicit search command:\n%s", out)
+	}
 }
 
 func TestNewModelInitAndViewSmoke(t *testing.T) {

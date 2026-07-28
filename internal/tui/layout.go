@@ -2,16 +2,17 @@ package tui
 
 // Layout describes fixed panel geometry for the interactive TUI (P046).
 type Layout struct {
-	Width      int
-	Height     int
-	StatusH    int
-	PeersW     int
-	FeedW      int
-	BodyH      int
-	ComposeH   int
-	HelpH      int
-	FeedLines  int
-	PeerLines  int
+	Width     int
+	Height    int
+	StatusH   int
+	PeersW    int
+	FeedW     int
+	BodyH     int
+	ComposeH  int
+	NoticeH   int
+	HelpH     int
+	FeedLines int
+	PeerLines int
 }
 
 // LayoutFor computes panel sizes for a terminal of width×height.
@@ -28,9 +29,10 @@ func LayoutFor(width, height int) Layout {
 		Height:   height,
 		StatusH:  1,
 		ComposeH: 1,
+		NoticeH:  1,
 		HelpH:    1,
 	}
-	l.BodyH = height - l.StatusH - l.ComposeH - l.HelpH
+	l.BodyH = height - l.StatusH - l.ComposeH - l.NoticeH - l.HelpH
 	if l.BodyH < 3 {
 		l.BodyH = 3
 	}

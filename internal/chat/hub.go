@@ -145,6 +145,31 @@ func (h *Hub) Channels() []string {
 	return out
 }
 
+// RegisterBacklog encodes the bounded local feed for the reverse side of a
+// register connection. Receivers deduplicate by msg_id.
+func (h *Hub) RegisterBacklog(_ discovery.Peer) [][]byte {
+	messages := h.store.List()
+	const recentLocalLimit = 32
+	start := len(messages) - recentLocalLimit
+	if start < 0 {
+		start = 0
+	}
+	out := make([][]byte, 0, len(messages)-start)
+	for _, message := range messages[start:] {
+		// A peer only needs messages originated by this node. Messages learned
+		// from another neighbor are already available from their origin and
+		// would otherwise be re-sent on every announce heartbeat.
+		if message.PeerID != h.peerID {
+			continue
+		}
+		raw, err := EncodeMessage(message)
+		if err == nil {
+			out = append(out, raw)
+		}
+	}
+	return out
+}
+
 // EnsureChannel registers a channel name (idempotent).
 func (h *Hub) EnsureChannel(name string) error {
 	name = strings.TrimSpace(name)

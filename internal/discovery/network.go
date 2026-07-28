@@ -146,3 +146,51 @@ func addrIP(a net.Addr) net.IP {
 		return nil
 	}
 }
+
+func interfaceBroadcasts(port int) []*net.UDPAddr {
+	var out []*net.UDPAddr
+	seen := map[string]struct{}{}
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return out
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 ||
+			iface.Flags&net.FlagBroadcast == 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			ipnet, ok := addr.(*net.IPNet)
+			if !ok || !isRFC1918(ipnet.IP) {
+				continue
+			}
+			broadcast := ipv4Broadcast(ipnet.IP, ipnet.Mask)
+			if broadcast == nil {
+				continue
+			}
+			key := broadcast.String()
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, &net.UDPAddr{IP: broadcast, Port: port})
+		}
+	}
+	return out
+}
+
+func ipv4Broadcast(ip net.IP, mask net.IPMask) net.IP {
+	ip4 := ip.To4()
+	if ip4 == nil || len(mask) != net.IPv4len {
+		return nil
+	}
+	out := make(net.IP, net.IPv4len)
+	for i := range out {
+		out[i] = ip4[i] | ^mask[i]
+	}
+	return out
+}

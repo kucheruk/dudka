@@ -25,7 +25,7 @@ void main() {
 
   test('saved engine identity is not overwritten by a placeholder name', () {
     final host = EngineHost(binaryPath: '/bin/dudkad', dataDir: '/data');
-    final args = host.arguments(announcePort: 41777);
+    final args = host.arguments();
     expect(args, isNot(contains('-name')));
   });
 
@@ -35,9 +35,17 @@ void main() {
       dataDir: '/data',
       name: 'Евгений',
     );
-    final args = host.arguments(announcePort: 41777);
+    final args = host.arguments();
     final nameIndex = args.indexOf('-name');
     expect(nameIndex, greaterThanOrEqualTo(0));
     expect(args[nameIndex + 1], 'Евгений');
+  });
+
+  test('desktop engine keeps shared LAN discovery defaults', () {
+    final host = EngineHost(binaryPath: '/bin/dudkad', dataDir: '/data');
+    final args = host.arguments();
+    expect(args, isNot(contains('-announce-port')));
+    expect(args, isNot(contains('-session-port')));
+    expect(args, isNot(contains('-announce-interval')));
   });
 }

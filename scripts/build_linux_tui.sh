@@ -32,7 +32,12 @@ bundle="$bundle_root/dudka-linux-${ARCH}"
 mkdir -p "$bundle"
 cp "$OUT/dudka-linux-${ARCH}" "$bundle/dudka"
 cp "$OUT/dudkad-linux-${ARCH}" "$bundle/dudkad"
-tar -czf "$OUT/dudka-linux-${ARCH}.tar.gz" -C "$bundle_root" "dudka-linux-${ARCH}"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  COPYFILE_DISABLE=1 tar --no-xattrs -czf "$OUT/dudka-linux-${ARCH}.tar.gz" \
+    -C "$bundle_root" "dudka-linux-${ARCH}"
+else
+  tar -czf "$OUT/dudka-linux-${ARCH}.tar.gz" -C "$bundle_root" "dudka-linux-${ARCH}"
+fi
 
 if [[ "$ARCH" == "amd64" ]]; then
   sha="$(sha256sum "$OUT/dudka-linux-amd64.tar.gz" | awk '{print $1}')"

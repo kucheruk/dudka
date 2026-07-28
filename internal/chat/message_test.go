@@ -10,11 +10,11 @@ import (
 func TestEncodeDecodeChatMessage(t *testing.T) {
 	t.Parallel()
 	in := chat.Message{
-		MsgID:              "11111111-1111-4111-8111-111111111111",
-		PeerID:             "peer-a",
-		DisplayNameAtSend:  "Аня",
-		TS:                 time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC),
-		Text:               "привет из комнаты",
+		MsgID:             "11111111-1111-4111-8111-111111111111",
+		PeerID:            "peer-a",
+		DisplayNameAtSend: "Аня",
+		TS:                time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC),
+		Text:              "привет из комнаты",
 	}
 	raw, err := chat.EncodeMessage(in)
 	if err != nil {

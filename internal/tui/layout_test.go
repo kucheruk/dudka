@@ -9,8 +9,8 @@ import (
 func TestLayoutForPanelsFit(t *testing.T) {
 	t.Parallel()
 	lay := tui.LayoutFor(80, 24)
-	if lay.StatusH+lay.BodyH+lay.ComposeH+lay.HelpH != lay.Height {
-		t.Fatalf("vertical sum %d want %d", lay.StatusH+lay.BodyH+lay.ComposeH+lay.HelpH, lay.Height)
+	if lay.StatusH+lay.BodyH+lay.ComposeH+lay.NoticeH+lay.HelpH != lay.Height {
+		t.Fatalf("vertical sum %d want %d", lay.StatusH+lay.BodyH+lay.ComposeH+lay.NoticeH+lay.HelpH, lay.Height)
 	}
 	if lay.PeersW+1+lay.FeedW != lay.Width {
 		t.Fatalf("horizontal peers+sep+feed=%d want %d", lay.PeersW+1+lay.FeedW, lay.Width)

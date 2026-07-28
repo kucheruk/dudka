@@ -87,7 +87,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case scanDoneMsg:
 		m.snap = msg.snap
-		m.statusMsg = fmt.Sprintf("поиск: найдено %d", msg.n)
+		m.statusMsg = fmt.Sprintf("ПОИСК ЗАВЕРШЁН · найдено: %d", msg.n)
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -121,13 +121,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		if (msg.String() == "s" || msg.String() == "S") &&
-			m.input.Value() == "" &&
-			m.snap.EngineOK &&
-			m.snap.Network != NetworkNoNetwork &&
-			len(m.snap.Peers) == 0 {
-			return m, m.scanCmd()
-		}
 	}
 
 	var cmd tea.Cmd
@@ -142,10 +135,18 @@ func (m Model) submitCompose() (tea.Model, tea.Cmd) {
 	if strings.TrimSpace(line) == "" {
 		return m, nil
 	}
+	if ParseSearchCommand(line) {
+		m.statusMsg = "ИЩУ СОСЕДЕЙ…"
+		return m, m.scanCmd()
+	}
 	c := m.client
 	return m, func() tea.Msg {
 		if err := HandleComposeLine(c, line); err != nil {
-			return statusErrMsg(err.Error())
+			if _, warning := err.(*ErrLargeFileWarning); warning {
+				return statusErrMsg(err.Error())
+			}
+			logTUIError("compose", err)
+			return statusErrMsg(composeErrorMessage(line))
 		}
 		snap, err := c.Fetch()
 		if err != nil {
@@ -155,16 +156,33 @@ func (m Model) submitCompose() (tea.Model, tea.Cmd) {
 	}
 }
 
+func composeErrorMessage(line string) string {
+	switch {
+	case strings.HasPrefix(strings.TrimSpace(line), "/nick"):
+		return "ИМЯ НЕ ИЗМЕНЕНО · используйте /nick Имя"
+	case strings.HasPrefix(strings.TrimSpace(line), "/announce"):
+		return "ФАЙЛ НЕ ДОБАВЛЕН · проверьте путь"
+	case strings.HasPrefix(strings.TrimSpace(line), "/fetch"):
+		return "СКАЧИВАНИЕ НЕ НАЧАТО · проверьте file_id"
+	case strings.HasPrefix(strings.TrimSpace(line), "/cancel"):
+		return "СКАЧИВАНИЕ НЕ ОСТАНОВЛЕНО · проверьте file_id"
+	default:
+		return "СООБЩЕНИЕ НЕ ОТПРАВЛЕНО · повторите"
+	}
+}
+
 func (m Model) scanCmd() tea.Cmd {
 	c := m.client
 	return func() tea.Msg {
 		n, err := c.Scan()
 		if err != nil {
-			return statusErrMsg("поиск: " + err.Error())
+			logTUIError("search", err)
+			return statusErrMsg("ПОИСК НЕ ЗАВЕРШЁН · повторите /search · подробности в tui.log")
 		}
 		snap, ferr := c.Fetch()
 		if ferr != nil {
-			return statusErrMsg(fmt.Sprintf("найдено %d · %v", n, ferr))
+			logTUIError("search refresh", ferr)
+			return statusErrMsg(fmt.Sprintf("НАЙДЕНО: %d · лента обновится автоматически", n))
 		}
 		// Prefer snap update; status shown via a tiny wrapper message type.
 		return scanDoneMsg{n: n, snap: snap}

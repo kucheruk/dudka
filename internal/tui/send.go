@@ -47,12 +47,16 @@ func (c *Client) Send(text string) (SendResult, error) {
 	return res, nil
 }
 
-// HandleComposeLine handles compose input: /nick, /announce, /fetch, /cancel, or Enter = send.
+// HandleComposeLine handles compose input commands or Enter = send.
 // Blank lines are ignored (no error).
 func HandleComposeLine(c *Client, line string) error {
 	text := strings.TrimSpace(line)
 	if text == "" {
 		return nil
+	}
+	if ParseSearchCommand(text) {
+		_, err := c.Scan()
+		return err
 	}
 	if name, isNick, err := ParseNickCommand(text); isNick {
 		if err != nil {
@@ -90,6 +94,16 @@ func HandleComposeLine(c *Client, line string) error {
 	}
 	_, err := c.Send(text)
 	return err
+}
+
+// ParseSearchCommand recognizes the explicit neighbor search command.
+func ParseSearchCommand(line string) bool {
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "/search", "/scan", "/поиск":
+		return true
+	default:
+		return false
+	}
 }
 
 // ErrLargeFileWarning is returned when /fetch needs confirmation for >100 MiB (P054).

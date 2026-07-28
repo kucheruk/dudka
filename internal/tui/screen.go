@@ -35,7 +35,8 @@ func RenderScreen(st ScreenState, width, height int) string {
 	}
 
 	rows = append(rows, paintCompose(st.Compose, st.CursorOn, lay.Width))
-	rows = append(rows, paintHelp(st.Snap, st.StatusMsg, lay.Width))
+	rows = append(rows, paintNotice(st.StatusMsg, lay.Width))
+	rows = append(rows, paintHelp(st.Snap, lay.Width))
 
 	for len(rows) < height {
 		rows = append(rows, fillBg("", width, colorPanel))
@@ -114,7 +115,7 @@ func peerPaneLines(snap Snapshot, width, height int) []string {
 		case len(snap.Peers) == 0:
 			lines = append(lines, fillBg(styleDim().Render(EmptyPeersCopy), width, colorPanelDeep))
 			if remaining > 1 {
-				lines = append(lines, fillBg(styleAction().Render(" S · ИСКАТЬ "), width, colorPanelDeep))
+				lines = append(lines, fillBg(styleAction().Render(" /search · ИСКАТЬ "), width, colorPanelDeep))
 			}
 		default:
 			for i, p := range snap.Peers {
@@ -203,17 +204,28 @@ func paintCompose(compose string, cursor bool, width int) string {
 	return fillBg(joined, width, colorPanelDeep)
 }
 
-func paintHelp(snap Snapshot, statusMsg string, width int) string {
-	return fillBg(styleDim().Render(truncateRunes(helpText(snap, statusMsg), width)), width, colorPanel)
+func paintHelp(snap Snapshot, width int) string {
+	return fillBg(styleDim().Render(truncateRunes(helpText(snap), width)), width, colorPanel)
 }
 
-func helpText(snap Snapshot, statusMsg string) string {
+func paintNotice(statusMsg string, width int) string {
+	msg := strings.TrimSpace(statusMsg)
+	if msg == "" {
+		msg = "ГОТОВО"
+	}
+	style := styleDim()
+	if strings.Contains(msg, "НЕ ЗАВЕРШЁН") {
+		style = styleErr()
+	} else if strings.Contains(msg, "ИЩУ") {
+		style = styleStatus()
+	}
+	return fillBg(style.Render(" "+truncateRunes(msg, width-1)), width, colorPanel)
+}
+
+func helpText(snap Snapshot) string {
 	base := "ENTER отправить  ↑↓ лента  /nick Имя  /announce путь  ESC выход"
 	if snap.EngineOK && snap.Network != NetworkNoNetwork && len(snap.Peers) == 0 {
-		base = "S искать · " + base
-	}
-	if msg := strings.TrimSpace(statusMsg); msg != "" {
-		return msg + " · " + base
+		base = "/search найти  " + base
 	}
 	return base
 }

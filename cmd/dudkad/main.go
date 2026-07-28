@@ -108,6 +108,7 @@ func main() {
 		OnFileChunkRequest: hub.HandleFileChunkRequest,
 		OnPeerUpserted:     hub.OnPeerUpserted,
 		OnPeerRemoved:      hub.OnPeerRemoved,
+		OnRegisterBacklog:  hub.RegisterBacklog,
 		Logf:               func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
 	if err := disc.Start(); err != nil {
