@@ -165,6 +165,7 @@
 - [x] P113 MCP tool: agent → чат (send текста в общий feed) (`dudka_send` in `cmd/dudka-mcp`)
 - [x] P114 MCP tool: чат → agent (получить входящий текст) (`dudka_inbox`)
 - [x] P115 Smoke: два процесса (человек + agent stub) на LAN/loopback обмениваются текстом; тройной префикс виден в ленте (`./scripts/agent_mcp_smoke.sh`)
+- [x] P116 Агентский skill + публичная инструкция MCP и модель source-available лицензии (`.skills/dudka/SKILL.md`, `docs/licensing.md`)
 
 **Фаза 7 готова:** домашний агент в том же чате квартиры, отличим по нику, без интернета.
 

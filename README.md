@@ -9,6 +9,7 @@
 
 - Forgejo: <http://winebottle.local:3030/vetinary/dudka>
 - Remote: `ssh://git@winebottle.local:2222/vetinary/dudka.git`
+- GitHub: <https://github.com/kucheruk/dudka> — публичное зеркало; Forgejo остаётся каноническим репозиторием
 - Go module: `dudka` (`go.mod`)
 
 ## Сборка stub
@@ -171,4 +172,9 @@ Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `
 
 ## Лицензирование
 
-Открытое решение: см. [`docs/specs/product.md`](docs/specs/product.md) (DUD-PRD-140). Пока продукт намеренно offline — callhome в рантайме запрещён требованиями сети.
+Исходники опубликованы для проверки, личного изучения и некоммерческого
+использования по **PolyForm Noncommercial 1.0.0**. Это source-available, не
+OSI Open Source: коммерческое использование требует отдельного разрешения.
+См. [`LICENSE.md`](LICENSE.md) и [`docs/licensing.md`](docs/licensing.md).
+Рантайм остаётся Community без callhome по
+[`DUD-PRD-140`](docs/specs/product.md#dud-prd-140).
