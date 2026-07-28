@@ -1,0 +1,9 @@
+Package: dudka
+Version: @VERSION@
+Section: net
+Priority: optional
+Architecture: @ARCH@
+Depends: libgtk-3-0, libayatana-appindicator3-1
+Maintainer: Студия ПО Замутим <hello@zamoo.team>
+Description: Локальный квартирный чат
+ Полноценное графическое приложение для текста и файлов в одной LAN.

@@ -6,7 +6,9 @@
 
 ## Статус
 
-**Фаза 1 закрыта:** engine discovery + текст + Linux TUI; `./scripts/check.sh` гоняет unit + multi-peer protocol tests.  
+**Desktop GUI работает на macOS, Windows и Linux;** TUI остаётся
+дополнительным инструментом. `./scripts/check.sh` гоняет unit +
+multi-peer protocol tests.
 Продуктовая правда — [`PRODUCT.md`](PRODUCT.md), визуальный мир — [`DESIGN.md`](DESIGN.md), требования — [`docs/specs/`](docs/specs/).
 
 - Forgejo: <http://winebottle.local:3030/vetinary/dudka>
@@ -66,7 +68,21 @@ go build -o dist/dudka ./cmd/dudka     # Linux TUI
 
 Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shell в `apps/dudka` — DESIGN.md charcoal UI + adaptive dual-pane/peer strip + чат/файлы/превью; Flutter↔Flutter text+file (`./scripts/flutter_ff_test.sh`); RU UI (`./scripts/ru_ui_test.sh`); bind ADR [`docs/design/flutter-bind.md`](docs/design/flutter-bind.md); `./scripts/flutter_*_test.sh`, `./scripts/run_flutter_spike.sh`.
 
-## Сборка Linux (P080)
+## Сборка Linux GUI (P150)
+
+Полноценное графическое приложение собирается на Linux или готовится
+автоматически desktop-build workflow:
+
+```bash
+./scripts/build_linux_app.sh
+# → dist/dudka-linux-amd64.deb
+# → dist/dudka-linux-amd64.tar.gz
+```
+
+Для обычной установки используйте `dudka-linux-amd64.deb`. Терминал не
+открывается, `dudkad` уже находится внутри пакета.
+
+## Дополнительный Linux TUI (P080)
 
 Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):
 
@@ -78,7 +94,8 @@ Flutter↔engine (P060–P072): subprocess + HTTP loopback, **macOS-first** shel
 # GOARCH=arm64 ./scripts/build_linux_tui.sh
 ```
 
-На Linux-машине: запустить `dudkad`, затем `dudka -engine 127.0.0.1:17880`.
+TUI нужен только для диагностики или терминальных машин. Обычным пользователям
+он не предлагается.
 
 ## Сборка macOS desktop (P081)
 
@@ -125,11 +142,14 @@ Android — системной установкой APK; самодельная 
 
 ```bash
 ./scripts/build_windows_app.sh
-# → dist/dudkad-windows-amd64.exe + dist/dudka-windows-amd64.exe
-# Flutter GUI: только на Windows-хосте — см. dist/BUILD-WINDOWS.md
+# → dist/dudka-windows-amd64-setup.exe
+# → dist/dudka-windows-amd64.zip (служебный пакет автообновления)
 ```
 
-Контракт: `./scripts/build_windows_app_test.sh`.
+Скрипт выполняется на Windows; в репозитории есть desktop-build workflow.
+Пользователь получает один `dudka-windows-amd64-setup.exe`, один ярлык Дудки и
+графическое окно без терминала. Встроенный engine не показывается отдельной
+программой. Контракт: `./scripts/build_windows_app_test.sh`.
 
 ## Сборка Android (P083)
 
@@ -178,12 +198,13 @@ Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `
 
 | Платформа | UI |
 | --- | --- |
-| iOS, Android, Windows, macOS | Flutter (грамматика из `DESIGN.md`) |
-| Linux | текстовый TUI (Go) |
+| iOS, Android, Windows, macOS, Linux | Flutter (грамматика из `DESIGN.md`) |
+| Linux/Windows TUI | дополнительный терминальный инструмент (Go) |
 
 ## Стек (зафиксирован на проектировании)
 
-- **Go** — протокол, discovery, хвост истории, файлы, Linux TUI, встроенный engine для GUI.
+- **Go** — протокол, discovery, хвост истории, файлы, дополнительный TUI,
+  встроенный engine для GUI.
 - **Flutter** — GUI shell; говорит с локальным Go-engine только через loopback.
 - Discovery: UDP broadcast + TCP register + subnet scan; **не** mDNS.
 - Рантайм без интернета (регуляторный контур, не деталь).

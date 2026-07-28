@@ -19,7 +19,13 @@ abstract final class DudkaColors {
 
 abstract final class DudkaType {
   static const monoFamily = 'JetBrains Mono';
-  static const monoFallback = <String>['UI Monospace', 'Menlo', 'Consolas', 'Courier', 'monospace'];
+  static const monoFallback = <String>[
+    'UI Monospace',
+    'Menlo',
+    'Consolas',
+    'Courier',
+    'monospace'
+  ];
 
   static TextStyle mono({
     double size = 15,
@@ -40,11 +46,21 @@ abstract final class DudkaType {
   }
 
   static TextStyle label({Color color = DudkaColors.silkscreenDim}) {
-    return mono(size: 11, weight: FontWeight.w500, color: color, letterSpacing: 0.12 * 11, height: 1.2);
+    return mono(
+        size: 11,
+        weight: FontWeight.w500,
+        color: color,
+        letterSpacing: 0.12 * 11,
+        height: 1.2);
   }
 
   static TextStyle display({Color color = DudkaColors.silkscreen}) {
-    return mono(size: 22, weight: FontWeight.w700, color: color, letterSpacing: 0.04 * 22, height: 1.15);
+    return mono(
+        size: 22,
+        weight: FontWeight.w700,
+        color: color,
+        letterSpacing: 0.04 * 22,
+        height: 1.15);
   }
 }
 
@@ -86,7 +102,8 @@ ThemeData buildDudkaTheme() {
       foregroundColor: DudkaColors.silkscreen,
       elevation: 0,
       scrolledUnderElevation: 0,
-      titleTextStyle: DudkaType.mono(size: 16, weight: FontWeight.w700, letterSpacing: 2),
+      titleTextStyle:
+          DudkaType.mono(size: 16, weight: FontWeight.w700, letterSpacing: 2),
       iconTheme: const IconThemeData(color: DudkaColors.silkscreen),
       shape: const Border(
         bottom: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
@@ -118,7 +135,11 @@ ThemeData buildDudkaTheme() {
         disabledBackgroundColor: DudkaColors.ledIdle,
         disabledForegroundColor: DudkaColors.silkscreenDim,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        textStyle: DudkaType.mono(size: 13, weight: FontWeight.w700, letterSpacing: 1.5, color: DudkaColors.panelDeep),
+        textStyle: DudkaType.mono(
+            size: 13,
+            weight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: DudkaColors.panelDeep),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
@@ -127,14 +148,16 @@ ThemeData buildDudkaTheme() {
         foregroundColor: DudkaColors.silkscreen,
         side: const BorderSide(color: DudkaColors.silkscreenDim, width: 1),
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        textStyle: DudkaType.mono(size: 12, weight: FontWeight.w600, letterSpacing: 1.5),
+        textStyle: DudkaType.mono(
+            size: 12, weight: FontWeight.w600, letterSpacing: 1.5),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: DudkaColors.silkscreen,
-        textStyle: DudkaType.mono(size: 12, weight: FontWeight.w600, letterSpacing: 1.2),
+        textStyle: DudkaType.mono(
+            size: 12, weight: FontWeight.w600, letterSpacing: 1.2),
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
     ),

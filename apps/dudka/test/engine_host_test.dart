@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('parseListenLine extracts host:port', () {
-    expect(EngineHost.parseListenLine('listen=127.0.0.1:17880'), '127.0.0.1:17880');
+    expect(EngineHost.parseListenLine('listen=127.0.0.1:17880'),
+        '127.0.0.1:17880');
     expect(EngineHost.parseListenLine('ready peer_id=x name=y'), isNull);
     expect(EngineHost.parseListenLine('listen=::1:9'), '::1:9');
   });
@@ -14,6 +15,7 @@ void main() {
   });
 
   test('baseUrlFromListen builds http URL', () {
-    expect(EngineHost.baseUrlFromListen('127.0.0.1:17880'), 'http://127.0.0.1:17880');
+    expect(EngineHost.baseUrlFromListen('127.0.0.1:17880'),
+        'http://127.0.0.1:17880');
   });
 }

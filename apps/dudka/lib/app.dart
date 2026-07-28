@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'engine/client.dart';
+import 'desktop/desktop_lifecycle.dart';
 import 'nick/fallback.dart';
 import 'screens/chat_screen.dart';
 import 'screens/first_run_nick_screen.dart';
@@ -21,6 +22,7 @@ class DudkaApp extends StatefulWidget {
     this.nickPick,
     this.chatPollInterval = const Duration(seconds: 1),
     this.updater,
+    this.desktop,
   });
 
   final String engineBase;
@@ -30,6 +32,7 @@ class DudkaApp extends StatefulWidget {
   final NickPick? nickPick;
   final Duration chatPollInterval;
   final UpdateController? updater;
+  final DesktopLifecycleHandle? desktop;
 
   @override
   State<DudkaApp> createState() => _DudkaAppState();
@@ -64,9 +67,15 @@ class _DudkaAppState extends State<DudkaApp> {
   }
 
   Directory _defaultShellDir() {
-    final home = Platform.environment['HOME'];
-    if (home != null && home.isNotEmpty) {
+    final home = Platform.environment[Platform.isWindows ? 'APPDATA' : 'HOME'];
+    if (home != null && home.isNotEmpty && Platform.isMacOS) {
       return Directory('$home/Library/Application Support/dudka/flutter-shell');
+    }
+    if (home != null && home.isNotEmpty && Platform.isWindows) {
+      return Directory('$home\\Dudka\\shell');
+    }
+    if (home != null && home.isNotEmpty) {
+      return Directory('$home/.local/share/dudka/shell');
     }
     return Directory('${Directory.systemTemp.path}/dudka-flutter-shell');
   }
@@ -93,7 +102,8 @@ class _DudkaAppState extends State<DudkaApp> {
     final confirmed = _nickConfirmed;
     if (confirmed == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(key: Key('boot-loading'))),
+        body:
+            Center(child: CircularProgressIndicator(key: Key('boot-loading'))),
       );
     }
     if (!confirmed) {
@@ -120,6 +130,7 @@ class _DudkaAppState extends State<DudkaApp> {
       client: _client,
       pollInterval: widget.chatPollInterval,
       updater: widget.updater,
+      desktop: widget.desktop,
     );
   }
 }

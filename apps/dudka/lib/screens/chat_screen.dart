@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../engine/client.dart';
+import '../desktop/desktop_lifecycle.dart';
 import '../files/local_file_actions.dart';
 import '../layout/chat_layout.dart';
 import '../theme/dudka_theme.dart';
@@ -21,6 +22,7 @@ class ChatScreen extends StatefulWidget {
     this.pickFiles,
     this.revealFile,
     this.updater,
+    this.desktop,
   });
 
   final EngineClient client;
@@ -28,6 +30,7 @@ class ChatScreen extends StatefulWidget {
   final LocalFilesPicker? pickFiles;
   final DownloadedFileRevealer? revealFile;
   final UpdateController? updater;
+  final DesktopLifecycleHandle? desktop;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -68,6 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final snap = await widget.client.fetchSnapshot();
       if (!mounted) return;
+      widget.desktop?.observeSnapshot(snap);
       setState(() {
         _snap = snap;
         _error = null;
@@ -137,8 +141,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final current = _snap?.me.name ?? '';
     final updated = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) =>
-            SettingsNickScreen(client: widget.client, initialNick: current),
+        builder: (_) => SettingsNickScreen(
+          client: widget.client,
+          initialNick: current,
+          autostart: widget.desktop?.autostart,
+        ),
       ),
     );
     if (!mounted) return;
@@ -628,8 +635,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _participantTile(PeerInfo peer, ChatSnapshot snap) {
-    final isMe =
-        peer.peerId == snap.me.peerId ||
+    final isMe = peer.peerId == snap.me.peerId ||
         (snap.me.peerId.trim().isEmpty && peer.peerId == 'self');
     return Text(
       isMe ? '${peer.displayName} · ВЫ' : peer.displayName,

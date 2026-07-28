@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ДУДКА
+Comment=Локальный квартирный чат
+Exec=/opt/dudka/dudka
+Icon=team.zamoo.dudka
+Terminal=false
+Categories=Network;Chat;
+StartupWMClass=team.zamoo.dudka

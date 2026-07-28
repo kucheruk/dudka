@@ -2,4 +2,4 @@
 package version
 
 // Version is the product version shared by dudkad and the TUI.
-const Version = "0.3.2"
+const Version = "0.4.0"

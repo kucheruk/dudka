@@ -95,7 +95,8 @@ class _FirstRunNickScreenState extends State<FirstRunNickScreen> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+              Text(_error!,
+                  style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
             ],
             const SizedBox(height: 24),
             FilledButton(

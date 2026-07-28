@@ -35,8 +35,7 @@ Map<String, Object?> manifestJson({
   String platform = 'macos-universal',
   String? hash,
   int? size,
-  String url =
-      'https://zamoo.team/dudka/releases/dudka-macos-universal.zip',
+  String url = 'https://zamoo.team/dudka/releases/dudka-macos-universal.zip',
 }) {
   return {
     'schema': 1,
@@ -128,8 +127,7 @@ void main() {
           HttpStatus.ok,
         );
       }
-      if (request.url.path ==
-          '/dudka/releases/dudka-macos-universal.zip') {
+      if (request.url.path == '/dudka/releases/dudka-macos-universal.zip') {
         return http.Response.bytes(artifact, HttpStatus.ok);
       }
       return http.Response('missing', HttpStatus.notFound);

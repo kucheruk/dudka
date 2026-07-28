@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// Thin loopback client for dudkad (P060–P071 / docs/design/flutter-bind.md).
 class EngineClient {
   EngineClient({required this.baseUrl, http.Client? httpClient})
-    : _http = httpClient ?? http.Client();
+      : _http = httpClient ?? http.Client();
 
   /// e.g. http://127.0.0.1:17880
   final String baseUrl;
@@ -239,9 +239,8 @@ class EngineClient {
     final portRelocated = st['port_relocated'] == true;
     final portNote = (st['port_note'] as String?)?.trim() ?? '';
     final incompatibleRaw = st['incompatible'];
-    final incompatibleCount = incompatibleRaw is List
-        ? incompatibleRaw.length
-        : 0;
+    final incompatibleCount =
+        incompatibleRaw is List ? incompatibleRaw.length : 0;
 
     final msgsRes = await _http.get(_uri('/messages'));
     if (msgsRes.statusCode != 200) {
@@ -344,8 +343,7 @@ class ChatMessage {
     final tsRaw = m['ts'];
     DateTime ts;
     if (tsRaw is String && tsRaw.isNotEmpty) {
-      ts =
-          DateTime.tryParse(tsRaw)?.toUtc() ??
+      ts = DateTime.tryParse(tsRaw)?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     } else {
       ts = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -567,9 +565,8 @@ String formatStatusStrip(ChatSnapshot snap) {
 }
 
 String formatFeedLine(ChatMessage m) {
-  final name = m.displayNameAtSend.trim().isEmpty
-      ? '—'
-      : m.displayNameAtSend.trim();
+  final name =
+      m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
   String body;
   if (m.isFileAnnounce) {
     final fn = m.fileName.trim().isEmpty ? 'файл' : m.fileName.trim();

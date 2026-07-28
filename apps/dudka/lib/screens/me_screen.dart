@@ -54,12 +54,15 @@ class _MeScreenState extends State<MeScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('GET /me', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('GET /me',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Text('name: ${me.name}', key: const Key('me-name')),
                 Text('peer_id: ${me.peerId}', key: const Key('me-peer-id')),
                 const SizedBox(height: 24),
-                Text('engine: ${widget.engineBase}', style: const TextStyle(color: Colors.black54)),
+                Text('engine: ${widget.engineBase}',
+                    style: const TextStyle(color: Colors.black54)),
               ],
             );
           },

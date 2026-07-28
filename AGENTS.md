@@ -33,8 +33,9 @@ LAN — чеклист фазы 7 в [`ROADMAP.md`](ROADMAP.md), контрак�
 
 ## Базовый стек первой реализации
 
-- Go: engine (`dudkad`), протокол, discovery, файлы, Linux TUI.
-- Flutter: iOS / Android / Windows / macOS UI по [`DESIGN.md`](DESIGN.md).
+- Go: engine (`dudkad`), протокол, discovery, файлы, дополнительный TUI.
+- Flutter: iOS / Android / Windows / macOS / Linux UI по
+  [`DESIGN.md`](DESIGN.md).
 - Связка Flutter↔Go: локальный loopback API engine (`127.0.0.1` / UDS); протокол не дублировать во втором языке.
 - Данные: локальные файлы устройства; без внешней БД.
 - Облако, mDNS-as-only-discovery, auth-провайдер — только по явной просьбе владельца / ADR.

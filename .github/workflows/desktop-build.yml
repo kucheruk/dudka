@@ -1,0 +1,63 @@
+name: Desktop GUI packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Test Flutter
+        working-directory: apps/dudka
+        run: flutter test
+      - name: Build Windows GUI and installer
+        shell: bash
+        run: ./scripts/build_windows_app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dudka-windows-amd64
+          if-no-files-found: error
+          path: |
+            dist/dudka-windows-amd64-setup.exe
+            dist/dudka-windows-amd64.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+      - name: Test Flutter
+        working-directory: apps/dudka
+        run: flutter test
+      - name: Build Linux GUI packages
+        run: ./scripts/build_linux_app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dudka-linux-amd64
+          if-no-files-found: error
+          path: |
+            dist/dudka-linux-amd64.deb
+            dist/dudka-linux-amd64.tar.gz

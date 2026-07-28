@@ -54,10 +54,18 @@ void main() {
     expect(stepProgressLitPads(40), 2);
 
     final p0 = tester.widget<ColoredBox>(
-      find.descendant(of: find.byKey(const Key('step-pad-0')), matching: find.byType(ColoredBox)).first,
+      find
+          .descendant(
+              of: find.byKey(const Key('step-pad-0')),
+              matching: find.byType(ColoredBox))
+          .first,
     );
     final p2 = tester.widget<ColoredBox>(
-      find.descendant(of: find.byKey(const Key('step-pad-2')), matching: find.byType(ColoredBox)).first,
+      find
+          .descendant(
+              of: find.byKey(const Key('step-pad-2')),
+              matching: find.byType(ColoredBox))
+          .first,
     );
     expect(p0.color, DudkaColors.stepRed);
     expect(p2.color, DudkaColors.ledIdle);

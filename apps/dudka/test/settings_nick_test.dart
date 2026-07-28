@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dudka/engine/client.dart';
+import 'package:dudka/desktop/autostart_service.dart';
 import 'package:dudka/screens/chat_screen.dart';
 import 'package:dudka/screens/settings_nick_screen.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,18 @@ Future<void> pumpFrames(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
+}
+
+class FakeAutostart implements AutostartController {
+  bool enabled = false;
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  Future<void> setEnabled(bool value) async {
+    enabled = value;
+  }
 }
 
 EngineClient mockClient(
@@ -85,6 +98,28 @@ void main() {
     expect(find.textContaining('телефон'), findsNothing);
     expect(find.textContaining('аватар'), findsNothing);
     expect(find.textContaining('пароль'), findsNothing);
+    client.close();
+  });
+
+  testWidgets('desktop settings can enable autostart', (tester) async {
+    final client = mockClient(meName: () => 'OldNick');
+    final autostart = FakeAutostart();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsNickScreen(
+          client: client,
+          initialNick: 'OldNick',
+          autostart: autostart,
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.byKey(const Key('settings-autostart')), findsOneWidget);
+    expect(find.text('Дудка запустится скрытой в трее.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings-autostart')));
+    await pumpFrames(tester);
+    expect(autostart.enabled, isTrue);
     client.close();
   });
 

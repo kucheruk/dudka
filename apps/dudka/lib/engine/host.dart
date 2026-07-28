@@ -70,7 +70,10 @@ class EngineHost {
     var ready = false;
     final done = Completer<void>();
     // Keep draining stdout/stderr so dudkad cannot block on a full pipe.
-    proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
+    proc.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((line) {
       listen ??= parseListenLine(line);
       if (parseReadyLine(line)) ready = true;
       if (listen != null && ready && !done.isCompleted) {
