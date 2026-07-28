@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"bytes"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +16,8 @@ func TestF5CopiesLastTechnicalErrorWithOSC52(t *testing.T) {
 	t.Setenv("TMUX", "")
 
 	m := NewModel(NewClient("http://127.0.0.1:9"))
+	var clipboard bytes.Buffer
+	m.clipboard = &clipboard
 	updated, _ := m.Update(statusErrMsg{
 		display: "ПОИСК НЕ ЗАВЕРШЁН · повторите /search",
 		detail:  "поиск: context deadline exceeded",
@@ -29,9 +33,15 @@ func TestF5CopiesLastTechnicalErrorWithOSC52(t *testing.T) {
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyF5})
 	m = updated.(Model)
 	if cmd == nil {
-		t.Fatal("F5 must schedule clipboard pulse cleanup")
+		t.Fatal("F5 must write the clipboard")
 	}
-	payload := osc52Payload(t, m.View())
+	if !strings.Contains(m.View(), "КОПИРУЮ ДИАГНОСТИКУ") {
+		t.Fatalf("missing copying state:\n%s", m.View())
+	}
+	done := cmd()
+	updated, _ = m.Update(done)
+	m = updated.(Model)
+	payload := osc52Payload(t, clipboard.String())
 	decoded, err := base64.StdEncoding.DecodeString(payload)
 	if err != nil {
 		t.Fatalf("decode OSC52 payload: %v", err)
@@ -57,11 +67,6 @@ func TestF5CopiesLastTechnicalErrorWithOSC52(t *testing.T) {
 	}
 	if !strings.Contains(m.View(), "ДИАГНОСТИКА СКОПИРОВАНА") {
 		t.Fatalf("missing copy confirmation:\n%s", m.View())
-	}
-	cleanup := cmd()
-	updated, _ = m.Update(cleanup)
-	if updated.(Model).clipboard != "" {
-		t.Fatal("OSC52 pulse must be removed after it was rendered")
 	}
 }
 
@@ -113,14 +118,29 @@ func TestF5WithoutErrorDoesNothing(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("F5 without an error must not emit a command")
 	}
-	if updated.(Model).clipboard != "" {
-		t.Fatal("F5 without an error must not emit OSC52")
+	_ = updated
+}
+
+func TestClipboardWriteFailureDoesNotClaimSuccess(t *testing.T) {
+	m := NewModel(NewClient("http://127.0.0.1:9"))
+	m.clipboard = failingWriter{}
+	updated, _ := m.Update(statusErrMsg{display: "ОШИБКА", detail: "detail"})
+	m = updated.(Model)
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyF5})
+	m = updated.(Model)
+	done := cmd()
+	updated, _ = m.Update(done)
+	m = updated.(Model)
+	if !m.statusErr || !strings.Contains(m.statusMsg, "НЕ УДАЛОСЬ СКОПИРОВАТЬ") {
+		t.Fatalf("write failure must stay visible: %+v", m)
+	}
+	if m.lastError != "detail" {
+		t.Fatalf("original diagnostic must remain available: %q", m.lastError)
 	}
 }
 
-func TestClipboardPulseOutlivesOneRefreshFrame(t *testing.T) {
-	t.Parallel()
-	if clipboardPulseDuration <= tickInterval {
-		t.Fatalf("clipboard pulse %s must outlive refresh frame %s", clipboardPulseDuration, tickInterval)
-	}
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write failed")
 }

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -10,10 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const (
-	tickInterval           = 500 * time.Millisecond
-	clipboardPulseDuration = tickInterval + 250*time.Millisecond
-)
+const tickInterval = 500 * time.Millisecond
 
 type tickMsg time.Time
 
@@ -27,7 +25,9 @@ type statusErrMsg struct {
 	detail  string
 }
 
-type clipboardPulseDoneMsg struct{}
+type clipboardWriteDoneMsg struct {
+	err error
+}
 
 // Model is the interactive bubbletea TUI (P046).
 type Model struct {
@@ -38,7 +38,7 @@ type Model struct {
 	statusErr   bool
 	lastError   string
 	lastErrorAt time.Time
-	clipboard   string
+	clipboard   io.Writer
 	feedScroll  int
 	width       int
 	height      int
@@ -53,11 +53,12 @@ func NewModel(client *Client) Model {
 	ti.CharLimit = 4000
 	ti.Focus()
 	return Model{
-		client: client,
-		input:  ti,
-		width:  80,
-		height: 24,
-		snap:   Snapshot{EngineOK: false, Err: "загрузка…"},
+		client:    client,
+		input:     ti,
+		clipboard: os.Stdout,
+		width:     80,
+		height:    24,
+		snap:      Snapshot{EngineOK: false, Err: "загрузка…"},
 	}
 }
 
@@ -104,8 +105,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lastError = msg.detail
 		m.lastErrorAt = time.Now()
 		return m, nil
-	case clipboardPulseDoneMsg:
-		m.clipboard = ""
+	case clipboardWriteDoneMsg:
+		if msg.err != nil {
+			m.statusMsg = "НЕ УДАЛОСЬ СКОПИРОВАТЬ · ошибка сохранена"
+			m.statusErr = true
+			return m, nil
+		}
+		m.statusMsg = "ДИАГНОСТИКА СКОПИРОВАНА"
+		m.statusErr = false
 		return m, nil
 	case scanDoneMsg:
 		m.snap = msg.snap
@@ -140,12 +147,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				time.Now(),
 				readTUILogTail(),
 			)
-			m.clipboard = osc52Sequence(report)
-			m.statusMsg = "ДИАГНОСТИКА СКОПИРОВАНА"
+			m.statusMsg = "КОПИРУЮ ДИАГНОСТИКУ…"
 			m.statusErr = false
-			return m, tea.Tick(clipboardPulseDuration, func(time.Time) tea.Msg {
-				return clipboardPulseDoneMsg{}
-			})
+			return m, writeClipboardCmd(m.clipboard, osc52Sequence(report))
 		case tea.KeyUp:
 			m.feedScroll++
 			return m, nil
@@ -263,7 +267,14 @@ func (m Model) View() string {
 		FeedScroll:   m.feedScroll,
 		CursorOn:     true,
 	}, m.width, m.height)
-	return m.clipboard + styleCanvas(m.width, m.height).Render(content)
+	return styleCanvas(m.width, m.height).Render(content)
+}
+
+func writeClipboardCmd(dst io.Writer, sequence string) tea.Cmd {
+	return func() tea.Msg {
+		_, err := io.WriteString(dst, sequence)
+		return clipboardWriteDoneMsg{err: err}
+	}
 }
 
 func technicalError(scope string, err error) string {
