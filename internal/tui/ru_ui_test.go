@@ -28,7 +28,7 @@ func TestRenderUserFacingRussian(t *testing.T) {
 			Mime:        "image/jpeg",
 		}},
 	})
-	for _, want := range []string{"СОСЕДИ", "ЛЕНТА", "ВВОД", "онлайн 1", "прото 1.0", "ФАЙЛ photo.jpg"} {
+	for _, want := range []string{"СОСЕДИ", "ЛЕНТА", "ВВОД", "онлайн 2", "Аня · ВЫ", "прото 1.0", "ФАЙЛ photo.jpg"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
 		}

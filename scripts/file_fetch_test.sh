@@ -19,7 +19,15 @@ trap 'rm -rf "$tmpdir"; for p in ${pid_a:-} ${pid_b:-}; do [[ -n "$p" ]] && kill
 bin="$tmpdir/dudkad"
 go build -o "$bin" ./cmd/dudkad || fail "go build failed"
 
-port="$(python3 - <<'PY'
+port_a="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_b="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("127.0.0.1", 0))
@@ -31,10 +39,12 @@ PY
 log_a="$tmpdir/a.log"
 log_b="$tmpdir/b.log"
 "$bin" -data-dir "$tmpdir/a" -name "Alice" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
+  -announce-port "$port_a" -announce-target "127.0.0.1:${port_b}" \
+  -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
 pid_a=$!
 "$bin" -data-dir "$tmpdir/b" -name "Bob" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
+  -announce-port "$port_b" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
 pid_b=$!
 
 listen_a=""; listen_b=""
@@ -97,6 +107,41 @@ print(m["file_id"])
 PY
 )"
 
+# The sender uses the same async API as the GUI. It must receive a named inbox
+# file, never the raw extensionless blob keyed only by file_id.
+curl -sS --max-time 2 -X POST "http://${listen_a}/files/fetch" \
+  -H 'Content-Type: application/json' \
+  -d "{\"file_id\":\"${file_id}\",\"wait\":false}" >/dev/null \
+  || fail "own async fetch failed to start"
+own_done=0
+for _ in $(seq 1 40); do
+  curl -sS --max-time 1 "http://${listen_a}/files/transfers" >"$tmpdir/own-transfers.json" || true
+  if python3 - "$tmpdir/own-transfers.json" "$file_id" <<'PY'
+import json, sys
+trs = json.load(open(sys.argv[1])).get("transfers") or []
+fid = sys.argv[2]
+raise SystemExit(0 if any(
+    t.get("file_id") == fid and t.get("status") == "done" and t.get("path")
+    for t in trs
+) else 1)
+PY
+  then
+    own_done=1
+    break
+  fi
+  sleep 0.05
+done
+[[ "$own_done" -eq 1 ]] || fail "own async fetch did not finish"
+python3 - "$tmpdir/own-transfers.json" "$file_id" <<'PY' || fail "own fetch leaked blob path"
+import json, pathlib, sys
+trs = json.load(open(sys.argv[1])).get("transfers") or []
+tr = next(t for t in trs if t.get("file_id") == sys.argv[2])
+path = pathlib.Path(tr["path"])
+assert path.name == "payload.bin", tr
+assert "blobs" not in path.parts, tr
+assert path.read_bytes() == b"p051-chunked-payload-OK!!", tr
+PY
+
 # Wait until Bob sees announce.
 seen=0
 for _ in $(seq 1 40); do
@@ -126,6 +171,7 @@ import json, sys, pathlib
 d = json.load(open(sys.argv[1]))
 path = pathlib.Path(d["path"])
 assert path.is_file(), d
+assert path.name == "payload.bin", d
 data = path.read_bytes()
 assert data == b"p051-chunked-payload-OK!!", data
 assert d.get("size") == len(data), d

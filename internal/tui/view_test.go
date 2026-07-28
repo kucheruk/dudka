@@ -24,8 +24,11 @@ func TestRenderEmptyPeersShowsNikogoRyadom(t *testing.T) {
 	if !strings.Contains(out, "Вася") {
 		t.Fatalf("missing me name:\n%s", out)
 	}
-	if !strings.Contains(out, "онлайн 0") {
+	if !strings.Contains(out, "онлайн 1") {
 		t.Fatalf("missing онлайн count:\n%s", out)
+	}
+	if !strings.Contains(out, "Вася · ВЫ") {
+		t.Fatalf("missing self in peers:\n%s", out)
 	}
 }
 
@@ -42,8 +45,8 @@ func TestRenderListsPeers(t *testing.T) {
 	if strings.Contains(out, tui.EmptyPeersCopy) {
 		t.Fatalf("must not show empty copy when peers present:\n%s", out)
 	}
-	if !strings.Contains(out, "онлайн 2") {
-		t.Fatalf("missing онлайн 2:\n%s", out)
+	if !strings.Contains(out, "онлайн 3") {
+		t.Fatalf("missing онлайн 3:\n%s", out)
 	}
 	if !strings.Contains(out, "Боб") || !strings.Contains(out, "Катя") {
 		t.Fatalf("missing peer names:\n%s", out)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Task-level contract for P040: TUI status + peers; empty → НИКОГО РЯДОМ.
+# Task-level contract for P040/P148: self + remote peers; alone keeps seek.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,11 +37,20 @@ frame="$("$tmpdir/dudka" -engine "$listen")"
 printf '%s\n' "$frame" | head -n 1 | grep -q '^dudka ' || fail "missing version line: $frame"
 printf '%s\n' "$frame" | grep -q 'ДУДКА' || fail "missing brand: $frame"
 printf '%s\n' "$frame" | grep -q 'Аня' || fail "missing me: $frame"
-printf '%s\n' "$frame" | grep -q 'онлайн 0' || fail "missing онлайн 0: $frame"
+printf '%s\n' "$frame" | grep -q 'онлайн 1' || fail "missing self in online count: $frame"
+printf '%s\n' "$frame" | grep -q 'Аня · ВЫ' || fail "missing self peer row: $frame"
 printf '%s\n' "$frame" | grep -q 'НИКОГО РЯДОМ' || fail "missing empty copy: $frame"
 
 # Second peer → TUI lists them.
-port="$(python3 - <<'PY'
+port_a="$(python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+port_b="$(python3 - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(("127.0.0.1", 0))
@@ -56,10 +65,12 @@ pid=""
 
 log_a="$tmpdir/a2.log"; log_b="$tmpdir/b.log"
 "$tmpdir/dudkad" -data-dir "$tmpdir/a2" -name "Аня" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
+  -announce-port "$port_a" -announce-target "127.0.0.1:${port_b}" \
+  -session-port 0 -announce-interval 150ms >"$log_a" 2>&1 &
 pid=$!
 "$tmpdir/dudkad" -data-dir "$tmpdir/b" -name "Боря" -listen "127.0.0.1:0" \
-  -announce-port "$port" -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
+  -announce-port "$port_b" -announce-target "127.0.0.1:${port_a}" \
+  -session-port 0 -announce-interval 150ms >"$log_b" 2>&1 &
 pid_b=$!
 
 listen_a=""
@@ -75,7 +86,7 @@ done
 found=0
 for _ in $(seq 1 60); do
   frame="$("$tmpdir/dudka" -engine "$listen_a")"
-  if printf '%s\n' "$frame" | grep -q 'Боря' && ! printf '%s\n' "$frame" | grep -q 'НИКОГО РЯДОМ'; then
+  if printf '%s\n' "$frame" | grep -q 'Боря' && printf '%s\n' "$frame" | grep -q 'онлайн 2' && ! printf '%s\n' "$frame" | grep -q 'НИКОГО РЯДОМ'; then
     found=1
     break
   fi

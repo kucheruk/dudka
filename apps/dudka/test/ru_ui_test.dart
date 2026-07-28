@@ -16,7 +16,10 @@ void main() {
       protoMinor: 0,
       messages: const [],
     );
-    expect(formatStatusStrip(ok), contains('онлайн 1'));
+    expect(ok.onlineCount, 2);
+    expect(ok.onlineParticipants.first.displayName, 'Аня');
+    expect(ok.remotePeerCount, 1);
+    expect(formatStatusStrip(ok), contains('онлайн 2'));
     expect(formatStatusStrip(ok), contains('ок'));
     expect(formatStatusStrip(ok), contains('прото 1.0'));
     expect(formatStatusStrip(ok), isNot(contains('online')));
@@ -30,7 +33,10 @@ void main() {
       protoMinor: 0,
       messages: const [],
     );
+    expect(alone.onlineCount, 1);
+    expect(alone.remotePeerCount, 0);
     expect(formatStatusStrip(alone), contains('один'));
+    expect(formatStatusStrip(alone), contains('онлайн 1'));
     expect(formatStatusStrip(alone), isNot(contains('alone')));
 
     final noNet = ChatSnapshot(
@@ -112,7 +118,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('СОСЕДИ'), findsWidgets);
     expect(find.text('PEERS'), findsNothing);
-    expect(find.textContaining('онлайн 2'), findsOneWidget);
+    expect(find.textContaining('онлайн 3'), findsOneWidget);
+    expect(find.text('Katya · ВЫ'), findsOneWidget);
     expect(find.textContaining('online '), findsNothing);
     client.close();
   });

@@ -6,10 +6,8 @@ import 'package:http/http.dart' as http;
 
 /// Thin loopback client for dudkad (P060–P071 / docs/design/flutter-bind.md).
 class EngineClient {
-  EngineClient({
-    required this.baseUrl,
-    http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+  EngineClient({required this.baseUrl, http.Client? httpClient})
+    : _http = httpClient ?? http.Client();
 
   /// e.g. http://127.0.0.1:17880
   final String baseUrl;
@@ -137,7 +135,8 @@ class EngineClient {
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
       throw EngineException(
-          'POST /files/announce → ${res.statusCode}: ${res.body}');
+        'POST /files/announce → ${res.statusCode}: ${res.body}',
+      );
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     final msgRaw = map['message'];
@@ -158,7 +157,8 @@ class EngineClient {
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
       throw EngineException(
-          'POST /files/fetch → ${res.statusCode}: ${res.body}');
+        'POST /files/fetch → ${res.statusCode}: ${res.body}',
+      );
     }
     return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -174,7 +174,8 @@ class EngineClient {
     );
     if (res.statusCode < 200 || res.statusCode > 299) {
       throw EngineException(
-          'POST /files/cancel → ${res.statusCode}: ${res.body}');
+        'POST /files/cancel → ${res.statusCode}: ${res.body}',
+      );
     }
     return TransferInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -184,7 +185,8 @@ class EngineClient {
     final res = await _http.get(_uri('/files/transfers'));
     if (res.statusCode != 200) {
       throw EngineException(
-          'GET /files/transfers → ${res.statusCode}: ${res.body}');
+        'GET /files/transfers → ${res.statusCode}: ${res.body}',
+      );
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     final raw = map['transfers'];
@@ -205,7 +207,8 @@ class EngineClient {
     final peersRes = await _http.get(_uri('/peers'));
     if (peersRes.statusCode != 200) {
       throw EngineException(
-          'GET /peers → ${peersRes.statusCode}: ${peersRes.body}');
+        'GET /peers → ${peersRes.statusCode}: ${peersRes.body}',
+      );
     }
     final peersMap = jsonDecode(peersRes.body) as Map<String, dynamic>;
     final peersRaw = peersMap['peers'];
@@ -224,7 +227,8 @@ class EngineClient {
     final statusRes = await _http.get(_uri('/status'));
     if (statusRes.statusCode != 200) {
       throw EngineException(
-          'GET /status → ${statusRes.statusCode}: ${statusRes.body}');
+        'GET /status → ${statusRes.statusCode}: ${statusRes.body}',
+      );
     }
     final st = jsonDecode(statusRes.body) as Map<String, dynamic>;
     final network = (st['network'] as String?)?.trim();
@@ -235,13 +239,15 @@ class EngineClient {
     final portRelocated = st['port_relocated'] == true;
     final portNote = (st['port_note'] as String?)?.trim() ?? '';
     final incompatibleRaw = st['incompatible'];
-    final incompatibleCount =
-        incompatibleRaw is List ? incompatibleRaw.length : 0;
+    final incompatibleCount = incompatibleRaw is List
+        ? incompatibleRaw.length
+        : 0;
 
     final msgsRes = await _http.get(_uri('/messages'));
     if (msgsRes.statusCode != 200) {
       throw EngineException(
-          'GET /messages → ${msgsRes.statusCode}: ${msgsRes.body}');
+        'GET /messages → ${msgsRes.statusCode}: ${msgsRes.body}',
+      );
     }
     final msgsMap = jsonDecode(msgsRes.body) as Map<String, dynamic>;
     final msgsRaw = msgsMap['messages'];
@@ -338,7 +344,8 @@ class ChatMessage {
     final tsRaw = m['ts'];
     DateTime ts;
     if (tsRaw is String && tsRaw.isNotEmpty) {
-      ts = DateTime.tryParse(tsRaw)?.toUtc() ??
+      ts =
+          DateTime.tryParse(tsRaw)?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     } else {
       ts = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -479,6 +486,32 @@ class ChatSnapshot {
   final List<ChatMessage> messages;
   final List<TransferInfo> transfers;
 
+  String get _selfParticipantId =>
+      me.peerId.trim().isEmpty ? 'self' : me.peerId.trim();
+
+  List<PeerInfo> get onlineParticipants {
+    final selfId = _selfParticipantId;
+    final seen = <String>{selfId};
+    final result = <PeerInfo>[
+      PeerInfo(
+        peerId: selfId,
+        displayName: me.name.trim().isEmpty ? '—' : me.name.trim(),
+      ),
+    ];
+    for (final peer in peers) {
+      final id = peer.peerId.trim();
+      if (id.isNotEmpty && !seen.add(id)) continue;
+      result.add(peer);
+    }
+    return result;
+  }
+
+  int get onlineCount => onlineParticipants.length;
+
+  int get remotePeerCount => onlineParticipants
+      .where((peer) => peer.peerId != _selfParticipantId)
+      .length;
+
   TransferInfo? transferFor(String fileId) {
     for (final t in transfers) {
       if (t.fileId == fileId) return t;
@@ -513,9 +546,11 @@ const String protoMismatchUserCopy = 'обнови Дудку';
 
 String formatStatusStrip(ChatSnapshot snap) {
   final me = snap.me.name.trim().isEmpty ? '—' : snap.me.name.trim();
-  final n = snap.peers.length;
-  final state = displayNetworkState(network: snap.network, peerCount: n);
-  final buf = StringBuffer('ДУДКА · $me · онлайн $n · $state');
+  final state = displayNetworkState(
+    network: snap.network,
+    peerCount: snap.remotePeerCount,
+  );
+  final buf = StringBuffer('ДУДКА · $me · онлайн ${snap.onlineCount} · $state');
   if (snap.protoMajor > 0) {
     buf.write(' · прото ${snap.protoMajor}.${snap.protoMinor}');
   }
@@ -532,8 +567,9 @@ String formatStatusStrip(ChatSnapshot snap) {
 }
 
 String formatFeedLine(ChatMessage m) {
-  final name =
-      m.displayNameAtSend.trim().isEmpty ? '—' : m.displayNameAtSend.trim();
+  final name = m.displayNameAtSend.trim().isEmpty
+      ? '—'
+      : m.displayNameAtSend.trim();
   String body;
   if (m.isFileAnnounce) {
     final fn = m.fileName.trim().isEmpty ? 'файл' : m.fileName.trim();

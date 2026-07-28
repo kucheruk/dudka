@@ -107,7 +107,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(client: client, pollInterval: Duration.zero),
+      ),
     );
     await pumpFrames(tester);
 
@@ -115,13 +116,14 @@ void main() {
     expect(find.byKey(const Key('chat-header')), findsOneWidget);
     expect(find.text('Чат'), findsNothing);
     expect(find.textContaining('Anya'), findsWidgets);
-    expect(find.textContaining('онлайн 2'), findsOneWidget);
+    expect(find.textContaining('онлайн 3'), findsOneWidget);
     expect(find.textContaining('ок'), findsWidgets);
 
     expect(find.byKey(const Key('chat-peers')), findsOneWidget);
+    expect(find.text('Anya · ВЫ'), findsOneWidget);
     expect(find.text('Boris'), findsWidgets);
     expect(find.text('Vera'), findsOneWidget);
-    expect(find.textContaining('НИКОГО РЯДОМ'), findsNothing);
+    expect(find.textContaining('БОЛЬШЕ НИКОГО РЯДОМ'), findsNothing);
 
     expect(find.byKey(const Key('chat-feed')), findsOneWidget);
     expect(find.byType(SelectionArea), findsOneWidget);
@@ -134,18 +136,21 @@ void main() {
     client.close();
   });
 
-  testWidgets('empty peers shows НИКОГО РЯДОМ and один in status',
-      (tester) async {
+  testWidgets('empty remote peers still shows self and онлайн 1', (
+    tester,
+  ) async {
     final client = mockChatClient(meName: 'Katya', peers: const []);
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(client: client, pollInterval: Duration.zero),
+      ),
     );
     await pumpFrames(tester);
 
     expect(find.textContaining('один'), findsOneWidget);
-    expect(find.textContaining('онлайн 0'), findsOneWidget);
-    expect(find.text('НИКОГО РЯДОМ'), findsOneWidget);
+    expect(find.textContaining('онлайн 1'), findsOneWidget);
+    expect(find.text('Katya · ВЫ'), findsOneWidget);
+    expect(find.text('БОЛЬШЕ НИКОГО РЯДОМ'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsOneWidget);
     expect(find.byKey(const Key('chat-feed-empty')), findsOneWidget);
     client.close();
@@ -155,24 +160,25 @@ void main() {
     final client = mockChatClient(meName: 'Katya', network: 'no_network');
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(client: client, pollInterval: Duration.zero),
+      ),
     );
     await pumpFrames(tester);
 
     expect(find.textContaining('нет сети'), findsOneWidget);
+    expect(find.textContaining('онлайн 1'), findsOneWidget);
+    expect(find.text('Katya · ВЫ'), findsOneWidget);
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();
   });
 
-  testWidgets('verified update shows button and activates once',
-      (tester) async {
+  testWidgets('verified update shows button and activates once', (
+    tester,
+  ) async {
     final client = mockChatClient(meName: 'Katya');
     final updater = FakeUpdateController(
-      const UpdateSnapshot(
-        phase: UpdatePhase.ready,
-        version: '0.3.1',
-      ),
+      const UpdateSnapshot(phase: UpdatePhase.ready, version: '0.3.1'),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -197,14 +203,12 @@ void main() {
     updater.dispose();
   });
 
-  testWidgets('update action stays hidden until package is verified',
-      (tester) async {
+  testWidgets('update action stays hidden until package is verified', (
+    tester,
+  ) async {
     final client = mockChatClient(meName: 'Katya');
     final updater = FakeUpdateController(
-      const UpdateSnapshot(
-        phase: UpdatePhase.downloading,
-        version: '0.3.1',
-      ),
+      const UpdateSnapshot(phase: UpdatePhase.downloading, version: '0.3.1'),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -219,10 +223,7 @@ void main() {
 
     expect(find.byKey(const Key('update-ready')), findsNothing);
     updater.setSnapshot(
-      const UpdateSnapshot(
-        phase: UpdatePhase.ready,
-        version: '0.3.1',
-      ),
+      const UpdateSnapshot(phase: UpdatePhase.ready, version: '0.3.1'),
     );
     await tester.pump();
     expect(find.byKey(const Key('update-ready')), findsOneWidget);

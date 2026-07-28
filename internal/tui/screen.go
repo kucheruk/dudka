@@ -63,18 +63,19 @@ func statusText(snap Snapshot) string {
 		}
 		return text
 	}
-	n := len(snap.Peers)
-	state := DisplayNetworkState(snap.Network, n)
+	remoteCount := len(snap.Peers)
+	state := DisplayNetworkState(snap.Network, remoteCount)
 	me := strings.TrimSpace(snap.MeName)
 	if me == "" {
 		me = "—"
 	}
 	// Segment-style brand + online count (DESIGN status strip).
-	text := fmt.Sprintf("ДУДКА · %s · онлайн %d · %s", me, n, state)
+	onlineCount := remoteCount + 1
+	text := fmt.Sprintf("ДУДКА · %s · онлайн %d · %s", me, onlineCount, state)
 	if snap.ProtoMajor > 0 {
 		text += fmt.Sprintf(" · прото %d.%d", snap.ProtoMajor, snap.ProtoMinor)
 	}
-	return text + "  " + StepPads(onlinePercent(n))
+	return text + "  " + StepPads(onlinePercent(onlineCount))
 }
 
 func onlinePercent(n int) int {
@@ -97,24 +98,36 @@ func peerPaneLines(snap Snapshot, width, height int) []string {
 	switch {
 	case !snap.EngineOK:
 		lines = append(lines, fillBg(styleDim().Render("—"), width, colorPanelDeep))
-	case snap.Network == NetworkNoNetwork:
-		lines = append(lines, fillBg(styleDim().Render(NoNetworkCopy), width, colorPanelDeep))
-	case len(snap.Peers) == 0:
-		lines = append(lines, fillBg(styleDim().Render(EmptyPeersCopy), width, colorPanelDeep))
-		if inner > 1 {
-			lines = append(lines, fillBg(styleAction().Render(" S · ИСКАТЬ "), width, colorPanelDeep))
-		}
 	default:
-		for i, p := range snap.Peers {
-			if i >= inner {
-				break
+		me := strings.TrimSpace(snap.MeName)
+		if me == "" {
+			me = "—"
+		}
+		selfRow := stylePeerActive().Render("●") +
+			styleBody().Render(" "+truncateRunes(me+" · ВЫ", width-2))
+		lines = append(lines, fillBg(selfRow, width, colorPanelDeep))
+		remaining := inner - 1
+		switch {
+		case remaining <= 0:
+		case snap.Network == NetworkNoNetwork:
+			lines = append(lines, fillBg(styleDim().Render(NoNetworkCopy), width, colorPanelDeep))
+		case len(snap.Peers) == 0:
+			lines = append(lines, fillBg(styleDim().Render(EmptyPeersCopy), width, colorPanelDeep))
+			if remaining > 1 {
+				lines = append(lines, fillBg(styleAction().Render(" S · ИСКАТЬ "), width, colorPanelDeep))
 			}
-			name := strings.TrimSpace(p.DisplayName)
-			if name == "" {
-				name = p.PeerID
+		default:
+			for i, p := range snap.Peers {
+				if i >= remaining {
+					break
+				}
+				name := strings.TrimSpace(p.DisplayName)
+				if name == "" {
+					name = p.PeerID
+				}
+				row := stylePeerActive().Render("●") + styleBody().Render(" "+truncateRunes(name, width-2))
+				lines = append(lines, fillBg(row, width, colorPanelDeep))
 			}
-			row := stylePeerActive().Render("●") + styleBody().Render(" "+truncateRunes(name, width-2))
-			lines = append(lines, fillBg(row, width, colorPanelDeep))
 		}
 	}
 	for len(lines) < height {

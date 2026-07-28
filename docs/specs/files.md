@@ -94,12 +94,22 @@ Status: Accepted
 локальный путь. На macOS доступно действие «ПОКАЗАТЬ В FINDER», на Windows и
 Linux — эквивалентное действие системного файлового менеджера. На мобильных
 путь остаётся видимым, даже если ОС не позволяет раскрыть app-private каталог.
+Человеческий файл сохраняется под исходным безопасным basename с расширением
+из announce. Внутренний blob, названный только по `file_id`, никогда не
+выдаётся пользователю как результат скачивания; это относится и к файлу,
+которым поделился текущий пользователь.
 
 Проверка:
 
 - `status=done` без `path` не выдаётся за полностью объяснённый успех;
+- `Transfer.path` заканчивается исходным basename, а его байты и SHA-256
+  совпадают с announce;
+- локальный source blob материализуется в inbox так же, как полученный от
+  соседа, и blob-path не просачивается в GUI;
 - desktop reveal получает ровно `Transfer.path`;
-- evidence: `apps/dudka/test/file_transfer_test.dart`.
+- evidence: `internal/chat/file_fetch_test.go`,
+  `internal/loopback/file_fetch_test.go`,
+  `apps/dudka/test/file_transfer_test.dart`.
 
 Зависимости: DUD-FILE-110
 ADR: не требуется

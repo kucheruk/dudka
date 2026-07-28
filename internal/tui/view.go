@@ -8,7 +8,7 @@ import (
 )
 
 // EmptyPeersCopy is shown when LAN is up but online peers list is empty (DUD-UI-120 / P040).
-const EmptyPeersCopy = "НИКОГО РЯДОМ"
+const EmptyPeersCopy = "БОЛЬШЕ НИКОГО РЯДОМ"
 
 // NoNetworkCopy is shown when there is no usable Wi‑Fi/LAN (DUD-UI-120 / P044).
 const NoNetworkCopy = "НЕТ СЕТИ"
@@ -113,9 +113,9 @@ func Render(s Snapshot) string {
 		}
 		return b.String()
 	}
-	n := len(s.Peers)
-	state := DisplayNetworkState(s.Network, n)
-	fmt.Fprintf(&b, "ДУДКА · %s · онлайн %d · %s", me, n, state)
+	remoteCount := len(s.Peers)
+	state := DisplayNetworkState(s.Network, remoteCount)
+	fmt.Fprintf(&b, "ДУДКА · %s · онлайн %d · %s", me, remoteCount+1, state)
 	if s.ProtoMajor > 0 {
 		fmt.Fprintf(&b, " · прото %d.%d", s.ProtoMajor, s.ProtoMinor)
 	}
@@ -136,10 +136,11 @@ func Render(s Snapshot) string {
 		}
 	}
 	b.WriteString("СОСЕДИ\n")
+	fmt.Fprintf(&b, "  %s · ВЫ\n", me)
 	switch {
 	case s.Network == NetworkNoNetwork:
 		fmt.Fprintf(&b, "  %s\n", NoNetworkCopy)
-	case n == 0:
+	case remoteCount == 0:
 		fmt.Fprintf(&b, "  %s\n", EmptyPeersCopy)
 		fmt.Fprintf(&b, "  (%s — скан подсети)\n", AloneHint)
 	default:

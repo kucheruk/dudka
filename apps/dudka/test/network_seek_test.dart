@@ -44,8 +44,9 @@ void main() {
     client.close();
   });
 
-  testWidgets('alone shows ИСКАТЬ; tap triggers scan and refreshes peers',
-      (tester) async {
+  testWidgets('alone shows ИСКАТЬ; tap triggers scan and refreshes peers', (
+    tester,
+  ) async {
     var peers = <Map<String, String>>[];
     var scanned = false;
     final client = EngineClient(
@@ -88,11 +89,7 @@ void main() {
               {'peer_id': 'p2', 'display_name': 'Boris'},
             ];
             return http.Response(
-              jsonEncode({
-                'probed': 1,
-                'found': 1,
-                'peers': peers,
-              }),
+              jsonEncode({'probed': 1, 'found': 1, 'peers': peers}),
               200,
               headers: {'content-type': 'application/json; charset=utf-8'},
             );
@@ -104,12 +101,14 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(client: client, pollInterval: Duration.zero),
+      ),
     );
     await pumpFrames(tester);
 
     expect(find.textContaining('один'), findsOneWidget);
-    expect(find.text('НИКОГО РЯДОМ'), findsOneWidget);
+    expect(find.text('Katya · ВЫ'), findsOneWidget);
+    expect(find.text('БОЛЬШЕ НИКОГО РЯДОМ'), findsOneWidget);
     expect(find.byKey(const Key('chat-seek')), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsOneWidget);
 
@@ -120,7 +119,7 @@ void main() {
 
     expect(scanned, isTrue);
     expect(find.text('Boris'), findsOneWidget);
-    expect(find.textContaining('онлайн 1'), findsOneWidget);
+    expect(find.textContaining('онлайн 2'), findsOneWidget);
     expect(find.text('ИСКАТЬ'), findsNothing);
     client.close();
   });
@@ -167,7 +166,8 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
-          home: ChatScreen(client: client, pollInterval: Duration.zero)),
+        home: ChatScreen(client: client, pollInterval: Duration.zero),
+      ),
     );
     await pumpFrames(tester);
     expect(find.text('НЕТ СЕТИ'), findsOneWidget);

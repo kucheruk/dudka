@@ -106,4 +106,60 @@ func TestFetchFileFromSourceWritesFullDiskCopy(t *testing.T) {
 	if !bytes.Equal(got, payload) {
 		t.Fatalf("disk=%q want=%q path=%s", got, payload, path)
 	}
+	if filepath.Base(path) != "hello.txt" {
+		t.Fatalf("download lost original basename: %s", path)
+	}
+}
+
+func TestFetchFileOwnAnnounceMaterializesNamedInboxFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	blobs, err := files.NewStore(filepath.Join(dir, "blobs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hub := chat.NewHub(chat.Config{
+		PeerID:   "peer-self",
+		Name:     "Owner",
+		Store:    chat.NewStore(),
+		Peers:    discovery.NewPeerStore(),
+		Blobs:    blobs,
+		InboxDir: filepath.Join(dir, "inbox"),
+	})
+	payload := []byte("GIF89a-owned-file")
+	res, err := hub.AnnounceFile(chat.FileAnnounce{
+		Name:    "family.gif",
+		Mime:    "image/gif",
+		Hash:    files.SHA256Sum(payload),
+		Content: payload,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourcePath, err := blobs.Path(res.Message.FileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := hub.Fetch(res.Message.FileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Status != chat.TransferDone || out.Path == "" {
+		t.Fatalf("want named done result: %+v", out)
+	}
+	if out.Path == sourcePath {
+		t.Fatalf("raw blob leaked as download path: %s", out.Path)
+	}
+	if filepath.Base(out.Path) != "family.gif" {
+		t.Fatalf("download lost original name and extension: %s", out.Path)
+	}
+	got, err := os.ReadFile(out.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, payload) {
+		t.Fatalf("download bytes=%q want=%q", got, payload)
+	}
 }

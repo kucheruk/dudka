@@ -64,7 +64,7 @@ func TestRenderNoNetworkOverridesPeersListCopy(t *testing.T) {
 		Network:  tui.NetworkNoNetwork,
 		Peers:    nil,
 	})
-	if strings.Contains(out, "онлайн 0") && !strings.Contains(out, "нет сети") {
-		t.Fatalf("want нет сети state with онлайн 0:\n%s", out)
+	if strings.Contains(out, "онлайн 1") && !strings.Contains(out, "нет сети") {
+		t.Fatalf("want нет сети state with self online:\n%s", out)
 	}
 }

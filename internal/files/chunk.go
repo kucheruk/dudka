@@ -269,7 +269,9 @@ func ReadChunks(ctx context.Context, r io.Reader, fileID string, destPath string
 	}
 }
 
-// InboxPath builds a safe destination path under inboxDir.
+// InboxPath builds a collision-safe destination directory for file_id while
+// preserving the original safe basename and extension for the human-facing
+// file.
 func InboxPath(inboxDir, fileID, name string) (string, error) {
 	inboxDir = strings.TrimSpace(inboxDir)
 	if inboxDir == "" {
@@ -279,12 +281,14 @@ func InboxPath(inboxDir, fileID, name string) (string, error) {
 	if id == "" || strings.ContainsAny(id, `/\`) {
 		return "", fmt.Errorf("files: bad file_id")
 	}
-	base := filepath.Base(strings.TrimSpace(name))
+	normalizedName := strings.ReplaceAll(strings.TrimSpace(name), `\`, "/")
+	base := filepath.Base(normalizedName)
 	if base == "." || base == string(filepath.Separator) || base == "" {
 		base = "file"
 	}
-	if err := os.MkdirAll(inboxDir, 0o755); err != nil {
+	fileDir := filepath.Join(inboxDir, id)
+	if err := os.MkdirAll(fileDir, 0o755); err != nil {
 		return "", err
 	}
-	return filepath.Join(inboxDir, id+"_"+base), nil
+	return filepath.Join(fileDir, base), nil
 }

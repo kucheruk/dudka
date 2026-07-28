@@ -27,7 +27,7 @@ func TestRenderScreenHasRussianPanels(t *testing.T) {
 		Compose:  "черновик",
 		CursorOn: true,
 	}, 80, 24)
-	for _, want := range []string{"С О С Е Д И", "Л Е Н Т А", "ОТПРАВИТЬ", "онлайн 1", "Боря", "привет", "черновик"} {
+	for _, want := range []string{"С О С Е Д И", "Л Е Н Т А", "ОТПРАВИТЬ", "онлайн 2", "Аня · ВЫ", "Боря", "привет", "черновик"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
 		}

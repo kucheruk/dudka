@@ -137,10 +137,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final current = _snap?.me.name ?? '';
     final updated = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) => SettingsNickScreen(
-          client: widget.client,
-          initialNick: current,
-        ),
+        builder: (_) =>
+            SettingsNickScreen(client: widget.client, initialNick: current),
       ),
     );
     if (!mounted) return;
@@ -207,9 +205,9 @@ class _ChatScreenState extends State<ChatScreen> {
       await updater.activate();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Не удалось обновить: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Не удалось обновить: $error')));
     }
   }
 
@@ -228,14 +226,17 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _body() {
     if (_loading && _snap == null) {
       return const Center(
-          child: CircularProgressIndicator(key: Key('chat-loading')));
+        child: CircularProgressIndicator(key: Key('chat-loading')),
+      );
     }
     if (_error != null && _snap == null) {
       return Text('движок недоступен\n$_error', key: const Key('chat-error'));
     }
     final snap = _snap!;
-    final state =
-        chatNetworkState(network: snap.network, peerCount: snap.peers.length);
+    final state = chatNetworkState(
+      network: snap.network,
+      peerCount: snap.remotePeerCount,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -316,9 +317,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   decoration: const BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                          color: DudkaColors.silkscreenDim, width: 1),
+                        color: DudkaColors.silkscreenDim,
+                        width: 1,
+                      ),
                       right: BorderSide(
-                          color: DudkaColors.silkscreenDim, width: 1),
+                        color: DudkaColors.silkscreenDim,
+                        width: 1,
+                      ),
                     ),
                   ),
                   padding: const EdgeInsets.fromLTRB(0, 8, 12, 0),
@@ -351,7 +356,8 @@ class _ChatScreenState extends State<ChatScreen> {
             alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
               border: Border(
-                  top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+                top: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
+              ),
             ),
             padding: const EdgeInsets.only(top: 8),
             child: KeyedSubtree(
@@ -379,18 +385,23 @@ class _ChatScreenState extends State<ChatScreen> {
             decoration: const BoxDecoration(
               color: DudkaColors.panelDeep,
               border: Border(
-                  top: BorderSide(color: DudkaColors.silkscreenDim, width: 1)),
+                top: BorderSide(color: DudkaColors.silkscreenDim, width: 1),
+              ),
             ),
             padding: const EdgeInsets.only(top: 8),
             child: _feedPane(snap),
           ),
         ),
         if (_sendError != null)
-          Text(_sendError!,
-              style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+          Text(
+            _sendError!,
+            style: DudkaType.mono(size: 12, color: DudkaColors.danger),
+          ),
         if (_fileError != null)
-          Text(_fileError!,
-              style: DudkaType.mono(size: 12, color: DudkaColors.danger)),
+          Text(
+            _fileError!,
+            style: DudkaType.mono(size: 12, color: DudkaColors.danger),
+          ),
         const SizedBox(height: 8),
         _composeRow(),
       ],
@@ -420,10 +431,8 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: CallbackShortcuts(
                 bindings: {
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    meta: true,
-                  ): _blow,
+                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                      _blow,
                   const SingleActivator(
                     LogicalKeyboardKey.enter,
                     control: true,
@@ -524,39 +533,67 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _peersList(String state, ChatSnapshot snap, {required Axis axis}) {
-    if (state == 'no_network') {
-      return const Text('НЕТ СЕТИ', key: Key('chat-peers-no-network'));
-    }
-    if (state == 'alone') {
+    if (state == 'alone' || state == 'no_network') {
+      final noNetwork = state == 'no_network';
       return axis == Axis.horizontal
-          ? Row(
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
-                const SizedBox(width: 12),
-                OutlinedButton(
-                  key: const Key('chat-seek'),
-                  onPressed: _seeking ? null : _seek,
-                  child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                SizedBox(
+                  height: 24,
+                  child: _participantList(snap, axis: Axis.horizontal),
                 ),
-                if (_seekError != null) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(_seekError!,
-                        style: const TextStyle(color: Colors.red)),
-                  ),
-                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      noNetwork ? 'НЕТ СЕТИ' : 'БОЛЬШЕ НИКОГО РЯДОМ',
+                      key: Key(
+                        noNetwork
+                            ? 'chat-peers-no-network'
+                            : 'chat-peers-alone',
+                      ),
+                    ),
+                    if (!noNetwork) ...[
+                      const SizedBox(width: 12),
+                      OutlinedButton(
+                        key: const Key('chat-seek'),
+                        onPressed: _seeking ? null : _seek,
+                        child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                      ),
+                    ],
+                    if (_seekError != null) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _seekError!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('НИКОГО РЯДОМ', key: Key('chat-peers-alone')),
+                _participantTile(snap.onlineParticipants.first, snap),
                 const SizedBox(height: 8),
-                OutlinedButton(
-                  key: const Key('chat-seek'),
-                  onPressed: _seeking ? null : _seek,
-                  child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                Text(
+                  noNetwork ? 'НЕТ СЕТИ' : 'БОЛЬШЕ НИКОГО РЯДОМ',
+                  key: Key(
+                    noNetwork ? 'chat-peers-no-network' : 'chat-peers-alone',
+                  ),
                 ),
+                if (!noNetwork) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    key: const Key('chat-seek'),
+                    onPressed: _seeking ? null : _seek,
+                    child: Text(_seeking ? 'ИЩЕМ…' : 'ИСКАТЬ'),
+                  ),
+                ],
                 if (_seekError != null) ...[
                   const SizedBox(height: 4),
                   Text(_seekError!, style: const TextStyle(color: Colors.red)),
@@ -564,36 +601,43 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             );
     }
+    return _participantList(snap, axis: axis);
+  }
+
+  Widget _participantList(ChatSnapshot snap, {required Axis axis}) {
+    final participants = snap.onlineParticipants;
     if (axis == Axis.horizontal) {
       return ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: snap.peers.length,
+        itemCount: participants.length,
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, i) {
-          final p = snap.peers[i];
-          return Center(
-            child: Text(
-              p.displayName,
-              key: Key('chat-peer-${p.peerId}'),
-              style: DudkaType.mono(size: 13),
-            ),
-          );
+          return Center(child: _participantTile(participants[i], snap));
         },
       );
     }
     return ListView.builder(
-      itemCount: snap.peers.length,
+      itemCount: participants.length,
       itemBuilder: (context, i) {
-        final p = snap.peers[i];
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
-          child: Text(
-            p.displayName,
-            key: Key('chat-peer-${p.peerId}'),
-            style: DudkaType.mono(size: 13),
-          ),
+          child: _participantTile(participants[i], snap),
         );
       },
+    );
+  }
+
+  Widget _participantTile(PeerInfo peer, ChatSnapshot snap) {
+    final isMe =
+        peer.peerId == snap.me.peerId ||
+        (snap.me.peerId.trim().isEmpty && peer.peerId == 'self');
+    return Text(
+      isMe ? '${peer.displayName} · ВЫ' : peer.displayName,
+      key: Key(isMe ? 'chat-peer-self' : 'chat-peer-${peer.peerId}'),
+      style: DudkaType.mono(
+        size: 13,
+        weight: isMe ? FontWeight.w700 : FontWeight.w400,
+      ),
     );
   }
 
@@ -685,9 +729,7 @@ class _ChatScreenState extends State<ChatScreen> {
         key: Key('file-done-$fileId'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            path.isEmpty ? 'скачано · путь не получен' : 'скачано · $path',
-          ),
+          Text(path.isEmpty ? 'скачано · путь не получен' : 'скачано · $path'),
           if (path.isNotEmpty)
             TextButton.icon(
               key: Key('file-reveal-$fileId'),

@@ -69,7 +69,7 @@ func TestFetchSnapshotFromEngine(t *testing.T) {
 		t.Fatalf("messages=%+v", snap.Messages)
 	}
 	frame := tui.Render(snap)
-	for _, part := range []string{"Аня", "Боря", "онлайн 1", "ЛЕНТА", "из engine"} {
+	for _, part := range []string{"Аня · ВЫ", "Боря", "онлайн 2", "ЛЕНТА", "из engine"} {
 		if !strings.Contains(frame, part) {
 			t.Fatalf("missing %q in:\n%s", part, frame)
 		}
