@@ -20,16 +20,14 @@ command -v go >/dev/null 2>&1 || fail "go not on PATH"
 OUT="${DIST:-$ROOT/dist}"
 mkdir -p "$OUT"
 
-ARCH="$(uname -m)"
-case "$ARCH" in
-  arm64|aarch64) GOARCH=arm64 ;;
-  x86_64|amd64) GOARCH=amd64 ;;
-  *) fail "unsupported arch $ARCH" ;;
-esac
-
-echo "building darwin dudkad ($GOARCH)"
-CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' \
-  -o "$OUT/dudkad-darwin-${GOARCH}" ./cmd/dudkad
+echo "building universal darwin dudkad"
+CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags='-s -w' \
+  -o "$OUT/dudkad-darwin-amd64" ./cmd/dudkad
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-s -w' \
+  -o "$OUT/dudkad-darwin-arm64" ./cmd/dudkad
+command -v lipo >/dev/null 2>&1 || fail "lipo not on PATH"
+lipo -create "$OUT/dudkad-darwin-amd64" "$OUT/dudkad-darwin-arm64" \
+  -output "$OUT/dudkad-darwin-universal"
 
 echo "flutter build macos --release"
 (
@@ -44,7 +42,7 @@ APP_SRC="apps/dudka/build/macos/Build/Products/Release/dudka.app"
 APP_DST="$OUT/dudka.app"
 rm -rf "$APP_DST"
 cp -R "$APP_SRC" "$APP_DST"
-cp "$OUT/dudkad-darwin-${GOARCH}" "$APP_DST/Contents/MacOS/dudkad"
+cp "$OUT/dudkad-darwin-universal" "$APP_DST/Contents/MacOS/dudkad"
 chmod +x "$APP_DST/Contents/MacOS/dudkad"
 
 ZIP="$OUT/dudka-macos.zip"
@@ -54,7 +52,12 @@ rm -f "$ZIP"
   ditto -c -k --sequesterRsrc --keepParent dudka.app "$(basename "$ZIP")"
 )
 
+DMG="$OUT/dudka-macos-universal.dmg"
+rm -f "$DMG"
+hdiutil create -volname "Дудка" -srcfolder "$APP_DST" -ov -format UDZO "$DMG" >/dev/null
+
 echo "OK"
 echo "  $APP_DST"
 echo "  $ZIP"
+echo "  $DMG"
 echo "  open $APP_DST"

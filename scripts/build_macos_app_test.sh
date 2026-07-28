@@ -24,11 +24,15 @@ DIST="$tmpdir/dist" ./scripts/build_macos_app.sh || fail "build_macos_app.sh fai
 
 app="$tmpdir/dist/dudka.app"
 zip="$tmpdir/dist/dudka-macos.zip"
+dmg="$tmpdir/dist/dudka-macos-universal.dmg"
 [[ -d "$app" ]] || fail "missing $app"
 [[ -f "$app/Contents/Info.plist" ]] || fail "not a macOS app bundle (no Info.plist)"
 [[ -x "$app/Contents/MacOS/dudka" ]] || fail "missing app executable Contents/MacOS/dudka"
 [[ -x "$app/Contents/MacOS/dudkad" ]] || fail "bundled dudkad missing next to app binary"
 [[ -f "$zip" ]] || fail "missing zip archive $zip"
+[[ -f "$dmg" ]] || fail "missing disk image $dmg"
+file "$app/Contents/MacOS/dudkad" | grep -q 'universal binary' \
+  || fail "bundled dudkad must contain Intel and Apple Silicon slices"
 
 # Smoke: bundled engine prints ready (does not need GUI).
 "$app/Contents/MacOS/dudkad" -data-dir "$tmpdir/eng" -name "Pack" -listen "127.0.0.1:0" \
@@ -43,4 +47,4 @@ kill "$pid" 2>/dev/null || true
 wait "$pid" 2>/dev/null || true
 [[ "$ok" -eq 1 ]] || fail "bundled dudkad did not become ready:\n$(cat "$tmpdir/eng.log")"
 
-echo "build_macos_app_test OK app=$app zip=$zip"
+echo "build_macos_app_test OK app=$app zip=$zip dmg=$dmg"

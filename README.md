@@ -11,6 +11,7 @@
 - Remote: `ssh://git@winebottle.local:2222/vetinary/dudka.git`
 - GitHub: <https://github.com/kucheruk/dudka> — публичное зеркало; Forgejo остаётся каноническим репозиторием
 - Go module: `dudka` (`go.mod`)
+- История версий и источник release notes: [`CHANGELOG.md`](CHANGELOG.md)
 
 ## Сборка stub
 
@@ -88,6 +89,12 @@ open dist/dudka.app
 ```
 
 Контракт: `./scripts/build_macos_app_test.sh`.
+
+## Выпуск версии
+
+Каждый законченный батч получает новую SemVer-версию и в том же проходе
+публикуется на лендинге. Полный обязательный порядок, правила bump и readback —
+в разделе «Версии, release notes и деплой» файла [`AGENTS.md`](AGENTS.md).
 
 ## Сборка Windows (P082)
 
