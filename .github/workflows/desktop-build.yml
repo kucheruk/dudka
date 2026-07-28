@@ -2,6 +2,9 @@ name: Desktop GUI packages
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "codex/**"
 
 jobs:
   windows:
