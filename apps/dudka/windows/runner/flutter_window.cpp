@@ -1,9 +1,7 @@
 #include "flutter_window.h"
 
 #include <algorithm>
-#include <iomanip>
 #include <optional>
-#include <sstream>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -102,10 +100,11 @@ bool FlutterWindow::OnCreate() {
         int count = 0;
         const auto* arguments = call.arguments();
         if (arguments) {
-          if (const auto* value = std::get_if<int32_t>(arguments)) {
-            count = *value;
-          } else if (const auto* value = std::get_if<int64_t>(arguments)) {
-            count = static_cast<int>(*value);
+          if (const auto* int32_value = std::get_if<int32_t>(arguments)) {
+            count = *int32_value;
+          } else if (const auto* int64_value =
+                         std::get_if<int64_t>(arguments)) {
+            count = static_cast<int>(*int64_value);
           }
         }
         SetBadge(std::max(0, count));
