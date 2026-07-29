@@ -12,3 +12,6 @@ header @dudka_web {
 	Referrer-Policy "no-referrer"
 	X-Content-Type-Options "nosniff"
 }
+
+@dudka_web_index path /dudka/web/ /dudka/web/index.html
+header @dudka_web_index Cache-Control "no-store, max-age=0"

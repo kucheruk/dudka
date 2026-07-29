@@ -17,5 +17,9 @@
    до согласия нет WebSocket, после согласия `ОНЛАЙН 2` и текст проходит
    напрямую.
 
+`index.html` не кешируется. Адреса `app.js`, `app.css` и `icon.png` содержат
+первые 12 знаков SHA-256. После изменения ассета обновить его `?v=` обязательно;
+это проверяет `scripts/web_asset_contract_test.sh`.
+
 Системный unit: `deploy/dudka-signal.service`. Фрагмент Caddy:
 `deploy/Caddyfile.fragment`.
