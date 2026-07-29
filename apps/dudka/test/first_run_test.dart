@@ -4,6 +4,7 @@ import 'package:dudka/app.dart';
 import 'package:dudka/engine/client.dart';
 import 'package:dudka/screens/chat_screen.dart';
 import 'package:dudka/screens/first_run_nick_screen.dart';
+import 'package:dudka/screens/internet_consent_screen.dart';
 import 'package:dudka/session/first_run_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,6 +179,52 @@ void main() {
           .text,
       isEmpty,
     );
+    client.close();
+  });
+
+  testWidgets('native internet starts only after informed consent', (
+    tester,
+  ) async {
+    await store.markNickConfirmed('Катя');
+    var enabled = false;
+    final client = EngineClient(
+      baseUrl: 'http://127.0.0.1:9',
+      httpClient: MockClient((req) async {
+        if (req.url.path == '/internet-consent') {
+          if (req.method == 'POST') enabled = true;
+          return http.Response(
+            '{"enabled":$enabled}',
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        return chatSnapshotResponse(req, meName: 'Катя') ??
+            http.Response('nope', 404);
+      }),
+    );
+
+    await tester.pumpWidget(
+      DudkaApp(
+        engineBase: 'http://127.0.0.1:9',
+        client: client,
+        firstRunStore: store,
+        chatPollInterval: Duration.zero,
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.byType(InternetConsentScreen), findsOneWidget);
+    expect(find.textContaining('публичный IP'), findsOneWidget);
+    expect(find.textContaining('сообщения, файлы и история'), findsOneWidget);
+    expect(find.textContaining('TURN не используется'), findsOneWidget);
+    expect(find.byType(ChatScreen), findsNothing);
+
+    await tester.tap(find.byKey(const Key('internet-consent-allow')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(enabled, isTrue);
+    expect(find.byType(ChatScreen), findsOneWidget);
     client.close();
   });
 }

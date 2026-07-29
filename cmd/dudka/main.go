@@ -1,4 +1,4 @@
-// Command dudka is the apartment LAN chat TUI (interactive by default, P046).
+// Command dudka is the apartment WebRTC chat TUI (interactive by default).
 package main
 
 import (
@@ -25,6 +25,7 @@ func main() {
 	nick := flag.String("nick", "", "change display name via engine, print frame, exit")
 	fetchID := flag.String("fetch", "", "start file download by file_id and print progress frames until done")
 	announcePath := flag.String("announce", "", "announce a local file into the feed and print frame")
+	allowInternet := flag.Bool("allow-internet", false, "allow Studio signaling and STUN")
 	interval := flag.Duration("interval", time.Second, "refresh interval in -watch mode")
 	flag.Parse()
 
@@ -40,6 +41,10 @@ func main() {
 	}
 
 	client := tui.NewClient(*engine)
+	if err := ensureInternetConsent(client, *allowInternet); err != nil {
+		fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
+		os.Exit(1)
+	}
 	printFrame := func() tui.Snapshot {
 		snap, err := client.Fetch()
 		if err != nil {
@@ -104,6 +109,30 @@ func main() {
 		fmt.Fprintf(os.Stderr, "dudka: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func ensureInternetConsent(client *tui.Client, explicitlyAllowed bool) error {
+	enabled, err := client.InternetEnabled()
+	if err != nil || enabled {
+		return err
+	}
+	if explicitlyAllowed {
+		return client.EnableInternet()
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return fmt.Errorf("нужно разрешение сети: запустите dudka --allow-internet")
+	}
+	fmt.Fprintln(os.Stderr, "Дудка подключится к signaling и STUN Студии на zamoo.team.")
+	fmt.Fprintln(os.Stderr, "Они увидят публичный IP и служебные данные соединения.")
+	fmt.Fprintln(os.Stderr, "Имя, сообщения, файлы и история идут напрямую по WebRTC и на сервер не попадают.")
+	fmt.Fprint(os.Stderr, "Разрешить и найти своих? [д/Н] ")
+	var answer string
+	_, _ = fmt.Fscanln(os.Stdin, &answer)
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	if answer != "д" && answer != "да" && answer != "y" && answer != "yes" {
+		return fmt.Errorf("сеть не запущена")
+	}
+	return client.EnableInternet()
 }
 
 func defaultEngine() string {

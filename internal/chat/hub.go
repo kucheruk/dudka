@@ -29,6 +29,7 @@ type Config struct {
 	ThumbsDir     string        // local JPEG previews for image announces (P056)
 	ChunkSize     int64         // LAN chunk limit; 0 → files.DefaultChunkSize
 	ProgressYield time.Duration // optional pause after each progress tick (tests / slow UI)
+	Broadcast     func(Message) int
 }
 
 // Hub fans out local sends to online peers and ingests inbound chat lines.
@@ -46,6 +47,7 @@ type Hub struct {
 	thumbsDir     string
 	chunkSize     int64
 	progressYield time.Duration
+	broadcast     func(Message) int
 	xfers         *transferBook
 	fetching      map[string]bool
 	cancels       map[string]context.CancelFunc
@@ -87,6 +89,7 @@ func NewHub(cfg Config) *Hub {
 		thumbsDir:     cfg.ThumbsDir,
 		chunkSize:     cfg.ChunkSize,
 		progressYield: cfg.ProgressYield,
+		broadcast:     cfg.Broadcast,
 		xfers:         newTransferBook(),
 		fetching:      make(map[string]bool),
 		cancels:       make(map[string]context.CancelFunc),
@@ -328,12 +331,17 @@ func (h *Hub) publish(msg Message) (SendResult, error) {
 	if !inserted {
 		return SendResult{}, fmt.Errorf("chat: duplicate msg_id")
 	}
-	peers := h.peers.List()
-	for _, p := range peers {
-		p := p
-		go h.fanout(p, msg)
+	queued := 0
+	if h.broadcast != nil {
+		queued = h.broadcast(msg)
+	} else {
+		peers := h.peers.List()
+		for _, p := range peers {
+			p := p
+			go h.fanout(p, msg)
+		}
+		queued = len(peers)
 	}
-	queued := len(peers)
 	status := SendStatusForQueued(queued)
 	switch msg.Type {
 	case TypeFileAnnounce:

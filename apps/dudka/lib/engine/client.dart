@@ -29,6 +29,26 @@ class EngineClient {
     return _parseMe(res.body);
   }
 
+  Future<bool> fetchInternetConsent() async {
+    final res = await _http.get(_uri('/internet-consent'));
+    if (res.statusCode != 200) {
+      throw EngineException(
+        'GET /internet-consent → ${res.statusCode}: ${res.body}',
+      );
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return map['enabled'] == true;
+  }
+
+  Future<void> enableInternet() async {
+    final res = await _http.post(_uri('/internet-consent'));
+    if (res.statusCode < 200 || res.statusCode > 299) {
+      throw EngineException(
+        'POST /internet-consent → ${res.statusCode}: ${res.body}',
+      );
+    }
+  }
+
   /// POST /nick — set display name (P016 / P062 first-run).
   Future<MeInfo> setNick(String name) async {
     final n = name.trim();

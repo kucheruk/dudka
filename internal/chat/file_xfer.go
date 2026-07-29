@@ -221,58 +221,58 @@ func (h *Hub) fetchLocked(fileID string, msg Message) (FetchResult, error) {
 		}
 	}
 
-	if msg.PeerID == h.peerID {
+	if h.blobs != nil && h.blobs.Has(fileID) {
 		if err := ctx.Err(); err != nil {
 			return h.finishCancelled(fileID, msg, 0, "")
 		}
-		if h.blobs != nil && h.blobs.Has(fileID) {
-			sourcePath, err := h.blobs.Path(fileID)
-			if err != nil {
-				h.failTransfer(fileID, msg.FileName, msg.Size, err)
-				return FetchResult{}, err
-			}
-			if err := files.VerifyFile(sourcePath, msg.Hash); err != nil {
-				h.failTransfer(fileID, msg.FileName, msg.Size, err)
-				return FetchResult{}, err
-			}
-			dest, err := files.InboxPath(h.inboxDir, fileID, msg.FileName)
-			if err != nil {
-				h.failTransfer(fileID, msg.FileName, msg.Size, err)
-				return FetchResult{}, err
-			}
-			n, err := files.MaterializeLocal(ctx, sourcePath, dest, update)
-			if errors.Is(err, files.ErrCancelled) || (err == nil && ctx.Err() != nil) {
-				_ = os.Remove(dest)
-				_ = os.Remove(dest + ".partial")
-				return h.finishCancelled(fileID, msg, n, dest)
-			}
-			if err != nil {
-				h.failTransfer(fileID, msg.FileName, msg.Size, err)
-				return FetchResult{}, err
-			}
-			if err := files.VerifyFile(dest, msg.Hash); err != nil {
-				_ = os.Remove(dest)
-				h.failTransfer(fileID, msg.FileName, msg.Size, err)
-				return FetchResult{}, err
-			}
-			if !h.xfers.putActive(Transfer{
-				FileID:   fileID,
-				Name:     msg.FileName,
-				Received: n,
-				Total:    msg.Size,
-				Percent:  100,
-				Status:   TransferDone,
-				Path:     dest,
-			}) {
-				_ = os.Remove(dest)
-				return h.finishCancelled(fileID, msg, n, dest)
-			}
-			h.logf("file_fetch_local_ok file_id=%s path=%s size=%d", fileID, dest, n)
-			return FetchResult{
-				FileID: fileID, Path: dest, Size: n, Name: msg.FileName,
-				Percent: 100, Status: TransferDone,
-			}, nil
+		sourcePath, err := h.blobs.Path(fileID)
+		if err != nil {
+			h.failTransfer(fileID, msg.FileName, msg.Size, err)
+			return FetchResult{}, err
 		}
+		if err := files.VerifyFile(sourcePath, msg.Hash); err != nil {
+			h.failTransfer(fileID, msg.FileName, msg.Size, err)
+			return FetchResult{}, err
+		}
+		dest, err := files.InboxPath(h.inboxDir, fileID, msg.FileName)
+		if err != nil {
+			h.failTransfer(fileID, msg.FileName, msg.Size, err)
+			return FetchResult{}, err
+		}
+		n, err := files.MaterializeLocal(ctx, sourcePath, dest, update)
+		if errors.Is(err, files.ErrCancelled) || (err == nil && ctx.Err() != nil) {
+			_ = os.Remove(dest)
+			_ = os.Remove(dest + ".partial")
+			return h.finishCancelled(fileID, msg, n, dest)
+		}
+		if err != nil {
+			h.failTransfer(fileID, msg.FileName, msg.Size, err)
+			return FetchResult{}, err
+		}
+		if err := files.VerifyFile(dest, msg.Hash); err != nil {
+			_ = os.Remove(dest)
+			h.failTransfer(fileID, msg.FileName, msg.Size, err)
+			return FetchResult{}, err
+		}
+		if !h.xfers.putActive(Transfer{
+			FileID:   fileID,
+			Name:     msg.FileName,
+			Received: n,
+			Total:    msg.Size,
+			Percent:  100,
+			Status:   TransferDone,
+			Path:     dest,
+		}) {
+			_ = os.Remove(dest)
+			return h.finishCancelled(fileID, msg, n, dest)
+		}
+		h.logf("file_fetch_local_ok file_id=%s path=%s size=%d", fileID, dest, n)
+		return FetchResult{
+			FileID: fileID, Path: dest, Size: n, Name: msg.FileName,
+			Percent: 100, Status: TransferDone,
+		}, nil
+	}
+	if msg.PeerID == h.peerID {
 		err := fmt.Errorf("chat: local blob missing")
 		h.failTransfer(fileID, msg.FileName, msg.Size, err)
 		return FetchResult{}, err

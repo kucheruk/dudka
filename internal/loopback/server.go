@@ -32,6 +32,8 @@ type Server struct {
 	chat        *chat.Hub
 	updatesDir  string
 	isAgent     bool
+	internetOK  func() bool
+	enableNet   func() error
 	mux         *http.ServeMux
 }
 
@@ -65,6 +67,8 @@ func New(peerID, name string) *Server {
 	s.mux.HandleFunc("POST /nick", s.handleNick)
 	s.mux.HandleFunc("GET /peers", s.handlePeers)
 	s.mux.HandleFunc("GET /status", s.handleStatus)
+	s.mux.HandleFunc("GET /internet-consent", s.handleInternetConsent)
+	s.mux.HandleFunc("POST /internet-consent", s.handleInternetConsentPost)
 	s.mux.HandleFunc("POST /scan", s.handleScan)
 	s.mux.HandleFunc("POST /send", s.handleSend)
 	s.mux.HandleFunc("POST /files/announce", s.handleFileAnnounce)
@@ -99,6 +103,38 @@ func (s *Server) SetStatusProvider(fn func() discovery.Status) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.status = fn
+}
+
+// SetInternetConsent wires the explicit WAN-consent state and activation hook.
+func (s *Server) SetInternetConsent(status func() bool, enable func() error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.internetOK = status
+	s.enableNet = enable
+}
+
+func (s *Server) handleInternetConsent(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	status := s.internetOK
+	s.mu.RUnlock()
+	enabled := status != nil && status()
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]bool{"enabled": enabled})
+}
+
+func (s *Server) handleInternetConsentPost(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	enable := s.enableNet
+	s.mu.RUnlock()
+	if enable == nil {
+		http.Error(w, "internet activation unavailable\n", http.StatusServiceUnavailable)
+		return
+	}
+	if err := enable(); err != nil {
+		http.Error(w, err.Error()+"\n", http.StatusInternalServerError)
+		return
+	}
+	s.handleInternetConsent(w, nil)
 }
 
 // SetScanProvider wires discovery Scan into POST /scan (P024).
@@ -566,7 +602,7 @@ func (s *Server) handleUpdatesPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name      string `json:"name"`
+		Name       string `json:"name"`
 		ContentB64 string `json:"content_b64"`
 	}
 	if err := json.Unmarshal(body, &req); err != nil {

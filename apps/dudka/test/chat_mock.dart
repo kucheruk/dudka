@@ -11,6 +11,12 @@ http.Response? chatSnapshotResponse(http.Request req, {String meName = 'Me'}) {
         200,
         headers: {'content-type': 'application/json; charset=utf-8'},
       );
+    case '/internet-consent':
+      return http.Response(
+        '{"enabled":true}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
     case '/peers':
       return http.Response(
         '{"peers":[]}',

@@ -6,7 +6,8 @@
 
 ## Назначение и границы
 
-Контур LAN: обнаружение peers, register, ограничение трафика локальной сетью. Не описывает UX-копирайт (см. DUD-UI) и семантику сообщений (DUD-CHAT).
+Единый WebRTC-контур браузеров и приложений. Не описывает UX-копирайт
+(см. DUD-UI) и семантику сообщений (DUD-CHAT).
 
 ### Non-goals
 
@@ -19,7 +20,7 @@
 ### DUD-NET-101
 
 Priority: P0
-Status: Partial
+Status: Replaced by DUD-NET-170
 
 Engine в рантайме не устанавливает исходящие соединения к адресам вне
 link-local, loopback и частных диапазонов IPv4/IPv6 (RFC1918, Unique Local).
@@ -65,7 +66,7 @@ ADR: `docs/adr/0001-browser-webrtc-signaling.md`
 ### DUD-NET-110
 
 Priority: P0  
-Status: Draft
+Status: Replaced by DUD-NET-170
 
 Discovery использует стек: (1) UDP broadcast announce, (2) TCP register в ответ/инициативно, (3) subnet scan как fallback или по действию пользователя. mDNS не используется.
 
@@ -81,7 +82,7 @@ ADR: не требуется
 ### DUD-NET-111
 
 Priority: P0  
-Status: Draft
+Status: Replaced by DUD-NET-170
 
 Announce и register содержат: `peer_id`, `display_name`, `proto_major`, `proto_minor`, TCP port для сессии, `instance_id` (меняется при рестарте процесса).
 
@@ -97,7 +98,7 @@ ADR: не требуется
 ### DUD-NET-120
 
 Priority: P0  
-Status: Draft
+Status: Replaced by DUD-NET-170
 
 По умолчанию LAN bind использует UDP/TCP порт `41777`. Если порт занят, engine выбирает свободный порт из документированного диапазона и объявляет его в announce; UI показывает фактический порт в диагностике.
 
@@ -144,7 +145,7 @@ ADR: не требуется
 ### DUD-NET-150
 
 Priority: P0
-Status: Accepted
+Status: Replaced by DUD-NET-170
 
 Пользовательская команда «ИСКАТЬ» не требует ручной передачи hosts/CIDR.
 При пустом `POST /scan` engine выбирает наиболее вероятный активный RFC1918
@@ -161,3 +162,26 @@ Status: Accepted
 
 Зависимости: DUD-NET-101, DUD-NET-110
 ADR: не требуется
+
+### DUD-NET-170
+
+Priority: P0
+Status: Accepted
+
+Все пользовательские клиенты Дудки — браузер, Flutter desktop и Linux TUI —
+входят в один полносвязный WebRTC mesh через
+`wss://zamoo.team/dudka/signal` и `stun:zamoo.team:3478`.
+
+Проверка:
+
+- до явного согласия нативный engine не открывает signaling и STUN;
+- браузер и приложение видят друг друга в списке участников;
+- текст и файл проходят в обе стороны через совместимые DataChannel-пакеты;
+- два приложения обмениваются текстом без UDP/TCP `41777`;
+- signaling отвергает прикладные данные, TURN отсутствует;
+- «ИСКАТЬ» переподключает signaling и не сканирует подсеть;
+- evidence: `internal/rtcmesh/client_test.go`,
+  `scripts/native_web_e2e_test.cjs`.
+
+Зависимости: DUD-WEB-110, DUD-WEB-120, DUD-WEB-130
+ADR: `docs/adr/0002-one-webrtc-mesh.md`

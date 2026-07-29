@@ -7,6 +7,7 @@ import 'desktop/desktop_lifecycle.dart';
 import 'nick/fallback.dart';
 import 'screens/chat_screen.dart';
 import 'screens/first_run_nick_screen.dart';
+import 'screens/internet_consent_screen.dart';
 import 'session/first_run_store.dart';
 import 'storage/app_paths.dart';
 import 'theme/dudka_theme.dart';
@@ -43,6 +44,7 @@ class _DudkaAppState extends State<DudkaApp> {
   late final EngineClient _client;
   late final FirstRunStore _store;
   bool? _nickConfirmed;
+  bool? _internetConfirmed;
   String _suggested = '';
 
   @override
@@ -55,9 +57,11 @@ class _DudkaAppState extends State<DudkaApp> {
 
   Future<void> _bootstrap() async {
     var suggested = '';
+    var internetConfirmed = false;
     try {
       final me = await _client.fetchMe();
       suggested = me.name;
+      internetConfirmed = await _client.fetchInternetConsent();
     } catch (_) {}
     if (!mounted) return;
     final confirmed = _store.isNickConfirmed();
@@ -68,6 +72,7 @@ class _DudkaAppState extends State<DudkaApp> {
     setState(() {
       _suggested = legacyPlaceholder ? '' : suggested;
       _nickConfirmed = legacyPlaceholder ? false : confirmed;
+      _internetConfirmed = internetConfirmed;
     });
   }
 
@@ -93,7 +98,7 @@ class _DudkaAppState extends State<DudkaApp> {
 
   Widget _home() {
     final confirmed = _nickConfirmed;
-    if (confirmed == null) {
+    if (confirmed == null || _internetConfirmed == null) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(key: Key('boot-loading')),
@@ -104,8 +109,7 @@ class _DudkaAppState extends State<DudkaApp> {
       return FirstRunNickScreen(
         client: _client,
         suggested: _suggested,
-        hostnameForFallback:
-            widget.hostnameForFallback ??
+        hostnameForFallback: widget.hostnameForFallback ??
             () {
               try {
                 return Platform.localHostname;
@@ -118,6 +122,16 @@ class _DudkaAppState extends State<DudkaApp> {
           await _store.markNickConfirmed(nick);
           if (!mounted) return;
           setState(() => _nickConfirmed = true);
+        },
+      );
+    }
+    if (!_internetConfirmed!) {
+      return InternetConsentScreen(
+        client: _client,
+        onDone: () async {
+          await _store.markInternetConfirmed();
+          if (!mounted) return;
+          setState(() => _internetConfirmed = true);
         },
       );
     }

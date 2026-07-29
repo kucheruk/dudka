@@ -51,7 +51,7 @@ func TestRenderOfflineAndAloneRussian(t *testing.T) {
 	}
 
 	alone := tui.Render(tui.Snapshot{MeName: "Аня", EngineOK: true, Network: tui.NetworkOK})
-	if !strings.Contains(alone, "один") || !strings.Contains(alone, "скан подсети") {
+	if !strings.Contains(alone, "один") || !strings.Contains(alone, "повторить знакомство") {
 		t.Fatalf("alone RU missing:\n%s", alone)
 	}
 	if strings.Contains(alone, "subnet scan") || strings.Contains(alone, " alone") {

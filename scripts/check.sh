@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Единый локальный/CI гейт: тот же скрипт гоняет агент локально и Forgejo CI.
-# После go.mod: go test ./... + multi-peer protocol suite (P045).
+# После go.mod: unit/integration tests, release and packaging contracts.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,4 +15,3 @@ go test ./...
 ./scripts/web_asset_contract_test.sh
 ./scripts/build_windows_app_test.sh
 ./scripts/build_linux_tui_test.sh
-./scripts/protocol_tests.sh

@@ -118,8 +118,8 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
-    assert.equal(await first.locator(".web-version").textContent(), "v0.7.5");
-    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.5/);
+    assert.equal(await first.locator(".web-version").textContent(), "v1.0.0");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 1\.0\.0/);
     assert.equal(await first.evaluate(() => formatNegotiationProgress(0)), "⠋ 00:00");
     assert.equal(await first.evaluate(() => formatNegotiationProgress(1000)), "⠇ 00:01");
     await second.goto(origin);

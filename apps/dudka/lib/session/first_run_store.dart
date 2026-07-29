@@ -37,13 +37,34 @@ class FirstRunStore {
   }
 
   Future<void> markNickConfirmed([String? nick]) async {
+    final current = _read();
     file.parent.createSync(recursive: true);
     final normalized = nick?.trim() ?? '';
     file.writeAsStringSync(
       jsonEncode({
+        ...current,
         'nick_confirmed': true,
         if (normalized.isNotEmpty) 'nick': normalized,
       }),
     );
+  }
+
+  bool isInternetConfirmed() => _read()['internet_confirmed'] == true;
+
+  Future<void> markInternetConfirmed() async {
+    final current = _read();
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(
+      jsonEncode({...current, 'internet_confirmed': true}),
+    );
+  }
+
+  Map<String, dynamic> _read() {
+    if (!file.existsSync()) return <String, dynamic>{};
+    try {
+      return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    } catch (_) {
+      return <String, dynamic>{};
+    }
   }
 }

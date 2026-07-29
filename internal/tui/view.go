@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-// EmptyPeersCopy is shown when LAN is up but online peers list is empty (DUD-UI-120 / P040).
+// EmptyPeersCopy is shown when the WebRTC mesh has no remote peers.
 const EmptyPeersCopy = "БОЛЬШЕ НИКОГО РЯДОМ"
 
 // NoNetworkCopy is shown when there is no usable Wi‑Fi/LAN (DUD-UI-120 / P044).
 const NoNetworkCopy = "НЕТ СЕТИ"
 
-// AloneHint is the alone-state affordance for subnet scan (DUD-UI-120).
+// AloneHint reconnects signaling when the client is alone.
 const AloneHint = "ИСКАТЬ"
 
 // Network state mirrors engine GET /status (DUD-NET-140).
@@ -142,7 +142,7 @@ func Render(s Snapshot) string {
 		fmt.Fprintf(&b, "  %s\n", NoNetworkCopy)
 	case remoteCount == 0:
 		fmt.Fprintf(&b, "  %s\n", EmptyPeersCopy)
-		fmt.Fprintf(&b, "  (%s — скан подсети)\n", AloneHint)
+		fmt.Fprintf(&b, "  (%s — повторить знакомство)\n", AloneHint)
 	default:
 		for _, p := range s.Peers {
 			name := strings.TrimSpace(p.DisplayName)

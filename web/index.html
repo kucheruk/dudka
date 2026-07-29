@@ -16,7 +16,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <title>ДУДКА · Веб-чат</title>
-    <meta name="description" content="Прямой WebRTC-чат между вкладками в одной домашней сети.">
+    <meta name="description" content="Прямой WebRTC-чат между браузерами и приложениями Дудки.">
     <link rel="icon" href="icon.png?v=f94cadbabd5e">
     <link rel="stylesheet" href="app.css?v=5f7af704ad96">
   </head>
@@ -42,7 +42,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
           </section>
           <section>
             <h2>Зачем</h2>
-            <p>Чтобы найти другие открытые вкладки Дудки с того же домашнего подключения и согласовать прямой WebRTC-канал.</p>
+            <p>Чтобы найти браузеры и приложения Дудки с того же домашнего подключения и согласовать прямой WebRTC-канал.</p>
           </section>
           <section>
             <h2>Что увидит сервис</h2>
@@ -50,7 +50,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
           </section>
           <section>
             <h2>Что не уйдёт</h2>
-            <p>Ваше имя, сообщения, файлы и история. После знакомства они идут напрямую между браузерами по шифрованному DTLS.</p>
+            <p>Ваше имя, сообщения, файлы и история. После знакомства они идут напрямую между устройствами по шифрованному DTLS.</p>
           </section>
           <section>
             <h2>Насколько</h2>
@@ -69,7 +69,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
         <label class="name-field" for="display-name">
           <span>КАК ВАС ПОКАЗАТЬ СОСЕДЯМ</span>
           <input id="display-name" name="display-name" maxlength="80" autocomplete="nickname" value="Дудка браузер">
-          <small>Имя пойдёт только напрямую соседним вкладкам после WebRTC-соединения.</small>
+          <small>Имя пойдёт только напрямую соседним устройствам после WebRTC-соединения.</small>
         </label>
 
         <p id="consent-note" class="consent-note" role="status">
@@ -89,7 +89,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
           <img class="app-icon compact" src="icon.png?v=f94cadbabd5e" width="44" height="44" alt="">
           <div>
             <p class="silk">ПРЯМОЙ WEBRTC · БЕЗ РЕЛЕЯ</p>
-            <h1>ДУДКА <small class="web-version">v0.7.5</small></h1>
+            <h1>ДУДКА <small class="web-version">v1.0.0</small></h1>
           </div>
         </div>
         <div class="connection-readout" aria-live="polite">
@@ -108,7 +108,7 @@ FORM: Operate, существующий мир Дудки; плотная deskto
         <section class="chat-panel" aria-labelledby="feed-title">
           <h2 id="feed-title" class="panel-label">ЛЕНТА</h2>
           <div id="feed" class="feed" role="log" aria-live="polite" aria-relevant="additions">
-            <p id="empty-feed" class="empty-feed">Пока пусто. Сообщение останется только между открытыми вкладками.</p>
+            <p id="empty-feed" class="empty-feed">Пока пусто. Сообщение останется только на ваших устройствах.</p>
           </div>
 
           <div id="draft-files" class="draft-files" aria-label="Файлы перед отправкой"></div>
@@ -134,6 +134,6 @@ FORM: Operate, существующий мир Дудки; плотная deskto
       </section>
     </main>
 
-    <script src="app.js?v=3fc3dd5b1fa1" defer></script>
+    <script src="app.js?v=5a5b164575df" defer></script>
   </body>
 </html>

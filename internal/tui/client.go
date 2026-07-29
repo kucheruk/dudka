@@ -247,6 +247,29 @@ func (c *Client) Scan() (found int, err error) {
 	return wire.Found, nil
 }
 
+func (c *Client) InternetEnabled() (bool, error) {
+	var state struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.getJSON("/internet-consent", &state); err != nil {
+		return false, err
+	}
+	return state.Enabled, nil
+}
+
+func (c *Client) EnableInternet() error {
+	resp, err := c.client.Post(c.base+"/internet-consent", "application/json", nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return fmt.Errorf("tui: internet consent → %s", strings.TrimSpace(string(raw)))
+	}
+	return nil
+}
+
 func (c *Client) getJSON(path string, dst any) error {
 	resp, err := c.client.Get(c.base + path)
 	if err != nil {

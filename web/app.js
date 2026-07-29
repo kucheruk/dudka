@@ -1,6 +1,6 @@
 "use strict";
 
-const WEB_VERSION = "0.7.5";
+const WEB_VERSION = "1.0.0";
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
@@ -59,7 +59,7 @@ els.name.value = identity.lastName || "Дудка браузер";
 els.accept.addEventListener("click", async () => {
   const name = cleanName(els.name.value);
   if (!name) {
-    els.consentNote.textContent = "Введите имя: его увидят только соседние вкладки.";
+    els.consentNote.textContent = "Введите имя: его увидят только соседние устройства.";
     els.name.focus();
     return;
   }
@@ -181,7 +181,7 @@ function connectSignaling() {
     state.signalClose = `code=${event.code} clean=${event.wasClean} reason=${event.reason || "нет"}`;
     setConnection("SIGNALING НЕДОСТУПЕН", false, true);
     if ([...state.peers.values()].some((peer) => peer.open)) {
-      setStatus("ПРЯМОЙ ЧАТ РАБОТАЕТ · новые вкладки пока не найдутся");
+      setStatus("ПРЯМОЙ ЧАТ РАБОТАЕТ · новые устройства пока не найдутся");
     } else {
       scheduleReconnect();
     }
@@ -298,7 +298,7 @@ function createPeer(peerID, initiator) {
     pc,
     channel: null,
     open: false,
-    name: "Соседняя вкладка",
+    name: "Соседнее устройство",
     initiator,
     offerStarted: false,
     descriptionSent: false,
@@ -512,7 +512,7 @@ function wireChatChannel(peer, channel) {
 function handlePeerPacket(peer, packet) {
   switch (packet.type) {
     case "hello":
-      peer.name = cleanName(packet.name) || "Соседняя вкладка";
+      peer.name = cleanName(packet.name) || "Соседнее устройство";
       peer.remotePeerID = String(packet.peerID || "");
       renderPeers();
       break;

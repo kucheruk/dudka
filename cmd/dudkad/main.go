@@ -1,4 +1,4 @@
-// Command dudkad is the LAN chat engine.
+// Command dudkad is the direct WebRTC chat engine.
 package main
 
 import (
@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
+	"sync/atomic"
 
 	"dudka/internal/agent"
 	"dudka/internal/chat"
@@ -16,6 +15,7 @@ import (
 	"dudka/internal/files"
 	"dudka/internal/identity"
 	"dudka/internal/loopback"
+	"dudka/internal/rtcmesh"
 	"dudka/internal/version"
 )
 
@@ -23,11 +23,9 @@ func main() {
 	dataDir := flag.String("data-dir", defaultDataDir(), "directory for local peer state")
 	nameFlag := flag.String("name", "", "display name (nick); overrides saved name")
 	listen := flag.String("listen", "127.0.0.1:17880", "loopback HTTP listen address")
-	announcePort := flag.Int("announce-port", discovery.DefaultUDPPort, "UDP announce listen/broadcast port")
-	announceInterval := flag.Duration("announce-interval", 2*time.Second, "UDP announce period")
-	announceTarget := flag.String("announce-target", "", "optional unicast host:port instead of broadcast (tests)")
-	dialHosts := flag.String("dial-hosts", "", "comma-separated seed IPs to TCP-register (LAN-only; WAN refused)")
-	sessionPort := flag.Int("session-port", discovery.DefaultUDPPort, "TCP register port; 0 = ephemeral")
+	signalURL := flag.String("signal-url", "wss://zamoo.team/dudka/signal", "Studio signaling WebSocket")
+	signalOrigin := flag.String("signal-origin", "https://zamoo.team", "signaling Origin header")
+	stunURL := flag.String("stun-url", "stun:zamoo.team:3478", "Studio STUN service")
 	asAgent := flag.Bool("agent", false, "this process is a home agent (requires triple-prefix nick)")
 	flag.Parse()
 
@@ -57,13 +55,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	instanceID, err := identity.NewUUIDv4()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "dudkad: instance_id: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("instance_id=%s\n", instanceID)
-
 	peers := discovery.NewPeerStore()
 	msgs, err := chat.NewPersistentStore(filepath.Join(*dataDir, "messages.json"))
 	if err != nil {
@@ -75,6 +66,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "dudkad: blobs: %v\n", err)
 		os.Exit(1)
 	}
+	var mesh *rtcmesh.Client
 	hub := chat.NewHub(chat.Config{
 		PeerID:    peerID,
 		Name:      displayName,
@@ -84,59 +76,68 @@ func main() {
 		InboxDir:  filepath.Join(*dataDir, "inbox"),
 		ThumbsDir: filepath.Join(*dataDir, "thumbs"),
 		Logf:      func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+		Broadcast: func(message chat.Message) int {
+			if mesh == nil {
+				return 0
+			}
+			return mesh.Broadcast(message)
+		},
 	})
-	var seeds []string
-	for _, h := range strings.Split(*dialHosts, ",") {
-		h = strings.TrimSpace(h)
-		if h != "" {
-			seeds = append(seeds, h)
-		}
-	}
-	disc := discovery.NewNode(discovery.Config{
-		PeerID:             peerID,
-		DisplayName:        displayName,
-		InstanceID:         instanceID,
-		UDPPort:            *announcePort,
-		TCPPort:            *sessionPort,
-		Interval:           *announceInterval,
-		Target:             *announceTarget,
-		DialHosts:          seeds,
-		IsAgent:            *asAgent,
-		Peers:              peers,
-		OnChatLine:         hub.HandleChatLine,
-		OnTailRequest:      hub.HandleTailRequest,
-		OnFileChunkRequest: hub.HandleFileChunkRequest,
-		OnPeerUpserted:     hub.OnPeerUpserted,
-		OnPeerRemoved:      hub.OnPeerRemoved,
-		OnRegisterBacklog:  hub.RegisterBacklog,
-		Logf:               func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+	mesh = rtcmesh.New(rtcmesh.Config{
+		PeerID: peerID, Name: displayName, Peers: peers, Blobs: blobs,
+		History: hub.Messages, OnMessage: func(raw []byte) {
+			hub.HandleChatLine("webrtc", raw)
+		},
+		SignalURL: *signalURL, Origin: *signalOrigin, STUNURL: *stunURL,
+		Logf: func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
 	})
-	if err := disc.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "dudkad: discovery: %v\n", err)
-		os.Exit(1)
-	}
-	defer func() { _ = disc.Stop() }()
-	if addr := disc.LocalAddr(); addr != nil {
-		fmt.Printf("announce=%s\n", addr.String())
-	}
-	fmt.Printf("session_tcp=%d\n", disc.TCPPort())
+	defer mesh.Stop()
 
 	api := loopback.New(peerID, displayName)
 	api.SetPersistName(func(name string) error {
 		if err := identity.SaveDisplayName(*dataDir, name); err != nil {
 			return err
 		}
-		disc.SetDisplayName(name)
+		mesh.SetName(name)
 		return nil
 	})
 	api.SetPeers(peers)
 	api.SetChat(hub)
 	api.SetIsAgent(*asAgent)
 	api.SetUpdatesDir(filepath.Join(*dataDir, "updates"))
-	api.SetStatusProvider(func() discovery.Status { return disc.Status() })
-	api.SetScanProvider(func(ctx context.Context, req discovery.ScanRequest) (discovery.ScanResult, error) {
-		return disc.Scan(ctx, req)
+	api.SetStatusProvider(func() discovery.Status {
+		return discovery.Status{
+			ProtoMajor: discovery.DefaultProtoMajor,
+			ProtoMinor: discovery.DefaultProtoMinor,
+			Network:    "ok", Incompatible: []discovery.IncompatiblePeer{},
+		}
 	})
+	api.SetScanProvider(func(_ context.Context, _ discovery.ScanRequest) (discovery.ScanResult, error) {
+		mesh.Restart()
+		return discovery.ScanResult{Peers: peers.List(), Found: len(peers.List())}, nil
+	})
+	consentPath := filepath.Join(*dataDir, "internet_consent")
+	var internetEnabled atomic.Bool
+	enableInternet := func() error {
+		if internetEnabled.Load() {
+			return nil
+		}
+		if err := os.MkdirAll(*dataDir, 0o700); err != nil {
+			return err
+		}
+		if err := os.WriteFile(consentPath, []byte("studio-signaling-and-stun\n"), 0o600); err != nil {
+			return err
+		}
+		internetEnabled.Store(true)
+		mesh.Start(context.Background())
+		return nil
+	}
+	api.SetInternetConsent(internetEnabled.Load, enableInternet)
+	if _, err := os.Stat(consentPath); err == nil {
+		if err := enableInternet(); err != nil {
+			fmt.Fprintf(os.Stderr, "dudkad: internet consent: %v\n", err)
+		}
+	}
 	ln, err := api.Listen(*listen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: listen: %v\n", err)
