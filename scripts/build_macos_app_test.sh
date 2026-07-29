@@ -45,7 +45,7 @@ file "$app/Contents/MacOS/dudkad" | grep -q 'universal binary' \
 
 # Smoke: bundled engine prints ready (does not need GUI).
 "$app/Contents/MacOS/dudkad" -data-dir "$tmpdir/eng" -name "Pack" -listen "127.0.0.1:0" \
-  -announce-port 0 -session-port 0 -announce-interval 1h >"$tmpdir/eng.log" 2>&1 &
+  >"$tmpdir/eng.log" 2>&1 &
 pid=$!
 ok=0
 for _ in $(seq 1 50); do

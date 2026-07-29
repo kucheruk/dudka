@@ -531,9 +531,14 @@ String buildMacActivationScript({
 }) {
   final archive = _shellQuote(archivePath);
   final target = _shellQuote(targetBundlePath);
+  final log = _shellQuote('$archivePath.activation.log');
   final safeVersion = version.replaceAll(RegExp(r'[^0-9.]'), '');
   return '''#!/bin/sh
 set -eu
+log=$log
+: >"\$log"
+exec >>"\$log" 2>&1
+echo "Дудка: начинаю обновление до $safeVersion"
 sleep ${delay.inSeconds}
 tries=0
 while kill -0 $processId 2>/dev/null; do
@@ -548,6 +553,7 @@ backup="\${target}.backup-$safeVersion"
 moved=0
 cleanup() {
   status=\$?
+  echo "Дудка: завершение обновления, код \$status"
   if [ "\$status" -ne 0 ] && [ "\$moved" -eq 1 ] && [ -d "\$backup" ]; then
     rm -rf "\$target"
     mv "\$backup" "\$target"
@@ -559,8 +565,11 @@ cleanup() {
 }
 trap cleanup EXIT
 /usr/bin/ditto -x -k $archive "\$work"
-new_app="\$work/dudka.app"
-[ -d "\$new_app" ] || exit 1
+new_app="\$(find "\$work" -maxdepth 1 -type d -name '*.app' -print | head -n 1)"
+[ -n "\$new_app" ] && [ -d "\$new_app" ] || {
+  echo "Дудка: в архиве нет приложения .app"
+  exit 1
+}
 rm -rf "\$incoming" "\$backup"
 /usr/bin/ditto "\$new_app" "\$incoming"
 mv "\$target" "\$backup"
@@ -570,6 +579,7 @@ mv "\$incoming" "\$target"
 sleep 2
 rm -rf "\$backup"
 moved=0
+echo "Дудка: обновление до $safeVersion установлено"
 ''';
 }
 

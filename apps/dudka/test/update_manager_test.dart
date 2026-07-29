@@ -260,6 +260,8 @@ void main() {
     expect(mac, contains('while kill -0 42'));
     expect(mac, contains('.backup-0.3.1'));
     expect(mac, contains('/usr/bin/open'));
+    expect(mac, contains('.activation.log'));
+    expect(mac, contains("-name '*.app'"));
     expect(mac, contains("'\"'\"'"));
 
     final windows = buildWindowsActivationScript(
@@ -296,6 +298,46 @@ void main() {
     expect(result.exitCode, 0, reason: result.stderr.toString());
   });
 
+  test('generated mac helper replaces a differently named app bundle',
+      () async {
+    if (!Platform.isMacOS) return;
+    final temp = await Directory.systemTemp.createTemp('dudka-activate-test-');
+    addTearDown(() async {
+      if (await temp.exists()) await temp.delete(recursive: true);
+    });
+    final target = Directory('${temp.path}/ДУДКА.app');
+    final packaged = Directory('${temp.path}/payload/Dudka.app');
+    await _writeFixtureApp(target, marker: 'old');
+    await _writeFixtureApp(packaged, marker: 'new');
+    final archive = File('${temp.path}/update.zip');
+    final packed = await Process.run(
+      '/usr/bin/ditto',
+      ['-c', '-k', '--keepParent', packaged.path, archive.path],
+    );
+    expect(packed.exitCode, 0, reason: packed.stderr.toString());
+    final script = File('${temp.path}/activate.sh');
+    await script.writeAsString(buildMacActivationScript(
+      archivePath: archive.path,
+      targetBundlePath: target.path,
+      processId: 999999,
+      delay: Duration.zero,
+      version: '0.3.1',
+    ));
+
+    final result = await Process.run('/bin/sh', [script.path]);
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    expect(
+      File('${target.path}/Contents/Resources/marker').readAsStringSync(),
+      'new',
+    );
+    expect(Directory('${target.path}.backup-0.3.1').existsSync(), isFalse);
+    expect(
+      File('${archive.path}.activation.log').readAsStringSync(),
+      contains('обновление до 0.3.1 установлено'),
+    );
+  });
+
   test('mac bundle is derived from the resolved executable', () {
     expect(
       macBundleFromExecutable(
@@ -326,4 +368,28 @@ void main() {
       isFalse,
     );
   });
+}
+
+Future<void> _writeFixtureApp(
+  Directory bundle, {
+  required String marker,
+}) async {
+  final executable = File('${bundle.path}/Contents/MacOS/fixture');
+  final resource = File('${bundle.path}/Contents/Resources/marker');
+  await executable.parent.create(recursive: true);
+  await resource.parent.create(recursive: true);
+  await File('${bundle.path}/Contents/Info.plist').writeAsString('''
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>fixture</string>
+<key>CFBundleIdentifier</key><string>team.zamoo.dudka.update-fixture.$marker</string>
+<key>CFBundleName</key><string>Dudka fixture</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+</dict></plist>
+''');
+  await executable.writeAsString('#!/bin/sh\nexit 0\n');
+  await Process.run('/bin/chmod', ['755', executable.path]);
+  await resource.writeAsString(marker);
 }
