@@ -40,6 +40,7 @@ type Status struct {
 	ProtoMajor    int                `json:"proto_major"`
 	ProtoMinor    int                `json:"proto_minor"`
 	Network       string             `json:"network"` // ok | no_network (DUD-NET-140)
+	Signaling     bool               `json:"signaling"`
 	Incompatible  []IncompatiblePeer `json:"incompatible"`
 	AnnouncePort  int                `json:"announce_port"`
 	SessionPort   int                `json:"session_port"`

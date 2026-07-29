@@ -25,6 +25,7 @@ class DudkaApp extends StatefulWidget {
     this.chatPollInterval = const Duration(seconds: 1),
     this.updater,
     this.desktop,
+    this.appVersion = '',
   });
 
   final String engineBase;
@@ -35,6 +36,7 @@ class DudkaApp extends StatefulWidget {
   final Duration chatPollInterval;
   final UpdateController? updater;
   final DesktopLifecycleHandle? desktop;
+  final String appVersion;
 
   @override
   State<DudkaApp> createState() => _DudkaAppState();
@@ -140,6 +142,7 @@ class _DudkaAppState extends State<DudkaApp> {
       pollInterval: widget.chatPollInterval,
       updater: widget.updater,
       desktop: widget.desktop,
+      appVersion: widget.appVersion,
       onNickChanged: (nick) => _store.markNickConfirmed(nick),
     );
   }

@@ -1,7 +1,7 @@
 name: dudka
 description: ДУДКА Flutter shell — thin client over dudkad loopback (P060).
 publish_to: "none"
-version: 1.0.1+21
+version: 1.1.0+22
 
 environment:
   sdk: ">=3.5.0 <4.0.0"

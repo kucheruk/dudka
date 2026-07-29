@@ -24,6 +24,7 @@ class ChatScreen extends StatefulWidget {
     this.updater,
     this.desktop,
     this.onNickChanged,
+    this.appVersion = '',
   });
 
   final EngineClient client;
@@ -33,6 +34,7 @@ class ChatScreen extends StatefulWidget {
   final UpdateController? updater;
   final DesktopLifecycleHandle? desktop;
   final Future<void> Function(String nick)? onNickChanged;
+  final String appVersion;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -256,7 +258,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Expanded(
               child: Text(
-                formatStatusStrip(snap),
+                formatStatusStrip(snap, appVersion: widget.appVersion),
                 key: const Key('chat-status'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -272,6 +274,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 animation: widget.updater!,
                 builder: (context, _) {
                   final update = widget.updater!.snapshot;
+                  if (update.phase == UpdatePhase.failed) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Tooltip(
+                        message: update.error ?? 'неизвестная ошибка',
+                        child: Text(
+                          'ОБНОВЛЕНИЕ: ОШИБКА',
+                          key: const Key('update-failed'),
+                          style: DudkaType.mono(
+                            size: 11,
+                            color: DudkaColors.danger,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
                   if (!update.isReady) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(left: 8),
@@ -638,8 +657,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _participantTile(PeerInfo peer, ChatSnapshot snap) {
-    final isMe =
-        peer.peerId == snap.me.peerId ||
+    final isMe = peer.peerId == snap.me.peerId ||
         (snap.me.peerId.trim().isEmpty && peer.peerId == 'self');
     return Text(
       isMe ? '${peer.displayName} · ВЫ' : peer.displayName,

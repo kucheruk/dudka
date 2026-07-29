@@ -4,11 +4,17 @@ import 'dart:io';
 
 /// Spawns local `dudkad` (subprocess + loopback) and yields its HTTP base URL (P061).
 class EngineHost {
-  EngineHost({required this.binaryPath, required this.dataDir, this.name = ''});
+  EngineHost({
+    required this.binaryPath,
+    required this.dataDir,
+    this.name = '',
+    int? parentProcessId,
+  }) : parentProcessId = parentProcessId ?? pid;
 
   final String binaryPath;
   final String dataDir;
   final String name;
+  final int parentProcessId;
 
   Process? _proc;
   String? _baseUrl;
@@ -71,12 +77,14 @@ class EngineHost {
   }
 
   List<String> arguments() => [
-    '-data-dir',
-    dataDir,
-    if (name.trim().isNotEmpty) ...['-name', name.trim()],
-    '-listen',
-    '127.0.0.1:0',
-  ];
+        '-data-dir',
+        dataDir,
+        if (name.trim().isNotEmpty) ...['-name', name.trim()],
+        '-parent-pid',
+        '$parentProcessId',
+        '-listen',
+        '127.0.0.1:0',
+      ];
 
   Future<void> stop() async {
     final p = _proc;

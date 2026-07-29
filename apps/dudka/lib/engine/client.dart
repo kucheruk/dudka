@@ -252,6 +252,7 @@ class EngineClient {
     }
     final st = jsonDecode(statusRes.body) as Map<String, dynamic>;
     final network = (st['network'] as String?)?.trim();
+    final signaling = st['signaling'] as bool?;
     final protoMajor = (st['proto_major'] as num?)?.toInt() ?? 0;
     final protoMinor = (st['proto_minor'] as num?)?.toInt() ?? 0;
     final announcePort = (st['announce_port'] as num?)?.toInt() ?? 0;
@@ -285,6 +286,7 @@ class EngineClient {
       me: me,
       peers: peers,
       network: (network == null || network.isEmpty) ? 'ok' : network,
+      signaling: signaling,
       protoMajor: protoMajor,
       protoMinor: protoMinor,
       announcePort: announcePort,
@@ -480,6 +482,7 @@ class ChatSnapshot {
     required this.me,
     required this.peers,
     required this.network,
+    this.signaling,
     required this.protoMajor,
     required this.protoMinor,
     required this.messages,
@@ -494,6 +497,7 @@ class ChatSnapshot {
   final MeInfo me;
   final List<PeerInfo> peers;
   final String network;
+  final bool? signaling;
   final int protoMajor;
   final int protoMinor;
   final int announcePort;
@@ -562,13 +566,21 @@ String displayNetworkState({required String network, required int peerCount}) {
 /// RU UX for proto mismatch neighbors (P092).
 const String protoMismatchUserCopy = 'обнови Дудку';
 
-String formatStatusStrip(ChatSnapshot snap) {
+String formatStatusStrip(ChatSnapshot snap, {String appVersion = ''}) {
   final me = snap.me.name.trim().isEmpty ? '—' : snap.me.name.trim();
   final state = displayNetworkState(
     network: snap.network,
     peerCount: snap.remotePeerCount,
   );
-  final buf = StringBuffer('ДУДКА · $me · онлайн ${snap.onlineCount} · $state');
+  final version = appVersion.trim();
+  final buf = StringBuffer('ДУДКА');
+  if (version.isNotEmpty) {
+    buf.write(' v$version');
+  }
+  buf.write(' · $me · онлайн ${snap.onlineCount} · $state');
+  if (snap.signaling != null) {
+    buf.write(snap.signaling! ? ' · сигнал есть' : ' · сигнал ждём');
+  }
   if (snap.protoMajor > 0) {
     buf.write(' · прото ${snap.protoMajor}.${snap.protoMinor}');
   }

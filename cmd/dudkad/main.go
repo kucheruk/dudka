@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	"dudka/internal/agent"
 	"dudka/internal/chat"
@@ -26,8 +27,13 @@ func main() {
 	signalURL := flag.String("signal-url", "wss://zamoo.team/dudka/signal", "Studio signaling WebSocket")
 	signalOrigin := flag.String("signal-origin", "https://zamoo.team", "signaling Origin header")
 	stunURL := flag.String("stun-url", "stun:zamoo.team:3478", "Studio STUN service")
+	parentPID := flag.Int("parent-pid", 0, "exit when this parent process is gone")
 	asAgent := flag.Bool("agent", false, "this process is a home agent (requires triple-prefix nick)")
 	flag.Parse()
+
+	if *parentPID > 0 {
+		go exitWithParent(*parentPID)
+	}
 
 	fmt.Printf("dudkad %s\n", version.Version)
 
@@ -107,9 +113,11 @@ func main() {
 	api.SetUpdatesDir(filepath.Join(*dataDir, "updates"))
 	api.SetStatusProvider(func() discovery.Status {
 		return discovery.Status{
-			ProtoMajor: discovery.DefaultProtoMajor,
-			ProtoMinor: discovery.DefaultProtoMinor,
-			Network:    "ok", Incompatible: []discovery.IncompatiblePeer{},
+			ProtoMajor:   discovery.DefaultProtoMajor,
+			ProtoMinor:   discovery.DefaultProtoMinor,
+			Network:      "ok",
+			Signaling:    mesh.Connected(),
+			Incompatible: []discovery.IncompatiblePeer{},
 		}
 	})
 	api.SetScanProvider(func(_ context.Context, _ discovery.ScanRequest) (discovery.ScanResult, error) {
@@ -149,6 +157,16 @@ func main() {
 	if err := api.Serve(ln); err != nil {
 		fmt.Fprintf(os.Stderr, "dudkad: serve: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+func exitWithParent(parentPID int) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if os.Getppid() != parentPID {
+			os.Exit(0)
+		}
 	}
 }
 

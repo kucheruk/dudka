@@ -48,4 +48,16 @@ void main() {
     expect(args, isNot(contains('-session-port')));
     expect(args, isNot(contains('-announce-interval')));
   });
+
+  test('desktop engine exits with its GUI parent', () {
+    final host = EngineHost(
+      binaryPath: '/bin/dudkad',
+      dataDir: '/data',
+      parentProcessId: 42,
+    );
+    final args = host.arguments();
+    final parentIndex = args.indexOf('-parent-pid');
+    expect(parentIndex, greaterThanOrEqualTo(0));
+    expect(args[parentIndex + 1], '42');
+  });
 }

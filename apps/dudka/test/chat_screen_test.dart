@@ -42,6 +42,7 @@ EngineClient mockChatClient({
   required String meName,
   List<Map<String, String>> peers = const [],
   String network = 'ok',
+  bool? signaling,
   List<Map<String, Object?>> messages = const [],
 }) {
   return EngineClient(
@@ -62,7 +63,12 @@ EngineClient mockChatClient({
           );
         case '/status':
           return http.Response(
-            '{"proto_major":1,"proto_minor":0,"network":"$network"}',
+            jsonEncode({
+              'proto_major': 1,
+              'proto_minor': 0,
+              'network': network,
+              if (signaling != null) 'signaling': signaling,
+            }),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},
           );
@@ -133,6 +139,25 @@ void main() {
     expect(find.byIcon(Icons.send), findsOneWidget);
     expect(find.byKey(const Key('chat-compose')), findsOneWidget);
 
+    client.close();
+  });
+
+  testWidgets('desktop header shows app and signaling versions',
+      (tester) async {
+    final client = mockChatClient(meName: 'Katya', signaling: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          appVersion: '1.1.0',
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.textContaining('ДУДКА v1.1.0'), findsOneWidget);
+    expect(find.textContaining('сигнал есть'), findsOneWidget);
     client.close();
   });
 
@@ -228,6 +253,33 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('update-ready')), findsOneWidget);
 
+    client.close();
+    updater.dispose();
+  });
+
+  testWidgets('update failure is visible without blocking chat',
+      (tester) async {
+    final client = mockChatClient(meName: 'Katya');
+    final updater = FakeUpdateController(
+      const UpdateSnapshot(
+        phase: UpdatePhase.failed,
+        error: 'manifest timeout',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(
+          client: client,
+          pollInterval: Duration.zero,
+          updater: updater,
+        ),
+      ),
+    );
+    await pumpFrames(tester);
+
+    expect(find.byKey(const Key('update-failed')), findsOneWidget);
+    expect(find.text('ОБНОВЛЕНИЕ: ОШИБКА'), findsOneWidget);
+    expect(find.byKey(const Key('chat-compose')), findsOneWidget);
     client.close();
     updater.dispose();
   });

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app.dart';
 import 'desktop/autostart_service.dart';
@@ -21,6 +22,7 @@ import 'update/update_manager.dart';
 /// 4. default attach `http://127.0.0.1:17880`
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  final packageInfo = await PackageInfo.fromPlatform();
 
   const predefined = String.fromEnvironment('DUDKA_ENGINE');
   const binDefine = String.fromEnvironment('DUDKAD_BIN');
@@ -84,6 +86,7 @@ Future<void> main(List<String> arguments) async {
       firstRunStore: firstRunStore,
       updater: updater,
       desktop: desktop,
+      appVersion: packageInfo.version,
     ),
   );
 }
