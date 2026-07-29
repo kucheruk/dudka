@@ -29,6 +29,10 @@ func TestSameIPPeersMeetAndRouteOnlySignaling(t *testing.T) {
 	if len(secondWelcome.Peers) != 1 || secondWelcome.Peers[0] != firstWelcome.From {
 		t.Fatalf("second welcome = %+v, first = %+v", secondWelcome, firstWelcome)
 	}
+	joined := readWire(t, first)
+	if joined.Type != "peer-joined" || joined.From != secondWelcome.From {
+		t.Fatalf("peer joined = %+v", joined)
+	}
 
 	offer := wireSignal{
 		Type:        "offer",
@@ -51,6 +55,25 @@ func TestSameIPPeersMeetAndRouteOnlySignaling(t *testing.T) {
 	_, _, err := second.Read(ctx)
 	if websocket.CloseStatus(err) != websocket.StatusPolicyViolation {
 		t.Fatalf("chat signaling close status = %v, err=%v", websocket.CloseStatus(err), err)
+	}
+}
+
+func TestExistingPeerIsNotifiedWhenPeerLeaves(t *testing.T) {
+	t.Parallel()
+	server := NewServer("http://example.test")
+	httpServer := httptest.NewServer(server.Handler())
+	t.Cleanup(httpServer.Close)
+
+	first := dialPeer(t, httpServer.URL, "198.51.100.24")
+	_ = readWire(t, first)
+	second := dialPeer(t, httpServer.URL, "198.51.100.24")
+	secondWelcome := readWire(t, second)
+	_ = readWire(t, first) // peer-joined
+	_ = second.Close(websocket.StatusNormalClosure, "")
+
+	left := readWire(t, first)
+	if left.Type != "peer-left" || left.From != secondWelcome.From {
+		t.Fatalf("peer left = %+v", left)
 	}
 }
 

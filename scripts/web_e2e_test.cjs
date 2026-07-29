@@ -51,6 +51,12 @@ function instrument(page) {
   return page.addInitScript(() => {
     const NativeWebSocket = window.WebSocket;
     const NativePeerConnection = window.RTCPeerConnection;
+    // Safari may serialize a native RTCIceCandidate as an empty object.
+    // The application must copy candidate fields explicitly.
+    Object.defineProperty(window.RTCIceCandidate.prototype, "toJSON", {
+      configurable: true,
+      value: () => ({}),
+    });
     window.__dudkaWebSockets = 0;
     window.__dudkaPeerConnections = 0;
     window.WebSocket = class extends NativeWebSocket {
@@ -106,6 +112,10 @@ async function main() {
     await first.press("#message-input", "Meta+Enter");
     await second.waitForFunction(() =>
       document.querySelector("#feed").textContent.includes("Привет через прямой WebRTC"));
+    await second.fill("#message-input", "Ответ напрямую");
+    await second.press("#message-input", "Meta+Enter");
+    await first.waitForFunction(() =>
+      document.querySelector("#feed").textContent.includes("Ответ напрямую"));
 
     await first.setInputFiles("#file-input", {
       name: "проверка.gif",
@@ -118,7 +128,7 @@ async function main() {
     await second.waitForFunction(() =>
       document.querySelector(".file-message a")?.getAttribute("download") === "проверка.gif");
 
-    console.log("OK consent=offline peers=2 text=direct file=проверка.gif");
+    console.log("OK consent=offline peers=2 text=bidirectional file=проверка.gif safari-ice=json");
   } finally {
     await browser.close();
   }

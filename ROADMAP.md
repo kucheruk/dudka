@@ -276,6 +276,8 @@
 - [x] P166 Прод-деплой `/dudka/web/` + `/dudka/signal` и браузерный smoke
 - [ ] P167 Собственный STUN Студии соединяет Safari на iPhone и desktop
   напрямую без TURN (`DUD-WEB-125`)
+- [x] P168 Signaling сообщает вход и выход peer, а браузеры без гонки
+  достраивают WebRTC mesh (`DUD-WEB-110`)
 
 ---
 

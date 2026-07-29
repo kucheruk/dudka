@@ -157,17 +157,27 @@ async function handleSignal(message) {
       case "welcome":
         state.signalID = message.from;
         for (const peerID of message.peers || []) {
-          const peer = createPeer(peerID, true);
-          await makeOffer(peer);
+          await connectPeer(peerID);
         }
         setStatus(message.peers?.length ? "СОГЛАСОВЫВАЮ ПРЯМОЙ КАНАЛ…" : "ЖДУ СОСЕДНЮЮ ВКЛАДКУ");
+        break;
+      case "peer-joined":
+        await connectPeer(message.from);
+        setStatus("СОСЕД НАЙДЕН · согласовываю прямой канал…");
+        break;
+      case "peer-left":
+        removePeer(message.from);
         break;
       case "offer": {
         const peer = createPeer(message.from, false);
         await peer.pc.setRemoteDescription(message.description);
         const answer = await peer.pc.createAnswer();
         await peer.pc.setLocalDescription(answer);
-        sendSignal({ type: "answer", to: message.from, description: peer.pc.localDescription });
+        sendSignal({
+          type: "answer",
+          to: message.from,
+          description: serializeDescription(peer.pc.localDescription),
+        });
         break;
       }
       case "answer": {
@@ -191,6 +201,16 @@ async function handleSignal(message) {
   }
 }
 
+async function connectPeer(peerID) {
+  if (!peerID || peerID === state.signalID) return;
+  const initiator = state.signalID.localeCompare(peerID) > 0;
+  const peer = createPeer(peerID, initiator);
+  if (initiator && !peer.offerStarted) {
+    peer.offerStarted = true;
+    await makeOffer(peer);
+  }
+}
+
 function createPeer(peerID, initiator) {
   if (state.peers.has(peerID)) return state.peers.get(peerID);
   const pc = new RTCPeerConnection({
@@ -203,21 +223,30 @@ function createPeer(peerID, initiator) {
     open: false,
     name: "Соседняя вкладка",
     initiator,
-    restartAttempted: false,
+    offerStarted: false,
     localCandidateTypes: new Set(),
     remoteCandidateTypes: new Set(),
     connectionTimer: null,
+    disconnectTimer: null,
   };
   state.peers.set(peerID, peer);
 
   pc.addEventListener("icecandidate", (event) => {
     if (event.candidate) {
       if (event.candidate.type) peer.localCandidateTypes.add(event.candidate.type);
-      sendSignal({ type: "ice", to: peerID, candidate: event.candidate });
+      sendSignal({ type: "ice", to: peerID, candidate: serializeCandidate(event.candidate) });
     }
   });
   pc.addEventListener("connectionstatechange", () => {
-    if (["failed", "closed", "disconnected"].includes(pc.connectionState)) removePeer(peerID);
+    if (pc.connectionState === "disconnected") {
+      window.clearTimeout(peer.disconnectTimer);
+      peer.disconnectTimer = window.setTimeout(() => {
+        if (pc.connectionState === "disconnected") removePeer(peerID);
+      }, 10000);
+    } else {
+      window.clearTimeout(peer.disconnectTimer);
+      if (["failed", "closed"].includes(pc.connectionState)) removePeer(peerID);
+    }
   });
   pc.addEventListener("datachannel", (event) => {
     if (event.channel.label === "dudka-chat") wireChatChannel(peer, event.channel);
@@ -232,29 +261,38 @@ function createPeer(peerID, initiator) {
   return peer;
 }
 
-async function makeOffer(peer, iceRestart = false) {
-  const offer = await peer.pc.createOffer({ iceRestart });
+async function makeOffer(peer) {
+  const offer = await peer.pc.createOffer();
   await peer.pc.setLocalDescription(offer);
-  sendSignal({ type: "offer", to: peer.id, description: peer.pc.localDescription });
+  sendSignal({
+    type: "offer",
+    to: peer.id,
+    description: serializeDescription(peer.pc.localDescription),
+  });
+}
+
+function serializeDescription(description) {
+  return {
+    type: description.type,
+    sdp: description.sdp,
+  };
+}
+
+function serializeCandidate(candidate) {
+  return {
+    candidate: candidate.candidate,
+    sdpMid: candidate.sdpMid,
+    sdpMLineIndex: candidate.sdpMLineIndex,
+    usernameFragment: candidate.usernameFragment,
+  };
 }
 
 function armConnectionTimeout(peer) {
   window.clearTimeout(peer.connectionTimer);
-  peer.connectionTimer = window.setTimeout(async () => {
+  peer.connectionTimer = window.setTimeout(() => {
     if (peer.open || !state.peers.has(peer.id)) return;
-    if (!peer.restartAttempted && peer.initiator) {
-      peer.restartAttempted = true;
-      setStatus("ПРЯМОЙ КАНАЛ НЕ ПОДНЯЛСЯ · повторяю ICE…");
-      try {
-        await makeOffer(peer, true);
-        armConnectionTimeout(peer);
-      } catch (error) {
-        showError(`ICE-restart не выполнен: ${error.message}`);
-      }
-      return;
-    }
-    showError("Прямой канал не поднялся после двух попыток. Скопируйте диагностику.");
-  }, 10000);
+    showError("Прямой канал не поднялся за 15 секунд. Скопируйте диагностику.");
+  }, 15000);
 }
 
 function sendSignal(message) {
@@ -577,6 +615,7 @@ function removePeer(peerID) {
   if (!peer) return;
   peer.open = false;
   window.clearTimeout(peer.connectionTimer);
+  window.clearTimeout(peer.disconnectTimer);
   peer.pc.close();
   state.peers.delete(peerID);
   renderPeers();
@@ -619,8 +658,7 @@ function buildDiagnostic() {
     `webrtc: ${[...state.peers.values()].map((peer) =>
       `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}` +
       ` local=${[...peer.localCandidateTypes].join("+") || "нет"}` +
-      ` remote=${[...peer.remoteCandidateTypes].join("+") || "нет"}` +
-      ` restart=${peer.restartAttempted}`).join(",") || "нет"}`,
+      ` remote=${[...peer.remoteCandidateTypes].join("+") || "нет"}`).join(",") || "нет"}`,
     `браузер: ${navigator.userAgent}`,
     "",
     "ОШИБКА",

@@ -140,6 +140,7 @@ func (s *Server) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 	if err := writeText(ctx, conn, welcome); err != nil {
 		return
 	}
+	s.notifyPeers(c.room, peers, wireSignal{Type: "peer-joined", From: c.id})
 
 	writeDone := make(chan struct{})
 	go func() {
@@ -248,11 +249,39 @@ func (s *Server) join(c *client) ([]string, error) {
 
 func (s *Server) leave(c *client) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	room := s.rooms[c.room]
+	if room[c.id] != c {
+		s.mu.Unlock()
+		return
+	}
 	delete(room, c.id)
+	peerIDs := make([]string, 0, len(room))
+	for id := range room {
+		peerIDs = append(peerIDs, id)
+	}
 	if len(room) == 0 {
 		delete(s.rooms, c.room)
+	}
+	s.mu.Unlock()
+	s.notifyPeers(c.room, peerIDs, wireSignal{Type: "peer-left", From: c.id})
+}
+
+func (s *Server) notifyPeers(room string, peerIDs []string, message wireSignal) {
+	payload, _ := json.Marshal(message)
+	s.mu.Lock()
+	targets := make([]*client, 0, len(peerIDs))
+	for _, id := range peerIDs {
+		if target := s.rooms[room][id]; target != nil {
+			targets = append(targets, target)
+		}
+	}
+	s.mu.Unlock()
+	for _, target := range targets {
+		select {
+		case <-target.done:
+		case target.send <- payload:
+		default:
+		}
 	}
 }
 
