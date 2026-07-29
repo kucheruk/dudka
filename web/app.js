@@ -41,6 +41,9 @@ const state = {
   messageIDs: new Set(),
   drafts: [],
   lastError: "",
+  signalClose: "не было",
+  reconnectAttempt: 0,
+  reconnectTimer: null,
   startedAt: "",
 };
 for (const message of state.messages) state.messageIDs.add(message.id);
@@ -112,24 +115,40 @@ function connectSignaling() {
   const socket = new WebSocket(`${scheme}//${location.host}/dudka/signal`);
   state.socket = socket;
 
-  socket.addEventListener("open", () => setConnection("ИЩУ СВОИХ…", true));
+  socket.addEventListener("open", () => {
+    state.reconnectAttempt = 0;
+    state.signalClose = "соединение открыто";
+    setConnection("ИЩУ СВОИХ…", true);
+  });
   socket.addEventListener("message", (event) => {
     signalQueue = signalQueue
       .then(() => handleSignal(JSON.parse(event.data)))
       .catch((error) => showError(`Ошибка signaling: ${error.message}`));
   });
-  socket.addEventListener("close", () => {
+  socket.addEventListener("close", (event) => {
     state.socket = null;
+    state.signalClose = `code=${event.code} clean=${event.wasClean} reason=${event.reason || "нет"}`;
     setConnection("SIGNALING НЕДОСТУПЕН", false, true);
     if ([...state.peers.values()].some((peer) => peer.open)) {
       setStatus("ПРЯМОЙ ЧАТ РАБОТАЕТ · новые вкладки пока не найдутся");
     } else {
-      showError("Сигнальный сервис недоступен. Повторите позже.");
+      scheduleReconnect();
     }
   });
   socket.addEventListener("error", () => {
     showError("Не удалось открыть signaling WebSocket.");
   });
+}
+
+function scheduleReconnect() {
+  if (!state.consented || state.reconnectTimer) return;
+  state.reconnectAttempt += 1;
+  const delay = Math.min(10000, 1000 * (2 ** state.reconnectAttempt));
+  showError(`Сигнальный сервис отключился. Повтор через ${delay / 1000} с.`);
+  state.reconnectTimer = window.setTimeout(() => {
+    state.reconnectTimer = null;
+    connectSignaling();
+  }, delay);
 }
 
 async function handleSignal(message) {
@@ -553,8 +572,11 @@ function buildDiagnostic() {
     `запущено: ${state.startedAt || "нет"}`,
     `страница: ${location.origin}${location.pathname}`,
     `online: ${openPeerCount() + 1}`,
-    `signaling: ${state.socket?.readyState ?? "не запускался"}`,
-    `webrtc: ${[...state.peers.values()].map((peer) => peer.pc.connectionState).join(",") || "нет"}`,
+    `signaling state: ${state.socket?.readyState ?? "закрыт"}`,
+    `signaling close: ${state.signalClose}`,
+    `signaling reconnect: ${state.reconnectAttempt}`,
+    `webrtc: ${[...state.peers.values()].map((peer) =>
+      `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}`).join(",") || "нет"}`,
     `браузер: ${navigator.userAgent}`,
     "",
     "ОШИБКА",

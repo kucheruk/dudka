@@ -26,6 +26,7 @@ const (
 	MaxSignalsPerSec  = 20
 	clientSendQueue   = 64
 	writeTimeout      = 5 * time.Second
+	pingInterval      = 25 * time.Second
 	closePolicyReason = "недопустимый signaling"
 )
 
@@ -126,10 +127,19 @@ func (s *Server) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 	writeDone := make(chan struct{})
 	go func() {
 		defer close(writeDone)
+		ping := time.NewTicker(pingInterval)
+		defer ping.Stop()
 		for {
 			select {
 			case <-c.done:
 				return
+			case <-ping.C:
+				pingCtx, pingCancel := context.WithTimeout(ctx, writeTimeout)
+				err := conn.Ping(pingCtx)
+				pingCancel()
+				if err != nil {
+					return
+				}
 			case payload := <-c.send:
 				if err := writeText(ctx, conn, payload); err != nil {
 					return
