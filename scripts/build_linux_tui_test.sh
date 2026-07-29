@@ -36,11 +36,11 @@ if [[ "$arch" == "amd64" ]]; then
   [[ -x "$tmpdir/dist/install.sh" ]] || fail "missing installer"
   ! grep -Eq 'apt-get|dpkg|\.deb' "$tmpdir/dist/install.sh" ||
     fail "installer must not use system package management"
-  grep -q "41777" "$tmpdir/dist/install.sh" ||
-    fail "installer must configure Dudka LAN ports when UFW is enabled"
+  ! grep -Eq '41777|ufw|sudo' "$tmpdir/dist/install.sh" ||
+    fail "WebRTC installer must not change firewall or ask for sudo"
   if [[ "$(uname -s)" == "Linux" ]]; then
     install_root="$tmpdir/home/.local/bin"
-    HOME="$tmpdir/home" DUDKA_INSTALL_DIR="$install_root" DUDKA_SKIP_FIREWALL=1 \
+    HOME="$tmpdir/home" DUDKA_INSTALL_DIR="$install_root" \
       DUDKA_ARCHIVE_URL="file://$archive" "$tmpdir/dist/install.sh" ||
       fail "installer smoke failed"
     [[ -x "$install_root/dudka" && -x "$install_root/dudkad" ]] ||
