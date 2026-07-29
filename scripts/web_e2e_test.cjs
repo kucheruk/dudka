@@ -98,8 +98,8 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
-    assert.equal(await first.locator(".web-version").textContent(), "v0.7.1");
-    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.1/);
+    assert.equal(await first.locator(".web-version").textContent(), "v0.7.2");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.2/);
     await second.goto(origin);
     assert.equal(await second.evaluate(() => window.__dudkaWebSockets), 0);
     await second.fill("#display-name", "Жена");
@@ -109,6 +109,7 @@ async function main() {
       document.querySelector("#online-count").textContent === "ОНЛАЙН 2";
     await first.waitForFunction(onlineTwo, null, { timeout: 15000 });
     await second.waitForFunction(onlineTwo, null, { timeout: 15000 });
+    assert.match(await first.evaluate(() => buildDiagnostic()), /remote=[1-9][0-9]*:/);
 
     await first.evaluate(() => restartSignaling("e2e resume"));
     await first.waitForFunction(() =>

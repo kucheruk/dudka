@@ -280,6 +280,8 @@
   достраивают WebRTC mesh (`DUD-WEB-110`)
 - [x] P169 iPhone Safari восстанавливает signaling после заморозки вкладки
   (`DUD-WEB-110`)
+- [x] P170 Safari и Firefox согласовывают полный ICE SDP, а диагностика
+  сохраняет отказ после удаления peer (`DUD-WEB-110`)
 
 ---
 

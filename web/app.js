@@ -1,6 +1,6 @@
 "use strict";
 
-const WEB_VERSION = "0.7.1";
+const WEB_VERSION = "0.7.2";
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
 const FILE_CHUNK = 16 * 1024;
@@ -47,6 +47,7 @@ const state = {
   reconnectTimer: null,
   signalResume: 0,
   hiddenAt: 0,
+  lastPeerFailure: "нет",
   startedAt: "",
 };
 for (const message of state.messages) state.messageIDs.add(message.id);
@@ -206,8 +207,10 @@ async function handleSignal(message) {
       case "offer": {
         const peer = createPeer(message.from, false);
         await peer.pc.setRemoteDescription(message.description);
+        recordRemoteDescriptionCandidates(peer, message.description);
         const answer = await peer.pc.createAnswer();
         await peer.pc.setLocalDescription(answer);
+        await waitForIceGathering(peer.pc);
         sendSignal({
           type: "answer",
           to: message.from,
@@ -217,7 +220,10 @@ async function handleSignal(message) {
       }
       case "answer": {
         const peer = state.peers.get(message.from);
-        if (peer) await peer.pc.setRemoteDescription(message.description);
+        if (peer) {
+          await peer.pc.setRemoteDescription(message.description);
+          recordRemoteDescriptionCandidates(peer, message.description);
+        }
         break;
       }
       case "ice": {
@@ -261,6 +267,9 @@ function createPeer(peerID, initiator) {
     offerStarted: false,
     localCandidateTypes: new Set(),
     remoteCandidateTypes: new Set(),
+    localCandidateCount: 0,
+    remoteCandidateCount: 0,
+    iceErrors: [],
     connectionTimer: null,
     disconnectTimer: null,
   };
@@ -268,9 +277,13 @@ function createPeer(peerID, initiator) {
 
   pc.addEventListener("icecandidate", (event) => {
     if (event.candidate) {
+      peer.localCandidateCount += 1;
       if (event.candidate.type) peer.localCandidateTypes.add(event.candidate.type);
-      sendSignal({ type: "ice", to: peerID, candidate: serializeCandidate(event.candidate) });
     }
+  });
+  pc.addEventListener("icecandidateerror", (event) => {
+    peer.iceErrors.push(`${event.errorCode || "?"}:${event.errorText || "ICE error"}`);
+    peer.iceErrors = peer.iceErrors.slice(-3);
   });
   pc.addEventListener("connectionstatechange", () => {
     if (pc.connectionState === "disconnected") {
@@ -280,7 +293,12 @@ function createPeer(peerID, initiator) {
       }, 10000);
     } else {
       window.clearTimeout(peer.disconnectTimer);
-      if (["failed", "closed"].includes(pc.connectionState)) removePeer(peerID);
+      if (pc.connectionState === "failed") {
+        rememberPeerFailure(peer, "connection failed");
+        removePeer(peerID);
+      } else if (pc.connectionState === "closed") {
+        removePeer(peerID);
+      }
     }
   });
   pc.addEventListener("datachannel", (event) => {
@@ -299,6 +317,7 @@ function createPeer(peerID, initiator) {
 async function makeOffer(peer) {
   const offer = await peer.pc.createOffer();
   await peer.pc.setLocalDescription(offer);
+  await waitForIceGathering(peer.pc);
   sendSignal({
     type: "offer",
     to: peer.id,
@@ -313,13 +332,39 @@ function serializeDescription(description) {
   };
 }
 
-function serializeCandidate(candidate) {
-  return {
-    candidate: candidate.candidate,
-    sdpMid: candidate.sdpMid,
-    sdpMLineIndex: candidate.sdpMLineIndex,
-    usernameFragment: candidate.usernameFragment,
-  };
+function waitForIceGathering(pc, timeout = 6000) {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      window.clearTimeout(timer);
+      pc.removeEventListener("icegatheringstatechange", check);
+      resolve();
+    };
+    const check = () => {
+      if (pc.iceGatheringState === "complete") finish();
+    };
+    const timer = window.setTimeout(finish, timeout);
+    pc.addEventListener("icegatheringstatechange", check);
+  });
+}
+
+function recordRemoteDescriptionCandidates(peer, description) {
+  const candidates = description?.sdp?.match(/^a=candidate:.*$/gm) || [];
+  peer.remoteCandidateCount = candidates.length;
+  for (const candidate of candidates) {
+    const type = candidate.match(/\styp\s+(\w+)/)?.[1];
+    if (type) peer.remoteCandidateTypes.add(type);
+  }
+}
+
+function rememberPeerFailure(peer, reason) {
+  state.lastPeerFailure =
+    `${reason}; role=${peer.initiator ? "offer" : "answer"}; ` +
+    `pc=${peer.pc.connectionState}; ice=${peer.pc.iceConnectionState}; ` +
+    `gather=${peer.pc.iceGatheringState}; signal=${peer.pc.signalingState}; ` +
+    `local=${peer.localCandidateCount}:${[...peer.localCandidateTypes].join("+") || "нет"}; ` +
+    `remote=${peer.remoteCandidateCount}:${[...peer.remoteCandidateTypes].join("+") || "нет"}; ` +
+    `ice-errors=${peer.iceErrors.join("|") || "нет"}`;
 }
 
 function armConnectionTimeout(peer) {
@@ -327,8 +372,9 @@ function armConnectionTimeout(peer) {
   peer.connectionTimer = window.setTimeout(() => {
     if (peer.open || !state.peers.has(peer.id)) return;
     if (openPeerCount()) return;
-    showError("Прямой канал не поднялся за 15 секунд. Скопируйте диагностику.");
-  }, 15000);
+    rememberPeerFailure(peer, "timeout 30s");
+    showError("Прямой канал не поднялся за 30 секунд. Скопируйте диагностику.");
+  }, 30000);
 }
 
 function sendSignal(message) {
@@ -342,6 +388,7 @@ function wireChatChannel(peer, channel) {
   peer.channel = channel;
   channel.addEventListener("open", () => {
     peer.open = true;
+    state.lastPeerFailure = "нет";
     window.clearTimeout(peer.connectionTimer);
     sendPeerPacket(peer, {
       type: "hello",
@@ -693,10 +740,12 @@ function buildDiagnostic() {
     `signaling close: ${state.signalClose}`,
     `signaling reconnect: ${state.reconnectAttempt}`,
     `signaling resume: ${state.signalResume}`,
+    `signaling peers: ${state.peers.size}`,
     `webrtc: ${[...state.peers.values()].map((peer) =>
       `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}` +
-      ` local=${[...peer.localCandidateTypes].join("+") || "нет"}` +
-      ` remote=${[...peer.remoteCandidateTypes].join("+") || "нет"}`).join(",") || "нет"}`,
+      ` local=${peer.localCandidateCount}:${[...peer.localCandidateTypes].join("+") || "нет"}` +
+      ` remote=${peer.remoteCandidateCount}:${[...peer.remoteCandidateTypes].join("+") || "нет"}`).join(",") || "нет"}`,
+    `webrtc last failure: ${state.lastPeerFailure}`,
     `браузер: ${navigator.userAgent}`,
     "",
     "ОШИБКА",
