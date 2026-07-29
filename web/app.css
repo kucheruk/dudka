@@ -257,6 +257,15 @@ code {
   letter-spacing: 0.08em;
 }
 
+.web-version {
+  margin-left: 0.35em;
+  color: var(--dim);
+  font-size: 0.52em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
 .brand .silk {
   margin-bottom: 3px;
   font-size: 0.62rem;

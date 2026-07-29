@@ -1,5 +1,6 @@
 "use strict";
 
+const WEB_VERSION = "0.7.1";
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
 const FILE_CHUNK = 16 * 1024;
@@ -683,6 +684,7 @@ function showError(text) {
 function buildDiagnostic() {
   return [
     "ДУДКА WEB — ДИАГНОСТИКА ДЛЯ АГЕНТА",
+    `версия: ${WEB_VERSION}`,
     `собрано: ${new Date().toISOString()}`,
     `запущено: ${state.startedAt || "нет"}`,
     `страница: ${location.origin}${location.pathname}`,

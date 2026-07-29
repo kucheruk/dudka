@@ -98,6 +98,8 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
+    assert.equal(await first.locator(".web-version").textContent(), "v0.7.1");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.1/);
     await second.goto(origin);
     assert.equal(await second.evaluate(() => window.__dudkaWebSockets), 0);
     await second.fill("#display-name", "Жена");
