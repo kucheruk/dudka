@@ -1,6 +1,7 @@
 "use strict";
 
-const WEB_VERSION = "0.7.2";
+const WEB_VERSION = "0.7.3";
+const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
 const FILE_CHUNK = 16 * 1024;
@@ -271,6 +272,8 @@ function createPeer(peerID, initiator) {
     remoteCandidateCount: 0,
     iceErrors: [],
     connectionTimer: null,
+    progressTimer: null,
+    progressStartedAt: 0,
     disconnectTimer: null,
   };
   state.peers.set(peerID, peer);
@@ -308,8 +311,8 @@ function createPeer(peerID, initiator) {
 
   if (initiator) {
     wireChatChannel(peer, pc.createDataChannel("dudka-chat", { ordered: true }));
-    armConnectionTimeout(peer);
   }
+  armConnectionTimeout(peer);
   renderPeers();
   return peer;
 }
@@ -369,12 +372,33 @@ function rememberPeerFailure(peer, reason) {
 
 function armConnectionTimeout(peer) {
   window.clearTimeout(peer.connectionTimer);
+  window.clearInterval(peer.progressTimer);
+  peer.progressStartedAt = Date.now();
+  const updateProgress = () => {
+    if (peer.open || !state.peers.has(peer.id) || openPeerCount()) {
+      window.clearInterval(peer.progressTimer);
+      return;
+    }
+    const elapsed = Date.now() - peer.progressStartedAt;
+    setStatus(`${formatNegotiationProgress(elapsed)} · СОГЛАСОВЫВАЮ ПРЯМОЙ КАНАЛ`);
+  };
+  updateProgress();
+  peer.progressTimer = window.setInterval(updateProgress, 125);
   peer.connectionTimer = window.setTimeout(() => {
+    window.clearInterval(peer.progressTimer);
     if (peer.open || !state.peers.has(peer.id)) return;
     if (openPeerCount()) return;
     rememberPeerFailure(peer, "timeout 30s");
     showError("Прямой канал не поднялся за 30 секунд. Скопируйте диагностику.");
   }, 30000);
+}
+
+function formatNegotiationProgress(elapsedMs) {
+  const frame = BRAILLE_FRAMES[Math.floor(elapsedMs / 125) % BRAILLE_FRAMES.length];
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${frame} ${minutes}:${seconds}`;
 }
 
 function sendSignal(message) {
@@ -390,6 +414,7 @@ function wireChatChannel(peer, channel) {
     peer.open = true;
     state.lastPeerFailure = "нет";
     window.clearTimeout(peer.connectionTimer);
+    window.clearInterval(peer.progressTimer);
     sendPeerPacket(peer, {
       type: "hello",
       peerID: identity.peerID,
@@ -698,6 +723,7 @@ function removePeer(peerID) {
   if (!peer) return;
   peer.open = false;
   window.clearTimeout(peer.connectionTimer);
+  window.clearInterval(peer.progressTimer);
   window.clearTimeout(peer.disconnectTimer);
   peer.pc.close();
   state.peers.delete(peerID);

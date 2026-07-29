@@ -98,8 +98,10 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
-    assert.equal(await first.locator(".web-version").textContent(), "v0.7.2");
-    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.2/);
+    assert.equal(await first.locator(".web-version").textContent(), "v0.7.3");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.3/);
+    assert.equal(await first.evaluate(() => formatNegotiationProgress(0)), "⠋ 00:00");
+    assert.equal(await first.evaluate(() => formatNegotiationProgress(1000)), "⠇ 00:01");
     await second.goto(origin);
     assert.equal(await second.evaluate(() => window.__dudkaWebSockets), 0);
     await second.fill("#display-name", "Жена");
