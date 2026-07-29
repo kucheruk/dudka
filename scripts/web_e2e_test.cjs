@@ -108,6 +108,13 @@ async function main() {
     await first.waitForFunction(onlineTwo, null, { timeout: 15000 });
     await second.waitForFunction(onlineTwo, null, { timeout: 15000 });
 
+    await first.evaluate(() => restartSignaling("e2e resume"));
+    await first.waitForFunction(() =>
+      window.__dudkaWebSockets === 2 &&
+      document.querySelector("#online-count").textContent === "ОНЛАЙН 2",
+    null, { timeout: 15000 });
+    await second.waitForFunction(onlineTwo, null, { timeout: 15000 });
+
     await first.fill("#message-input", "Привет через прямой WebRTC");
     await first.press("#message-input", "Meta+Enter");
     await second.waitForFunction(() =>

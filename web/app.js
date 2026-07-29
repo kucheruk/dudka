@@ -44,6 +44,8 @@ const state = {
   signalClose: "не было",
   reconnectAttempt: 0,
   reconnectTimer: null,
+  signalResume: 0,
+  hiddenAt: 0,
   startedAt: "",
 };
 for (const message of state.messages) state.messageIDs.add(message.id);
@@ -108,6 +110,22 @@ window.addEventListener("beforeunload", () => {
   for (const peer of state.peers.values()) peer.pc.close();
 });
 
+window.addEventListener("online", () => restartSignaling("сеть вернулась"));
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted || (state.consented && !state.socket)) {
+    restartSignaling("страница вернулась");
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    state.hiddenAt = Date.now();
+    return;
+  }
+  const hiddenFor = state.hiddenAt ? Date.now() - state.hiddenAt : 0;
+  state.hiddenAt = 0;
+  if (hiddenFor >= 1000) restartSignaling("вкладка вернулась");
+});
+
 function connectSignaling() {
   if (!state.consented || state.socket) return;
   setConnection("ЗНАКОМЛЮСЬ…");
@@ -126,6 +144,7 @@ function connectSignaling() {
       .catch((error) => showError(`Ошибка signaling: ${error.message}`));
   });
   socket.addEventListener("close", (event) => {
+    if (state.socket !== socket) return;
     state.socket = null;
     state.signalClose = `code=${event.code} clean=${event.wasClean} reason=${event.reason || "нет"}`;
     setConnection("SIGNALING НЕДОСТУПЕН", false, true);
@@ -138,6 +157,21 @@ function connectSignaling() {
   socket.addEventListener("error", () => {
     showError("Не удалось открыть signaling WebSocket.");
   });
+}
+
+function restartSignaling(reason) {
+  if (!state.consented) return;
+  window.clearTimeout(state.reconnectTimer);
+  state.reconnectTimer = null;
+  const staleSocket = state.socket;
+  state.socket = null;
+  if (staleSocket && staleSocket.readyState < WebSocket.CLOSING) {
+    staleSocket.close(1000, reason);
+  }
+  for (const peerID of [...state.peers.keys()]) removePeer(peerID);
+  state.signalID = "";
+  state.signalResume += 1;
+  connectSignaling();
 }
 
 function scheduleReconnect() {
@@ -291,6 +325,7 @@ function armConnectionTimeout(peer) {
   window.clearTimeout(peer.connectionTimer);
   peer.connectionTimer = window.setTimeout(() => {
     if (peer.open || !state.peers.has(peer.id)) return;
+    if (openPeerCount()) return;
     showError("Прямой канал не поднялся за 15 секунд. Скопируйте диагностику.");
   }, 15000);
 }
@@ -655,6 +690,7 @@ function buildDiagnostic() {
     `signaling state: ${state.socket?.readyState ?? "закрыт"}`,
     `signaling close: ${state.signalClose}`,
     `signaling reconnect: ${state.reconnectAttempt}`,
+    `signaling resume: ${state.signalResume}`,
     `webrtc: ${[...state.peers.values()].map((peer) =>
       `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}` +
       ` local=${[...peer.localCandidateTypes].join("+") || "нет"}` +

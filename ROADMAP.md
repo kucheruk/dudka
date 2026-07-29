@@ -278,6 +278,8 @@
   напрямую без TURN (`DUD-WEB-125`)
 - [x] P168 Signaling сообщает вход и выход peer, а браузеры без гонки
   достраивают WebRTC mesh (`DUD-WEB-110`)
+- [x] P169 iPhone Safari восстанавливает signaling после заморозки вкладки
+  (`DUD-WEB-110`)
 
 ---
 

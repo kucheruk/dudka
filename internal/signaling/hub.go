@@ -167,7 +167,7 @@ func (s *Server) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	err = s.readLoop(ctx, c)
-	if err != nil && !errors.Is(err, context.Canceled) {
+	if errors.Is(err, errInvalidSignal) || errors.Is(err, errRateLimit) {
 		_ = conn.Close(websocket.StatusPolicyViolation, closePolicyReason)
 	}
 	s.leave(c)
