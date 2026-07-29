@@ -177,7 +177,10 @@ async function handleSignal(message) {
       }
       case "ice": {
         const peer = state.peers.get(message.from);
-        if (peer && message.candidate) await peer.pc.addIceCandidate(message.candidate);
+        if (peer && message.candidate) {
+          if (message.candidate.type) peer.remoteCandidateTypes.add(message.candidate.type);
+          await peer.pc.addIceCandidate(message.candidate);
+        }
         break;
       }
       default:
@@ -193,11 +196,25 @@ function createPeer(peerID, initiator) {
   const pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:zamoo.team:3478" }],
   });
-  const peer = { id: peerID, pc, channel: null, open: false, name: "Соседняя вкладка" };
+  const peer = {
+    id: peerID,
+    pc,
+    channel: null,
+    open: false,
+    name: "Соседняя вкладка",
+    initiator,
+    restartAttempted: false,
+    localCandidateTypes: new Set(),
+    remoteCandidateTypes: new Set(),
+    connectionTimer: null,
+  };
   state.peers.set(peerID, peer);
 
   pc.addEventListener("icecandidate", (event) => {
-    if (event.candidate) sendSignal({ type: "ice", to: peerID, candidate: event.candidate });
+    if (event.candidate) {
+      if (event.candidate.type) peer.localCandidateTypes.add(event.candidate.type);
+      sendSignal({ type: "ice", to: peerID, candidate: event.candidate });
+    }
   });
   pc.addEventListener("connectionstatechange", () => {
     if (["failed", "closed", "disconnected"].includes(pc.connectionState)) removePeer(peerID);
@@ -207,15 +224,37 @@ function createPeer(peerID, initiator) {
     if (event.channel.label.startsWith("dudka-file:")) receiveFileChannel(peer, event.channel);
   });
 
-  if (initiator) wireChatChannel(peer, pc.createDataChannel("dudka-chat", { ordered: true }));
+  if (initiator) {
+    wireChatChannel(peer, pc.createDataChannel("dudka-chat", { ordered: true }));
+    armConnectionTimeout(peer);
+  }
   renderPeers();
   return peer;
 }
 
-async function makeOffer(peer) {
-  const offer = await peer.pc.createOffer();
+async function makeOffer(peer, iceRestart = false) {
+  const offer = await peer.pc.createOffer({ iceRestart });
   await peer.pc.setLocalDescription(offer);
   sendSignal({ type: "offer", to: peer.id, description: peer.pc.localDescription });
+}
+
+function armConnectionTimeout(peer) {
+  window.clearTimeout(peer.connectionTimer);
+  peer.connectionTimer = window.setTimeout(async () => {
+    if (peer.open || !state.peers.has(peer.id)) return;
+    if (!peer.restartAttempted && peer.initiator) {
+      peer.restartAttempted = true;
+      setStatus("ПРЯМОЙ КАНАЛ НЕ ПОДНЯЛСЯ · повторяю ICE…");
+      try {
+        await makeOffer(peer, true);
+        armConnectionTimeout(peer);
+      } catch (error) {
+        showError(`ICE-restart не выполнен: ${error.message}`);
+      }
+      return;
+    }
+    showError("Прямой канал не поднялся после двух попыток. Скопируйте диагностику.");
+  }, 10000);
 }
 
 function sendSignal(message) {
@@ -229,6 +268,7 @@ function wireChatChannel(peer, channel) {
   peer.channel = channel;
   channel.addEventListener("open", () => {
     peer.open = true;
+    window.clearTimeout(peer.connectionTimer);
     sendPeerPacket(peer, {
       type: "hello",
       peerID: identity.peerID,
@@ -536,6 +576,7 @@ function removePeer(peerID) {
   const peer = state.peers.get(peerID);
   if (!peer) return;
   peer.open = false;
+  window.clearTimeout(peer.connectionTimer);
   peer.pc.close();
   state.peers.delete(peerID);
   renderPeers();
@@ -555,7 +596,6 @@ function setStatus(text, error = false) {
   els.status.textContent = text;
   els.statusLine.classList.toggle("error", error);
   if (!error) {
-    els.copyDiagnostic.hidden = true;
     state.lastError = "";
   }
 }
@@ -564,7 +604,6 @@ function showError(text) {
   state.lastError = text;
   els.status.textContent = text;
   els.statusLine.classList.add("error");
-  els.copyDiagnostic.hidden = false;
 }
 
 function buildDiagnostic() {
@@ -578,7 +617,10 @@ function buildDiagnostic() {
     `signaling close: ${state.signalClose}`,
     `signaling reconnect: ${state.reconnectAttempt}`,
     `webrtc: ${[...state.peers.values()].map((peer) =>
-      `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}`).join(",") || "нет"}`,
+      `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}` +
+      ` local=${[...peer.localCandidateTypes].join("+") || "нет"}` +
+      ` remote=${[...peer.remoteCandidateTypes].join("+") || "нет"}` +
+      ` restart=${peer.restartAttempted}`).join(",") || "нет"}`,
     `браузер: ${navigator.userAgent}`,
     "",
     "ОШИБКА",
