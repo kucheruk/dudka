@@ -40,44 +40,6 @@ if [ "${DUDKA_INSTALL_DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-configure_ufw() {
-  [ "${DUDKA_SKIP_FIREWALL:-0}" != "1" ] || return 0
-  [ -r /etc/ufw/ufw.conf ] || return 0
-  grep -Eq '^[[:space:]]*ENABLED=yes' /etc/ufw/ufw.conf || return 0
-  command -v ufw >/dev/null 2>&1 || return 0
-  command -v ip >/dev/null 2>&1 ||
-    fail "UFW включён, но не найден ip; задайте локальную сеть через DUDKA_LAN_CIDR"
-
-  lan_cidr="${DUDKA_LAN_CIDR:-}"
-  if [ -z "$lan_cidr" ]; then
-    default_iface="$(ip -4 route show default | awk 'NR == 1 {for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
-    [ -n "$default_iface" ] ||
-      fail "UFW включён, но не удалось определить сетевой интерфейс"
-    lan_cidr="$(ip -4 route show dev "$default_iface" scope link |
-      awk '$1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$/ && $1 !~ /^169\.254\./ {print $1; exit}')"
-  fi
-  case "$lan_cidr" in
-    10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*) ;;
-    *) fail "не удалось безопасно определить приватную LAN-подсеть: ${lan_cidr:-пусто}" ;;
-  esac
-
-  echo "UFW включён. Дудке нужны 41777/tcp+udp только внутри ${lan_cidr}."
-  if [ "$(id -u)" -eq 0 ]; then
-    ufw allow proto udp from "$lan_cidr" to any port 41777 comment 'dudka:discovery'
-    ufw allow proto tcp from "$lan_cidr" to any port 41777 comment 'dudka:peer'
-  else
-    command -v sudo >/dev/null 2>&1 ||
-      fail "нужен sudo для двух локальных UFW-правил; файлы ещё не установлены"
-    echo "Сейчас sudo спросит пароль один раз; системные пакеты устанавливаться не будут."
-    sudo ufw allow proto udp from "$lan_cidr" to any port 41777 comment 'dudka:discovery' ||
-      fail "не получены права для локального UDP-правила; файлы ещё не установлены"
-    sudo ufw allow proto tcp from "$lan_cidr" to any port 41777 comment 'dudka:peer' ||
-      fail "не получены права для локального TCP-правила; файлы ещё не установлены"
-  fi
-}
-
-configure_ufw
-
 tar -xzf "$archive" -C "$work"
 mkdir -p "$install_dir"
 install -m 0755 "$work/dudka-linux-amd64/dudka" "$install_dir/dudka"

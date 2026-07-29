@@ -24,15 +24,14 @@ go build -o dist/dudkad ./cmd/dudkad   # engine
 go build -o dist/dudka ./cmd/dudka     # Linux TUI
 ./dist/dudkad -data-dir /tmp/dudka-demo -name Вася -listen 127.0.0.1:17880
 # → ready peer_id=<uuid> name=Вася
-# → UDP announce :41777 + TCP register; curl /peers → соседи
+# → до явного согласия нет signaling и STUN
+# curl -s -X POST http://127.0.0.1:17880/internet-consent
+# → WebRTC signaling и STUN запущены; curl /peers → соседи
 # curl -s http://127.0.0.1:17880/me → {"peer_id":"…","name":"Вася"}
 # curl -s http://127.0.0.1:17880/peers → {"peers":[{"peer_id":"…","updated":false,…}]}
 # curl -s http://127.0.0.1:17880/status → proto_major + incompatible[]
-# curl -s -X POST http://127.0.0.1:17880/scan -d '{"hosts":["192.168.1.10"],"port":41777}'
 # curl -s -X POST http://127.0.0.1:17880/scan -d '{}'
-# (пустой scan сам выбирает активную приватную подсеть; explicit hosts остаются для диагностики)
-# публичный seed IP не уходит в WAN: лог wan_refuse (DUD-NET-101)
-# ./dist/dudkad -dial-hosts 8.8.8.8 …
+# → повторное знакомство через signaling, без сканирования подсети
 # curl -s -X POST http://127.0.0.1:17880/send -d '{"text":"привет"}' → accepted|queued (не «доставлено»)
 # curl -s -X POST http://127.0.0.1:17880/files/announce \
 #   -d '{"name":"a.txt","mime":"text/plain","hash":"sha256:…","content_b64":"…"}'
@@ -78,9 +77,8 @@ curl -fsSL https://zamoo.team/dudka/install.sh | sh
 ```
 
 Скрипт скачивает точный архив, сверяет SHA-256 и кладёт `dudka` с `dudkad`
-в `~/.local/bin`. Пакеты и GUI-зависимости не устанавливаются. Если UFW
-активен, установщик один раз просит sudo и сам добавляет два узких правила
-`41777/tcp+udp` только для текущей приватной LAN-подсети.
+в `~/.local/bin`. Пакеты и GUI-зависимости не устанавливаются, `sudo` и
+настройка firewall не нужны.
 
 Одна команда → артефакты в `dist/` (cross-compile, `CGO_ENABLED=0`):
 
@@ -192,7 +190,9 @@ Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `
 
 ## Зачем
 
-Семья айтишников устала от блокировок и сложности обычных мессенджеров, когда нужно просто перекинуть строку или файл через комнату. ДУДКА работает только в LAN: открыл приложение — уже в общем чате с теми, кто онлайн рядом.
+Семья айтишников устала от блокировок и сложности обычных мессенджеров, когда
+нужно просто перекинуть строку или файл через комнату. ДУДКА знакомит устройства
+через Студию, а текст и файлы передаёт напрямую по WebRTC.
 
 ## Платформы
 
@@ -206,8 +206,8 @@ Linux TUI/engine pack (P080): `./scripts/build_linux_tui.sh`, контракт `
 - **Go** — протокол, discovery, хвост истории, файлы, дополнительный TUI,
   встроенный engine для GUI.
 - **Flutter** — GUI shell; говорит с локальным Go-engine только через loopback.
-- Discovery: UDP broadcast + TCP register + subnet scan; **не** mDNS.
-- Рантайм без интернета (регуляторный контур, не деталь).
+- Discovery: узкий signaling Студии; транспорт: WebRTC DataChannel.
+- Signaling и STUN запускаются только после явного согласия; TURN отсутствует.
 
 ## Документы
 
