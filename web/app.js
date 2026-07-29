@@ -1,6 +1,6 @@
 "use strict";
 
-const WEB_VERSION = "0.7.3";
+const WEB_VERSION = "0.7.4";
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
@@ -271,6 +271,7 @@ function createPeer(peerID, initiator) {
     localCandidateCount: 0,
     remoteCandidateCount: 0,
     iceErrors: [],
+    failureHandled: false,
     connectionTimer: null,
     progressTimer: null,
     progressStartedAt: 0,
@@ -297,12 +298,14 @@ function createPeer(peerID, initiator) {
     } else {
       window.clearTimeout(peer.disconnectTimer);
       if (pc.connectionState === "failed") {
-        rememberPeerFailure(peer, "connection failed");
-        removePeer(peerID);
+        failPeer(peer, "connection failed");
       } else if (pc.connectionState === "closed") {
         removePeer(peerID);
       }
     }
+  });
+  pc.addEventListener("iceconnectionstatechange", () => {
+    if (pc.iceConnectionState === "failed") failPeer(peer, "ICE failed");
   });
   pc.addEventListener("datachannel", (event) => {
     if (event.channel.label === "dudka-chat") wireChatChannel(peer, event.channel);
@@ -370,6 +373,16 @@ function rememberPeerFailure(peer, reason) {
     `ice-errors=${peer.iceErrors.join("|") || "нет"}`;
 }
 
+function failPeer(peer, reason) {
+  if (peer.failureHandled) return;
+  peer.failureHandled = true;
+  rememberPeerFailure(peer, reason);
+  window.clearTimeout(peer.connectionTimer);
+  window.clearInterval(peer.progressTimer);
+  showError("ПРЯМОЙ КАНАЛ НЕ НАЙДЕН · ICE проверил прямые адреса, но ни один не доступен. TURN выключен.");
+  removePeer(peer.id);
+}
+
 function armConnectionTimeout(peer) {
   window.clearTimeout(peer.connectionTimer);
   window.clearInterval(peer.progressTimer);
@@ -389,7 +402,7 @@ function armConnectionTimeout(peer) {
     if (peer.open || !state.peers.has(peer.id)) return;
     if (openPeerCount()) return;
     rememberPeerFailure(peer, "timeout 30s");
-    showError("Прямой канал не поднялся за 30 секунд. Скопируйте диагностику.");
+    showError("ПРЯМОЙ КАНАЛ НЕ НАЙДЕН ЗА 30 СЕКУНД · Скопируйте диагностику.");
   }, 30000);
 }
 

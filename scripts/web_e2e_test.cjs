@@ -98,8 +98,8 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
-    assert.equal(await first.locator(".web-version").textContent(), "v0.7.3");
-    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.3/);
+    assert.equal(await first.locator(".web-version").textContent(), "v0.7.4");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.4/);
     assert.equal(await first.evaluate(() => formatNegotiationProgress(0)), "⠋ 00:00");
     assert.equal(await first.evaluate(() => formatNegotiationProgress(1000)), "⠇ 00:01");
     await second.goto(origin);
@@ -140,7 +140,41 @@ async function main() {
     await second.waitForFunction(() =>
       document.querySelector(".file-message a")?.getAttribute("download") === "проверка.gif");
 
-    console.log("OK consent=offline peers=2 text=bidirectional file=проверка.gif safari-ice=json");
+    const failedIce = await first.evaluate(() => {
+      const peer = {
+        id: "e2e-failed-peer",
+        initiator: true,
+        pc: {
+          connectionState: "failed",
+          iceConnectionState: "failed",
+          iceGatheringState: "complete",
+          signalingState: "stable",
+          close() {},
+        },
+        open: false,
+        localCandidateCount: 2,
+        remoteCandidateCount: 3,
+        localCandidateTypes: new Set(["host", "srflx"]),
+        remoteCandidateTypes: new Set(["host", "srflx"]),
+        iceErrors: [],
+        failureHandled: false,
+        connectionTimer: null,
+        progressTimer: null,
+        disconnectTimer: null,
+      };
+      state.peers.set(peer.id, peer);
+      failPeer(peer, "ICE failed");
+      return {
+        status: document.querySelector("#status-message").textContent,
+        diagnostic: buildDiagnostic(),
+        peerRemoved: !state.peers.has(peer.id),
+      };
+    });
+    assert.match(failedIce.status, /ПРЯМОЙ КАНАЛ НЕ НАЙДЕН/);
+    assert.match(failedIce.diagnostic, /webrtc last failure: ICE failed/);
+    assert.equal(failedIce.peerRemoved, true);
+
+    console.log("OK consent=offline peers=2 text=bidirectional file=проверка.gif safari-ice=json failure=visible");
   } finally {
     await browser.close();
   }
