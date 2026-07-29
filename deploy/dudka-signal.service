@@ -1,0 +1,28 @@
+[Unit]
+Description=Dudka browser WebRTC signaling
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dudka-signal
+Group=dudka-signal
+ExecStart=/opt/dudka-signal/dudka-signal -listen 127.0.0.1:5251 -origin https://zamoo.team
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

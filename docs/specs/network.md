@@ -18,7 +18,7 @@
 
 ### DUD-NET-101
 
-Priority: P0  
+Priority: P0
 Status: Partial
 
 Engine в рантайме не устанавливает исходящие соединения к адресам вне
@@ -37,6 +37,27 @@ artifact по DUD-UPD-101. Попытка конфигурации другог�
 
 Зависимости: DUD-UPD-101 для единственного исключения GUI
 ADR: не требуется
+
+### DUD-NET-160
+
+Priority: P0
+Status: Accepted
+
+Браузерная Дудка после явного согласия пользователя имеет одно дополнительное
+WAN-исключение: `wss://zamoo.team/dudka/signal`. По этому соединению разрешены
+только WebRTC offer/answer/ICE и случайные ID вкладок. Сообщения, файлы, имена и
+история через него запрещены. STUN и TURN не используются.
+
+Проверка:
+
+- до согласия соединения нет;
+- allowlist содержит только точный same-origin WebSocket path;
+- WebRTC config содержит пустой `iceServers`;
+- signaling service отвергает прикладные типы данных;
+- evidence: DUD-WEB-101/110/140 tests.
+
+Зависимости: DUD-WEB-101, DUD-WEB-140
+ADR: `docs/adr/0001-browser-webrtc-signaling.md`
 
 ### DUD-NET-110
 

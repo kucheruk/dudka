@@ -1,0 +1,135 @@
+<!doctype html>
+<!--
+THESIS: Веб-Дудка — рабочая панель прямой связи, а не лендинг и не облачный чат.
+OWN-WORLD: Charcoal rhythm-machine panel, четыре цветных шага, mono silkscreen,
+жёсткие линии без карточек, пузырей и декоративного CRT.
+STORY: Сначала человек понимает точный выход в интернет и разрешает его; затем
+видит соседей, ленту и один compose, где текст и файлы отправляются напрямую.
+FIRST VIEWPORT: Блокирующий паспорт сети занимает экран целиком; после согласия
+его заменяет единая двухпанельная рабочая поверхность.
+FORM: Operate, существующий мир Дудки; плотная desktop-панель становится одной
+колонкой на телефоне. Визуальный seed проекта c3406aa1.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>ДУДКА · Веб-чат</title>
+    <meta name="description" content="Прямой WebRTC-чат между вкладками в одной домашней сети.">
+    <link rel="icon" href="icon.png">
+    <link rel="stylesheet" href="app.css">
+  </head>
+  <body>
+    <noscript>
+      <p class="noscript">Для WebRTC нужна поддержка JavaScript. Сеть не запускалась.</p>
+    </noscript>
+
+    <main id="consent-screen" class="consent-screen" aria-labelledby="consent-title">
+      <section class="consent-panel">
+        <header class="consent-head">
+          <img class="app-icon" src="icon.png" width="72" height="72" alt="">
+          <div>
+            <p class="silk">СЕТЕВОЙ ПАСПОРТ · ДО ПОДКЛЮЧЕНИЯ</p>
+            <h1 id="consent-title">Эта вкладка хочет выйти в интернет.</h1>
+          </div>
+        </header>
+
+        <div class="consent-grid">
+          <section>
+            <h2>Кто и куда</h2>
+            <p>Эта вкладка откроет один WebSocket к сигнальному сервису Студии на <code>zamoo.team</code>.</p>
+          </section>
+          <section>
+            <h2>Зачем</h2>
+            <p>Чтобы найти другие открытые вкладки Дудки с того же домашнего подключения и согласовать прямой WebRTC-канал.</p>
+          </section>
+          <section>
+            <h2>Что увидит сервис</h2>
+            <p>Публичный IP, случайный ID вкладки, обычный User-Agent браузера и служебные WebRTC offer, answer и ICE.</p>
+          </section>
+          <section>
+            <h2>Что не уйдёт</h2>
+            <p>Ваше имя, сообщения, файлы и история. После знакомства они идут напрямую между браузерами по шифрованному DTLS.</p>
+          </section>
+          <section>
+            <h2>Насколько</h2>
+            <p>Соединение живёт только пока открыта вкладка. Один пакет не больше 64 КиБ, не больше 20 пакетов в секунду. Состояние удаляется сразу после отключения.</p>
+          </section>
+          <section>
+            <h2>Предел</h2>
+            <p>STUN и TURN выключены: сервер не пересылает чат. Один внешний IP не является паролем; используйте веб-Дудку только в доверенной домашней сети.</p>
+          </section>
+        </div>
+
+        <label class="name-field" for="display-name">
+          <span>КАК ВАС ПОКАЗАТЬ СОСЕДЯМ</span>
+          <input id="display-name" name="display-name" maxlength="80" autocomplete="nickname" value="Дудка браузер">
+          <small>Имя пойдёт только напрямую соседним вкладкам после WebRTC-соединения.</small>
+        </label>
+
+        <p id="consent-note" class="consent-note" role="status">
+          До разрешения signaling и WebRTC не запускаются.
+        </p>
+
+        <div class="consent-actions">
+          <button id="consent-accept" class="control primary" type="button">РАЗРЕШИТЬ И НАЙТИ СВОИХ</button>
+          <button id="consent-decline" class="control secondary" type="button">ОСТАТЬСЯ ОФЛАЙН</button>
+        </div>
+      </section>
+    </main>
+
+    <main id="chat-app" class="app-shell" hidden>
+      <header class="app-header">
+        <div class="brand">
+          <img class="app-icon compact" src="icon.png" width="44" height="44" alt="">
+          <div>
+            <p class="silk">ПРЯМОЙ WEBRTC · БЕЗ РЕЛЕЯ</p>
+            <h1>ДУДКА</h1>
+          </div>
+        </div>
+        <div class="connection-readout" aria-live="polite">
+          <span id="connection-led" class="led"></span>
+          <span id="connection-state">ЗНАКОМЛЮСЬ…</span>
+          <strong id="online-count">ОНЛАЙН 1</strong>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="peers-panel" aria-labelledby="peers-title">
+          <h2 id="peers-title" class="panel-label">СОСЕДИ</h2>
+          <ol id="peer-list" class="peer-list"></ol>
+        </aside>
+
+        <section class="chat-panel" aria-labelledby="feed-title">
+          <h2 id="feed-title" class="panel-label">ЛЕНТА</h2>
+          <div id="feed" class="feed" role="log" aria-live="polite" aria-relevant="additions">
+            <p id="empty-feed" class="empty-feed">Пока пусто. Сообщение останется только между открытыми вкладками.</p>
+          </div>
+
+          <div id="draft-files" class="draft-files" aria-label="Файлы перед отправкой"></div>
+
+          <form id="compose-form" class="compose">
+            <label class="attach-control" for="file-input" title="Добавить файлы">
+              <span aria-hidden="true">📎</span>
+              <span class="sr-only">Добавить файлы</span>
+            </label>
+            <input id="file-input" type="file" multiple hidden>
+            <textarea id="message-input" rows="2" maxlength="4000" placeholder="Сообщение…  Cmd/Ctrl+Enter — отправить"></textarea>
+            <button class="send-control" type="submit" title="Отправить">
+              <span aria-hidden="true">↗</span>
+              <span class="sr-only">Отправить</span>
+            </button>
+          </form>
+
+          <div class="status-line">
+            <span id="status-message" role="status">ГОТОВО</span>
+            <button id="copy-diagnostic" type="button" hidden>КОПИРОВАТЬ ДИАГНОСТИКУ</button>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

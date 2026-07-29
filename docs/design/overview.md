@@ -28,6 +28,17 @@
                          other peers
 ```
 
+Браузерная ветка не дублирует UDP/TCP engine и не требует домашнего сервера:
+
+```
+Browser tab ── WSS offer/answer/ICE ── zamoo.team signaling (memory only)
+     │
+     └──────── WebRTC DataChannel / DTLS ──────── other browser tabs
+```
+
+Signaling запускается только после отдельного экрана согласия. Прикладные
+сообщения и файлы сигнальный сервис не принимает.
+
 ## Discovery (не mDNS)
 
 1. Периодический **UDP broadcast** announce на порт `41777`.

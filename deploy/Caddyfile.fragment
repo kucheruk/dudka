@@ -1,0 +1,14 @@
+# Inside the existing zamoo.team site block.
+handle /dudka/signal {
+	rewrite * /
+	reverse_proxy 127.0.0.1:5251
+}
+
+@dudka_web path /dudka/web/*
+header @dudka_web {
+	Cache-Control "no-cache"
+	Content-Security-Policy "default-src 'self'; connect-src 'self' wss://zamoo.team; img-src 'self' blob: data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+	Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	Referrer-Policy "no-referrer"
+	X-Content-Type-Options "nosniff"
+}
