@@ -308,4 +308,22 @@ void main() {
       throwsStateError,
     );
   });
+
+  test('write check does not depend on an external test binary', () async {
+    final temp = await Directory.systemTemp.createTemp('dudka-write-test-');
+    addTearDown(() async {
+      if (await temp.exists()) await temp.delete(recursive: true);
+    });
+
+    await ensureDirectoryWritable(
+      temp,
+      probeSuffix: 'fixture',
+      errorTarget: temp.path,
+    );
+
+    expect(
+      File('${temp.path}/.dudka-update-write-test-fixture').existsSync(),
+      isFalse,
+    );
+  });
 }

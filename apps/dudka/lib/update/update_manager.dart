@@ -432,15 +432,11 @@ class PlatformUpdateActivator implements UpdateActivator {
           'Сначала перенесите Дудку из DMG в Applications',
         );
       }
-      final writable = await Process.run(
-        '/usr/bin/test',
-        ['-w', bundle.parent.path],
+      await ensureDirectoryWritable(
+        bundle.parent,
+        probeSuffix: '$processId',
+        errorTarget: bundle.path,
       );
-      if (writable.exitCode != 0) {
-        throw StateError(
-          'Нет прав на обновление ${bundle.path}',
-        );
-      }
       final script = File('${archive.parent.path}/activate-macos-$version.sh');
       await script.writeAsString(buildMacActivationScript(
         archivePath: archive.path,
@@ -496,6 +492,24 @@ class PlatformUpdateActivator implements UpdateActivator {
       return;
     }
     throw UnsupportedError('auto-update is desktop-only');
+  }
+}
+
+Future<void> ensureDirectoryWritable(
+  Directory directory, {
+  required String probeSuffix,
+  required String errorTarget,
+}) async {
+  final probe = File(
+    '${directory.path}${Platform.pathSeparator}'
+    '.dudka-update-write-test-$probeSuffix',
+  );
+  try {
+    await probe.create(exclusive: true);
+    await probe.delete();
+  } catch (_) {
+    if (await probe.exists()) await probe.delete();
+    throw StateError('Нет прав на обновление $errorTarget');
   }
 }
 
