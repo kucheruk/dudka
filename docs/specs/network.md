@@ -43,17 +43,20 @@ ADR: не требуется
 Priority: P0
 Status: Accepted
 
-Браузерная Дудка после явного согласия пользователя имеет одно дополнительное
-WAN-исключение: `wss://zamoo.team/dudka/signal`. По этому соединению разрешены
-только WebRTC offer/answer/ICE и случайные ID вкладок. Сообщения, файлы, имена и
-история через него запрещены. STUN и TURN не используются.
+Браузерная Дудка после явного согласия пользователя имеет два дополнительных
+WAN-исключения: `wss://zamoo.team/dudka/signal` и
+`stun:zamoo.team:3478` по UDP. WebSocket принимает только WebRTC
+offer/answer/ICE и случайные ID вкладок. STUN возвращает только наблюдаемый
+IP и UDP-порт. Сообщения, файлы, имена и история через них запрещены. TURN
+не используется.
 
 Проверка:
 
 - до согласия соединения нет;
-- allowlist содержит только точный same-origin WebSocket path;
-- WebRTC config содержит пустой `iceServers`;
+- allowlist содержит точный same-origin WebSocket path и один STUN Студии;
+- WebRTC config не содержит сторонних STUN или TURN;
 - signaling service отвергает прикладные типы данных;
+- STUN отвечает только на RFC 5389 Binding Request;
 - evidence: DUD-WEB-101/110/140 tests.
 
 Зависимости: DUD-WEB-101, DUD-WEB-140

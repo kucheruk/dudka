@@ -107,6 +107,36 @@ func TestRoomRemovedAfterLastPeerLeaves(t *testing.T) {
 	t.Fatal("room retained after disconnect")
 }
 
+func TestDebugExposesOnlyAggregateCounts(t *testing.T) {
+	t.Parallel()
+	server := NewServer("http://example.test")
+	httpServer := httptest.NewServer(server.Handler())
+	t.Cleanup(httpServer.Close)
+
+	first := dialPeer(t, httpServer.URL, "198.51.100.30")
+	_ = readWire(t, first)
+	second := dialPeer(t, httpServer.URL, "198.51.100.30")
+	_ = readWire(t, second)
+
+	response, err := http.Get(httpServer.URL + "/debug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	var snapshot struct {
+		Rooms     int   `json:"rooms"`
+		Peers     int   `json:"peers"`
+		RoomSizes []int `json:"room_sizes"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Rooms != 1 || snapshot.Peers != 2 ||
+		len(snapshot.RoomSizes) != 1 || snapshot.RoomSizes[0] != 2 {
+		t.Fatalf("debug snapshot = %+v", snapshot)
+	}
+}
+
 func dialPeer(t *testing.T, baseURL, forwardedIP string) *websocket.Conn {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

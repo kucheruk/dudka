@@ -190,7 +190,9 @@ async function handleSignal(message) {
 
 function createPeer(peerID, initiator) {
   if (state.peers.has(peerID)) return state.peers.get(peerID);
-  const pc = new RTCPeerConnection({ iceServers: [] });
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:zamoo.team:3478" }],
+  });
   const peer = { id: peerID, pc, channel: null, open: false, name: "Соседняя вкладка" };
   state.peers.set(peerID, peer);
 

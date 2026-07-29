@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"dudka/internal/signaling"
+	"dudka/internal/stunserver"
 	"dudka/internal/version"
 )
 
@@ -18,8 +19,18 @@ func main() {
 	listen := flag.String("listen", "127.0.0.1:5251", "HTTP listen address")
 	origin := flag.String("origin", "https://zamoo.team", "exact allowed browser origin")
 	webDir := flag.String("web-dir", "", "optional static web directory for local testing")
+	stunListen := flag.String("stun-listen", "", "optional public STUN UDP listen address")
 	flag.Parse()
 
+	if *stunListen != "" {
+		go func() {
+			log.Printf("dudka-stun %s listen=%s", version.Version, *stunListen)
+			if err := stunserver.ListenAndServe(*stunListen); err != nil {
+				fmt.Fprintf(os.Stderr, "dudka-stun: %v\n", err)
+				os.Exit(1)
+			}
+		}()
+	}
 	signalHandler := signaling.NewServer(*origin).Handler()
 	handler := signalHandler
 	if *webDir != "" {

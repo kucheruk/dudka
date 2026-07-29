@@ -77,6 +77,23 @@ func (s *Server) Handler() http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	mux.HandleFunc("GET /debug", func(w http.ResponseWriter, _ *http.Request) {
+		s.mu.Lock()
+		roomSizes := make([]int, 0, len(s.rooms))
+		peerCount := 0
+		for _, room := range s.rooms {
+			roomSizes = append(roomSizes, len(room))
+			peerCount += len(room)
+		}
+		s.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"rooms":      len(roomSizes),
+			"peers":      peerCount,
+			"room_sizes": roomSizes,
+		})
+	})
 	mux.HandleFunc("GET /", s.serveWebSocket)
 	return securityHeaders(mux)
 }

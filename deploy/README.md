@@ -3,7 +3,8 @@
 Публичная статика лежит в `/srv/zamoo.team/dudka/web/`. Сигнальный бинарь
 лежит в `/opt/dudka-signal/dudka-signal` и слушает только
 `127.0.0.1:5251`. Caddy открывает наружу только точный путь
-`https://zamoo.team/dudka/signal`.
+`https://zamoo.team/dudka/signal`. Тот же процесс слушает публичный
+`3478/udp` как STUN-only сервис; TURN в нём нет.
 
 Перед обновлением:
 
