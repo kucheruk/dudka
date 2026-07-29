@@ -6,10 +6,13 @@ const { execFileSync, spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { chromium } = require("playwright");
+const { chromium, firefox, webkit } = require("playwright");
 
 const repo = path.resolve(__dirname, "..");
 const origin = "http://127.0.0.1:55251";
+const firstBrowserName = process.env.DUDKA_WEB_FIRST || "chromium";
+const secondBrowserName = process.env.DUDKA_WEB_SECOND || firstBrowserName;
+const browserTypes = { chromium, firefox, webkit };
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dudka-web-e2e-"));
 const serverBinary = path.join(tempDir, "dudka-signal");
 execFileSync("go", ["build", "-o", serverBinary, "./cmd/dudka-signal"], {
@@ -59,10 +62,19 @@ function instrument(page) {
     });
     window.__dudkaWebSockets = 0;
     window.__dudkaPeerConnections = 0;
+    window.__dudkaSignals = [];
     window.WebSocket = class extends NativeWebSocket {
       constructor(...args) {
         super(...args);
         window.__dudkaWebSockets += 1;
+      }
+      send(data) {
+        try {
+          window.__dudkaSignals.push(JSON.parse(data));
+        } catch {
+          // The application only sends JSON; retain normal WebSocket behavior.
+        }
+        return super.send(data);
       }
     };
     window.RTCPeerConnection = class extends NativePeerConnection {
@@ -76,15 +88,23 @@ function instrument(page) {
 
 async function main() {
   await waitForServer();
-  const browser = await chromium.launch({
+  const firstBrowserType = browserTypes[firstBrowserName];
+  const secondBrowserType = browserTypes[secondBrowserName];
+  assert(firstBrowserType, `unknown first browser: ${firstBrowserName}`);
+  assert(secondBrowserType, `unknown second browser: ${secondBrowserName}`);
+  const launchOptions = (name) => ({
     headless: true,
     // Headless Chromium has no mDNS resolver. Real browsers resolve these
     // host candidates in LAN; the test exposes the same local ICE addresses.
-    args: ["--disable-features=WebRtcHideLocalIpsWithMdns"],
+    ...(name === "chromium"
+      ? { args: ["--disable-features=WebRtcHideLocalIpsWithMdns"] }
+      : {}),
   });
+  const firstBrowser = await firstBrowserType.launch(launchOptions(firstBrowserName));
+  const secondBrowser = await secondBrowserType.launch(launchOptions(secondBrowserName));
   try {
-    const firstContext = await browser.newContext();
-    const secondContext = await browser.newContext();
+    const firstContext = await firstBrowser.newContext();
+    const secondContext = await secondBrowser.newContext();
     const first = await firstContext.newPage();
     const second = await secondContext.newPage();
     await instrument(first);
@@ -98,8 +118,8 @@ async function main() {
 
     await first.fill("#display-name", "Евгений");
     await first.click("#consent-accept");
-    assert.equal(await first.locator(".web-version").textContent(), "v0.7.4");
-    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.4/);
+    assert.equal(await first.locator(".web-version").textContent(), "v0.7.5");
+    assert.match(await first.evaluate(() => buildDiagnostic()), /версия: 0\.7\.5/);
     assert.equal(await first.evaluate(() => formatNegotiationProgress(0)), "⠋ 00:00");
     assert.equal(await first.evaluate(() => formatNegotiationProgress(1000)), "⠇ 00:01");
     await second.goto(origin);
@@ -109,8 +129,17 @@ async function main() {
 
     const onlineTwo = () =>
       document.querySelector("#online-count").textContent === "ОНЛАЙН 2";
-    await first.waitForFunction(onlineTwo, null, { timeout: 15000 });
-    await second.waitForFunction(onlineTwo, null, { timeout: 15000 });
+    try {
+      await first.waitForFunction(onlineTwo, null, { timeout: 15000 });
+      await second.waitForFunction(onlineTwo, null, { timeout: 15000 });
+    } catch (error) {
+      const firstDiagnostic = await first.evaluate(() => buildDiagnostic());
+      const secondDiagnostic = await second.evaluate(() => buildDiagnostic());
+      throw new Error(
+        `${error.message}\nFIRST (${firstBrowserName})\n${firstDiagnostic}\n` +
+        `SECOND (${secondBrowserName})\n${secondDiagnostic}`,
+      );
+    }
     assert.match(await first.evaluate(() => buildDiagnostic()), /remote=[1-9][0-9]*:/);
 
     await first.evaluate(() => restartSignaling("e2e resume"));
@@ -174,9 +203,62 @@ async function main() {
     assert.match(failedIce.diagnostic, /webrtc last failure: ICE failed/);
     assert.equal(failedIce.peerRemoved, true);
 
-    console.log("OK consent=offline peers=2 text=bidirectional file=проверка.gif safari-ice=json failure=visible");
+    const iosUnlock = await first.evaluate(async () => {
+      let stopped = false;
+      Object.defineProperty(navigator, "userAgent", {
+        configurable: true,
+        value: "Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Safari/604.1",
+      });
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: {
+          getUserMedia: async () => ({
+            getTracks: () => [{ stop: () => { stopped = true; } }],
+          }),
+        },
+      });
+      const allowed = await unlockIOSLocalNetwork();
+      return { allowed, stopped, access: state.localNetworkAccess };
+    });
+    assert.deepEqual(iosUnlock, {
+      allowed: true,
+      stopped: true,
+      access: "разрешён; аудиопоток остановлен",
+    });
+    const trickleSignals = await first.evaluate(() =>
+      window.__dudkaSignals.filter((message) => message.type === "ice"));
+    assert(trickleSignals.length > 0, "trickle ICE messages were not sent");
+    assert(
+      trickleSignals.every((message) =>
+        message.candidate === null || Boolean(message.candidate?.candidate)),
+      "ICE completion was sent as an empty candidate object",
+    );
+    const deniedUnlock = await first.evaluate(async () => {
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: {
+          getUserMedia: async () => {
+            throw new DOMException("denied", "NotAllowedError");
+          },
+        },
+      });
+      const allowed = await unlockIOSLocalNetwork();
+      return {
+        allowed,
+        access: state.localNetworkAccess,
+        note: document.querySelector("#consent-note").textContent,
+      };
+    });
+    assert.equal(deniedUnlock.allowed, false);
+    assert.match(deniedUnlock.access, /NotAllowedError/);
+    assert.match(deniedUnlock.note, /Без разрешения Safari/);
+
+    console.log(
+      `OK browsers=${firstBrowserName}+${secondBrowserName} consent=offline peers=2 ` +
+      "text=bidirectional file=проверка.gif safari-ice=json failure=visible",
+    );
   } finally {
-    await browser.close();
+    await Promise.all([firstBrowser.close(), secondBrowser.close()]);
   }
 }
 

@@ -1,6 +1,6 @@
 "use strict";
 
-const WEB_VERSION = "0.7.4";
+const WEB_VERSION = "0.7.5";
 const BRAILLE_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MAX_HISTORY = 200;
 const MAX_TEXT = 4000;
@@ -49,17 +49,25 @@ const state = {
   signalResume: 0,
   hiddenAt: 0,
   lastPeerFailure: "нет",
+  localNetworkAccess: "не требуется",
   startedAt: "",
 };
 for (const message of state.messages) state.messageIDs.add(message.id);
 
 els.name.value = identity.lastName || "Дудка браузер";
 
-els.accept.addEventListener("click", () => {
+els.accept.addEventListener("click", async () => {
   const name = cleanName(els.name.value);
   if (!name) {
     els.consentNote.textContent = "Введите имя: его увидят только соседние вкладки.";
     els.name.focus();
+    return;
+  }
+  els.accept.disabled = true;
+  els.consentNote.textContent = "ОТКРЫВАЮ ПРЯМОЙ LAN-МАРШРУТ…";
+  if (!await unlockIOSLocalNetwork()) {
+    els.accept.disabled = false;
+    els.accept.focus();
     return;
   }
   state.consented = true;
@@ -74,6 +82,27 @@ els.accept.addEventListener("click", () => {
   connectSignaling();
   els.input.focus();
 });
+
+async function unlockIOSLocalNetwork() {
+  if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    state.localNetworkAccess = "недоступен";
+    els.consentNote.textContent =
+      "Safari не дал запросить прямой LAN-маршрут. Обновите iOS и повторите.";
+    return false;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    for (const track of stream.getTracks()) track.stop();
+    state.localNetworkAccess = "разрешён; аудиопоток остановлен";
+    return true;
+  } catch (error) {
+    state.localNetworkAccess = `отказ: ${error.name || "неизвестно"}`;
+    els.consentNote.textContent =
+      "Без разрешения Safari скрывает локальный адрес. Дудка не сможет открыть прямой канал без серверного ретранслятора.";
+    return false;
+  }
+}
 
 els.decline.addEventListener("click", () => {
   els.consentNote.textContent = "Сеть не запущена. Можно закрыть вкладку или разрешить подключение позже.";
@@ -209,14 +238,16 @@ async function handleSignal(message) {
         const peer = createPeer(message.from, false);
         await peer.pc.setRemoteDescription(message.description);
         recordRemoteDescriptionCandidates(peer, message.description);
+        await flushRemoteCandidates(peer);
         const answer = await peer.pc.createAnswer();
         await peer.pc.setLocalDescription(answer);
-        await waitForIceGathering(peer.pc);
         sendSignal({
           type: "answer",
           to: message.from,
-          description: serializeDescription(peer.pc.localDescription),
+          description: serializeDescription(answer),
         });
+        peer.descriptionSent = true;
+        flushLocalCandidates(peer);
         break;
       }
       case "answer": {
@@ -224,14 +255,18 @@ async function handleSignal(message) {
         if (peer) {
           await peer.pc.setRemoteDescription(message.description);
           recordRemoteDescriptionCandidates(peer, message.description);
+          await flushRemoteCandidates(peer);
         }
         break;
       }
       case "ice": {
         const peer = state.peers.get(message.from);
-        if (peer && message.candidate) {
-          if (message.candidate.type) peer.remoteCandidateTypes.add(message.candidate.type);
-          await peer.pc.addIceCandidate(message.candidate);
+        if (peer) {
+          if (peer.pc.remoteDescription) {
+            await addRemoteCandidate(peer, message.candidate);
+          } else {
+            peer.pendingRemoteCandidates.push(message.candidate);
+          }
         }
         break;
       }
@@ -266,6 +301,10 @@ function createPeer(peerID, initiator) {
     name: "Соседняя вкладка",
     initiator,
     offerStarted: false,
+    descriptionSent: false,
+    localIceCompleteSent: false,
+    pendingLocalCandidates: [],
+    pendingRemoteCandidates: [],
     localCandidateTypes: new Set(),
     remoteCandidateTypes: new Set(),
     localCandidateCount: 0,
@@ -280,9 +319,18 @@ function createPeer(peerID, initiator) {
   state.peers.set(peerID, peer);
 
   pc.addEventListener("icecandidate", (event) => {
-    if (event.candidate) {
+    const complete = !event.candidate?.candidate;
+    if (complete && peer.localIceCompleteSent) return;
+    if (complete) peer.localIceCompleteSent = true;
+    if (!complete) {
       peer.localCandidateCount += 1;
       if (event.candidate.type) peer.localCandidateTypes.add(event.candidate.type);
+    }
+    const candidate = complete ? null : serializeCandidate(event.candidate);
+    if (peer.descriptionSent) {
+      sendSignal({ type: "ice", to: peerID, candidate });
+    } else {
+      peer.pendingLocalCandidates.push(candidate);
     }
   });
   pc.addEventListener("icecandidateerror", (event) => {
@@ -323,12 +371,13 @@ function createPeer(peerID, initiator) {
 async function makeOffer(peer) {
   const offer = await peer.pc.createOffer();
   await peer.pc.setLocalDescription(offer);
-  await waitForIceGathering(peer.pc);
   sendSignal({
     type: "offer",
     to: peer.id,
-    description: serializeDescription(peer.pc.localDescription),
+    description: serializeDescription(offer),
   });
+  peer.descriptionSent = true;
+  flushLocalCandidates(peer);
 }
 
 function serializeDescription(description) {
@@ -338,20 +387,34 @@ function serializeDescription(description) {
   };
 }
 
-function waitForIceGathering(pc, timeout = 6000) {
-  if (pc.iceGatheringState === "complete") return Promise.resolve();
-  return new Promise((resolve) => {
-    const finish = () => {
-      window.clearTimeout(timer);
-      pc.removeEventListener("icegatheringstatechange", check);
-      resolve();
-    };
-    const check = () => {
-      if (pc.iceGatheringState === "complete") finish();
-    };
-    const timer = window.setTimeout(finish, timeout);
-    pc.addEventListener("icegatheringstatechange", check);
-  });
+function serializeCandidate(candidate) {
+  return {
+    candidate: candidate.candidate,
+    sdpMid: candidate.sdpMid,
+    sdpMLineIndex: candidate.sdpMLineIndex,
+    usernameFragment: candidate.usernameFragment,
+  };
+}
+
+function flushLocalCandidates(peer) {
+  for (const candidate of peer.pendingLocalCandidates.splice(0)) {
+    sendSignal({ type: "ice", to: peer.id, candidate });
+  }
+}
+
+async function flushRemoteCandidates(peer) {
+  for (const candidate of peer.pendingRemoteCandidates.splice(0)) {
+    await addRemoteCandidate(peer, candidate);
+  }
+}
+
+async function addRemoteCandidate(peer, candidate) {
+  if (candidate) {
+    peer.remoteCandidateCount += 1;
+    const type = candidate.candidate?.match(/\styp\s+(\w+)/)?.[1];
+    if (type) peer.remoteCandidateTypes.add(type);
+  }
+  await peer.pc.addIceCandidate(candidate);
 }
 
 function recordRemoteDescriptionCandidates(peer, description) {
@@ -780,6 +843,7 @@ function buildDiagnostic() {
     `signaling reconnect: ${state.reconnectAttempt}`,
     `signaling resume: ${state.signalResume}`,
     `signaling peers: ${state.peers.size}`,
+    `local network access: ${state.localNetworkAccess}`,
     `webrtc: ${[...state.peers.values()].map((peer) =>
       `${peer.pc.connectionState}/${peer.pc.iceConnectionState}/${peer.pc.iceGatheringState}/${peer.pc.signalingState}` +
       ` local=${peer.localCandidateCount}:${[...peer.localCandidateTypes].join("+") || "нет"}` +
